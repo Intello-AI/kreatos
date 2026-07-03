@@ -8,7 +8,7 @@ import {
 } from "../lib/constants"
 import { fetchPlaceDetails, sleep, textSearchIds } from "../lib/places"
 
-/** Lead calificado: negocio local encontrado en Google Maps sin sitio web. */
+/** Lead calificado: negocio local encontrado en Google Maps, con o sin sitio web. */
 export interface QualifiedLead {
   placeId: string
   name: string | null
@@ -18,6 +18,8 @@ export interface QualifiedLead {
   description: string | null
   address: string | null
   phone: string | null
+  /** websiteUri de Places; null = sin sitio (sitio nuevo), con valor = candidato a rediseño. */
+  website: string | null
   rating: number | null
   reviewsCount: number | null
   mapsUri: string | null
@@ -26,7 +28,7 @@ export interface QualifiedLead {
 
 export default defineTool({
   description:
-    "Busca negocios locales de una categoría en Google Maps (Places API) y devuelve SOLO los que NO tienen sitio web, ya calificados como leads. Los negocios con websiteUri se descartan aquí y nunca se guardan.",
+    "Busca negocios locales de una categoría en Google Maps (Places API) y los devuelve como candidatos a lead, con o sin sitio web. `website` viene lleno cuando el negocio ya tiene sitio (candidato a rediseño) y null cuando no tiene (candidato a sitio nuevo).",
   inputSchema: z.object({
     category: z
       .string()
@@ -45,33 +47,31 @@ export default defineTool({
     const placeIds = await textSearchIds(textQuery)
 
     const leads: QualifiedLead[] = []
-    let discardedWithWebsite = 0
+    let withWebsite = 0
 
     // Secuencial con delay: amable con el rate limit y con el costo.
     for (const placeId of placeIds) {
       if (leads.length >= MAX_LEADS_PER_RUN) break
 
       const details = await fetchPlaceDetails(placeId)
+      const website = details.websiteUri?.trim() || null
+      if (website) withWebsite += 1
 
-      // Regla de calificación: sin websiteUri = lead. Con website, descartado.
-      if (details.websiteUri && details.websiteUri.trim().length > 0) {
-        discardedWithWebsite += 1
-      } else {
-        leads.push({
-          placeId: details.id,
-          name: details.displayName?.text ?? null,
-          category,
-          businessType: details.primaryTypeDisplayName?.text ?? null,
-          googleTypes: details.types ?? [],
-          description: details.editorialSummary?.text ?? null,
-          address: details.formattedAddress ?? null,
-          phone: details.nationalPhoneNumber ?? null,
-          rating: details.rating ?? null,
-          reviewsCount: details.userRatingCount ?? null,
-          mapsUri: details.googleMapsUri ?? null,
-          city,
-        })
-      }
+      leads.push({
+        placeId: details.id,
+        name: details.displayName?.text ?? null,
+        category,
+        businessType: details.primaryTypeDisplayName?.text ?? null,
+        googleTypes: details.types ?? [],
+        description: details.editorialSummary?.text ?? null,
+        address: details.formattedAddress ?? null,
+        phone: details.nationalPhoneNumber ?? null,
+        website,
+        rating: details.rating ?? null,
+        reviewsCount: details.userRatingCount ?? null,
+        mapsUri: details.googleMapsUri ?? null,
+        city,
+      })
 
       await sleep(DETAILS_REQUEST_DELAY_MS)
     }
@@ -79,7 +79,7 @@ export default defineTool({
     return {
       query: textQuery,
       candidatesFound: placeIds.length,
-      discardedWithWebsite,
+      withWebsite,
       qualifiedLeads: leads,
     }
   },

@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { StarIcon } from "@phosphor-icons/react/ssr"
 
 const STATUS_BADGE_CLASS: Record<LeadStatus, string> = {
   new: "",
@@ -63,7 +64,7 @@ export function LeadsTable({
   }
 
   return (
-    <div className="border w-full overflow-x-auto">
+    <div className="w-full overflow-x-auto border">
       <Table>
         <TableHeader className="bg-sidebar">
           <TableRow className="divide-x">
@@ -90,9 +91,12 @@ export function LeadsTable({
                 {lead.phone ?? "—"}
               </TableCell>
               <TableCell>
-                {lead.rating !== null
-                  ? `${lead.rating} (${lead.reviews_count ?? 0})`
-                  : "—"}
+                <span className="flex items-center gap-1">
+                  <StarIcon weight="fill" className="size-3 fill-warning text-warning" />
+                  {lead.rating !== null
+                    ? `${lead.rating} (${lead.reviews_count ?? 0})`
+                    : "—"}
+                </span>
               </TableCell>
               <TableCell>
                 <LeadStatusBadge status={lead.status} />

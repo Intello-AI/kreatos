@@ -17,7 +17,8 @@ export const DEFAULT_CATEGORIES = [
 
 /**
  * Field mask de Place Details (Places API New). Pedir solo estos campos
- * controla el costo por request. `websiteUri` es el campo que descalifica.
+ * controla el costo por request. `websiteUri` distingue lead de sitio nuevo
+ * (null) vs candidato a rediseño (con valor).
  */
 export const PLACE_DETAILS_FIELD_MASK = [
   "id",

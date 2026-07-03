@@ -4,10 +4,10 @@ description: Usa este playbook antes de guardar leads para decidir qué negocios
 
 # Criterios de calificación de leads
 
-Un lead es una empresa sin sitio web a la que podríamos venderle un sitio **corporativo
-e informativo** (quiénes somos, servicios, portafolio, contacto). La herramienta
-`search_businesses` ya garantiza que no tienen `websiteUri`; este playbook decide cuáles
-de esos valen la pena guardar.
+Un lead es una empresa a la que podríamos venderle un sitio **corporativo e
+informativo** (quiénes somos, servicios, portafolio, contacto) — sitio nuevo si no
+tiene, o rediseño si ya tiene uno (`website` con valor). Este playbook decide cuáles
+candidatos de `search_businesses` valen la pena guardar.
 
 ## Buen lead (guárdalo)
 
@@ -21,6 +21,8 @@ de esos valen la pena guardar.
 - **Tiene datos de contacto utilizables**: idealmente teléfono y dirección presentes.
   Sin teléfono no hay forma de contactarlo en etapas posteriores; guárdalo solo si lo
   demás es fuerte.
+- **Con o sin sitio web**: ambos califican. Sin sitio = candidato a sitio nuevo; con
+  sitio = candidato a rediseño/mejora. No descartes un negocio solo por tener sitio.
 
 ## Mal lead (descártalo)
 

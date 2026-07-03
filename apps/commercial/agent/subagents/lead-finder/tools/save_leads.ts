@@ -12,6 +12,7 @@ const leadInputSchema = z.object({
   description: z.string().nullable(),
   address: z.string().nullable(),
   phone: z.string().nullable(),
+  website: z.string().nullable(),
   rating: z.number().nullable(),
   reviewsCount: z.number().int().nullable(),
   mapsUri: z.string().nullable(),
@@ -20,7 +21,7 @@ const leadInputSchema = z.object({
 
 export default defineTool({
   description:
-    "Guarda leads calificados (negocios sin sitio web) en la tabla `leads` de Supabase. Hace upsert por place_id: re-ejecutar la misma búsqueda no crea duplicados, solo refresca los datos cacheados y fetched_at.",
+    "Guarda leads calificados (con o sin sitio web) en la tabla `leads` de Supabase. Hace upsert por place_id: re-ejecutar la misma búsqueda no crea duplicados, solo refresca los datos cacheados y fetched_at.",
   inputSchema: z.object({
     leads: z
       .array(leadInputSchema)
@@ -40,6 +41,7 @@ export default defineTool({
       description: lead.description,
       address: lead.address,
       phone: lead.phone,
+      website: lead.website,
       rating: lead.rating,
       reviews_count: lead.reviewsCount,
       maps_uri: lead.mapsUri,

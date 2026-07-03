@@ -10,6 +10,7 @@ export interface LeadRow {
   description: string | null
   address: string | null
   phone: string | null
+  website: string | null
   rating: number | null
   reviews_count: number | null
   maps_uri: string | null
