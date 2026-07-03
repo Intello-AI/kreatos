@@ -9,7 +9,7 @@ import {
 } from "@phosphor-icons/react"
 
 import { logout } from "@/features/auth/actions"
-import { Icon, Logo } from "@/components/icons"
+import { AppSidebarHeader } from "@/components/app-sidebar-header"
 import {
   Sidebar,
   SidebarContent,
@@ -17,7 +17,6 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -45,15 +44,7 @@ const AppSidebar = (props: React.ComponentProps<typeof Sidebar>) => {
 
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
-        <Link
-          href="/dashboard"
-          className="flex h-12 items-center gap-2 px-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
-        >
-          <Icon className="h-6 w-5 shrink-0" />
-          <Logo className="h-4 w-auto group-data-[collapsible=icon]:hidden" />
-        </Link>
-      </SidebarHeader>
+      <AppSidebarHeader />
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Plataforma</SidebarGroupLabel>
