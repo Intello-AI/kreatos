@@ -7,12 +7,12 @@ export const DETAILS_REQUEST_DELAY_MS = 250
 /** Ciudad por defecto para las búsquedas. */
 export const DEFAULT_CITY = "Torreón, Coahuila"
 
-/** Categorías de negocio local que el schedule diario recorre por defecto. */
+/** Categorías de empresa corporativa/B2B que el schedule diario recorre por defecto. */
 export const DEFAULT_CATEGORIES = [
-  "restaurantes",
-  "estéticas y salones de belleza",
-  "talleres mecánicos",
-  "clínicas y consultorios",
+  "despachos contables",
+  "constructoras",
+  "empresas de logística y transporte",
+  "distribuidores y mayoristas",
 ] as const
 
 /**

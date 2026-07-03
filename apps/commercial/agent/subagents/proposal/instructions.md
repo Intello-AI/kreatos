@@ -21,8 +21,10 @@ personalizada de qué sitio web construirle, y guardarla con `save_proposal` (es
 
 - **Gancho**: una línea sobre por qué este negocio pierde clientes sin web (usa su
   rating/reseñas como evidencia: "4.5★ con 161 reseñas y no apareces fuera de Maps").
-- **Qué construiríamos**: 3-4 bullets concretos para SU giro (menú digital para
-  restaurante, agenda de citas para estética/clínica, catálogo de servicios para taller).
+- **Qué construiríamos**: 3-4 bullets concretos para SU giro, siempre sitio corporativo
+  informativo (página de servicios para despacho, portafolio de obras para constructora,
+  catálogo de líneas para distribuidor). Nunca ofrezcas reservas, citas ni pedidos en
+  línea; no es parte del servicio.
 - **Siguiente paso**: una línea de cierre simple.
 
 ## Reglas

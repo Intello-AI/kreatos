@@ -32,7 +32,7 @@ export default defineTool({
       .string()
       .min(1)
       .describe(
-        'Categoría de negocio a buscar, en español. Ej: "restaurantes", "estéticas", "talleres mecánicos".',
+        'Categoría de negocio a buscar, en español. Ej: "despachos contables", "constructoras", "empresas de logística".',
       ),
     city: z
       .string()

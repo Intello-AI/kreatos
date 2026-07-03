@@ -16,10 +16,10 @@ Ciudad objetivo: **Torreón, Coahuila**.
 
 Delega al subagente **lead-finder**, una categoría a la vez y en este orden:
 
-1. restaurantes
-2. estéticas y salones de belleza
-3. talleres mecánicos
-4. clínicas y consultorios
+1. despachos contables
+2. constructoras
+3. empresas de logística y transporte
+4. distribuidores y mayoristas
 
 Para cada categoría pásale en el mensaje la categoría y la ciudad. lead-finder aplica sus
 criterios de calidad y guarda los calificados (tope global de 20 leads guardados por
