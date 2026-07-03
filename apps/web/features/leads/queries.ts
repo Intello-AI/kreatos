@@ -5,7 +5,7 @@ import {
   type LeadStatus,
 } from "@/features/leads/types"
 
-export const LEADS_PAGE_SIZE = 20
+export const LEADS_PAGE_SIZE = 15
 
 export interface GetLeadsParams {
   page?: number
