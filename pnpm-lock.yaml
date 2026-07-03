@@ -7,6 +7,7 @@ settings:
 overrides:
   '@types/react': 19.2.17
   '@types/react-dom': 19.2.3
+  nf3: 0.3.19
 
 importers:
 
@@ -74,7 +75,7 @@ importers:
         version: 1.1.1(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       eve:
         specifier: ^0.19.0
-        version: 0.19.0(ai@7.0.11(zod@4.4.3))(dotenv@17.4.2)(jiti@2.7.0)(lru-cache@5.1.1)
+        version: 0.19.0(ai@7.0.11(zod@4.4.3))(dotenv@17.4.2)(jiti@2.7.0)(lru-cache@11.5.1)
       lucide-react:
         specifier: 1.16.0
         version: 1.16.0(react@19.2.6)
@@ -84,9 +85,6 @@ importers:
       nanoid:
         specifier: 5.1.11
         version: 5.1.11
-      next:
-        specifier: 16.2.6
-        version: 16.2.6(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       radix-ui:
         specifier: 1.4.3
         version: 1.4.3(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -168,7 +166,7 @@ importers:
         version: 8.6.0(react@19.2.4)
       eve:
         specifier: ^0.19.0
-        version: 0.19.0(ai@7.0.11(zod@4.4.3))(dotenv@17.4.2)(jiti@2.7.0)(lru-cache@5.1.1)
+        version: 0.19.0(ai@7.0.11(zod@4.4.3))(dotenv@17.4.2)(jiti@2.7.0)(lru-cache@11.5.1)
       input-otp:
         specifier: ^1.4.2
         version: 1.4.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -4814,6 +4812,10 @@ packages:
   loose-envify@1.4.0:
     resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
 
+  lru-cache@11.5.1:
+    resolution: {integrity: sha512-RPimw/7aMdv2oqRrxKwvZXcPfwBrn/JZ2xYcY9Hus/6LaS3VOAKVWKWgNLCFSiOm1ESXinjsDlidVU7JlnCN2A==}
+    engines: {node: 20 || >=22}
+
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
 
@@ -5152,8 +5154,8 @@ packages:
       sass:
         optional: true
 
-  nf3@0.3.18:
-    resolution: {integrity: sha512-lFvZrVZXN4FQYoV1iGiZ5RAzfzjbjQvm0MBdLvQKqvnOfkh09btu1tzI/RdIKrdIoRKL12XYlwdbcB0QwM3m6Q==}
+  nf3@0.3.19:
+    resolution: {integrity: sha512-tfOXX/ivQBL+4km/fzxQ0HWMmp1Ewx/YpFLbya080gXVfm26bZy0n4a5K5PPnqTLyuAHu0FobVpXXUadIiIwIQ==}
 
   nitro@3.0.260610-beta:
     resolution: {integrity: sha512-KPb4L5yaF/Rx/xoGMpgHRJvZhbhGiqbRKOwwPLCH9jKTKTsEUHLjnJas85AeCzaswqa8Wi52eQBtRsODC4PS0Q==}
@@ -10447,10 +10449,10 @@ snapshots:
 
   etag@1.8.1: {}
 
-  eve@0.19.0(ai@7.0.11(zod@4.4.3))(dotenv@17.4.2)(jiti@2.7.0)(lru-cache@5.1.1):
+  eve@0.19.0(ai@7.0.11(zod@4.4.3))(dotenv@17.4.2)(jiti@2.7.0)(lru-cache@11.5.1):
     dependencies:
       ai: 7.0.11(zod@4.4.3)
-      nitro: 3.0.260610-beta(dotenv@17.4.2)(jiti@2.7.0)(lru-cache@5.1.1)
+      nitro: 3.0.260610-beta(dotenv@17.4.2)(jiti@2.7.0)(lru-cache@11.5.1)
     transitivePeerDependencies:
       - '@azure/app-configuration'
       - '@azure/cosmos'
@@ -11318,6 +11320,9 @@ snapshots:
     dependencies:
       js-tokens: 4.0.0
 
+  lru-cache@11.5.1:
+    optional: true
+
   lru-cache@5.1.1:
     dependencies:
       yallist: 3.1.1
@@ -11880,33 +11885,9 @@ snapshots:
       - '@babel/core'
       - babel-plugin-macros
 
-  next@16.2.6(react-dom@19.2.6(react@19.2.6))(react@19.2.6):
-    dependencies:
-      '@next/env': 16.2.6
-      '@swc/helpers': 0.5.15
-      baseline-browser-mapping: 2.10.41
-      caniuse-lite: 1.0.30001800
-      postcss: 8.4.31
-      react: 19.2.6
-      react-dom: 19.2.6(react@19.2.6)
-      styled-jsx: 5.1.6(react@19.2.6)
-    optionalDependencies:
-      '@next/swc-darwin-arm64': 16.2.6
-      '@next/swc-darwin-x64': 16.2.6
-      '@next/swc-linux-arm64-gnu': 16.2.6
-      '@next/swc-linux-arm64-musl': 16.2.6
-      '@next/swc-linux-x64-gnu': 16.2.6
-      '@next/swc-linux-x64-musl': 16.2.6
-      '@next/swc-win32-arm64-msvc': 16.2.6
-      '@next/swc-win32-x64-msvc': 16.2.6
-      sharp: 0.34.5
-    transitivePeerDependencies:
-      - '@babel/core'
-      - babel-plugin-macros
+  nf3@0.3.19: {}
 
-  nf3@0.3.18: {}
-
-  nitro@3.0.260610-beta(dotenv@17.4.2)(jiti@2.7.0)(lru-cache@5.1.1):
+  nitro@3.0.260610-beta(dotenv@17.4.2)(jiti@2.7.0)(lru-cache@11.5.1):
     dependencies:
       consola: 3.4.2
       crossws: 0.4.8(srvx@0.11.20)
@@ -11914,14 +11895,14 @@ snapshots:
       env-runner: 0.1.15
       h3: 2.0.1-rc.22(crossws@0.4.8(srvx@0.11.20))
       hookable: 6.1.1
-      nf3: 0.3.18
+      nf3: 0.3.19
       ocache: 0.1.5
       ofetch: 2.0.0-alpha.3
       ohash: 2.0.11
       rolldown: 1.1.4
       srvx: 0.11.20
       unenv: 2.0.0-rc.24
-      unstorage: 2.0.0-alpha.7(db0@0.3.4)(lru-cache@5.1.1)(ofetch@2.0.0-alpha.3)
+      unstorage: 2.0.0-alpha.7(db0@0.3.4)(lru-cache@11.5.1)(ofetch@2.0.0-alpha.3)
     optionalDependencies:
       dotenv: 17.4.2
       jiti: 2.7.0
@@ -13090,11 +13071,6 @@ snapshots:
     optionalDependencies:
       '@babel/core': 7.29.7
 
-  styled-jsx@5.1.6(react@19.2.6):
-    dependencies:
-      client-only: 0.0.1
-      react: 19.2.6
-
   stylis@4.4.0: {}
 
   supports-color@7.2.0:
@@ -13320,10 +13296,10 @@ snapshots:
       '@unrs/resolver-binding-win32-ia32-msvc': 1.12.2
       '@unrs/resolver-binding-win32-x64-msvc': 1.12.2
 
-  unstorage@2.0.0-alpha.7(db0@0.3.4)(lru-cache@5.1.1)(ofetch@2.0.0-alpha.3):
+  unstorage@2.0.0-alpha.7(db0@0.3.4)(lru-cache@11.5.1)(ofetch@2.0.0-alpha.3):
     optionalDependencies:
       db0: 0.3.4
-      lru-cache: 5.1.1
+      lru-cache: 11.5.1
       ofetch: 2.0.0-alpha.3
 
   update-browserslist-db@1.2.3(browserslist@4.28.4):

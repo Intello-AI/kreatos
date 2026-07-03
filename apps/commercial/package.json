@@ -4,14 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "check-types": "tsc --noEmit",
-    "build:eve": "eve build",
-    "dev:eve": "eve dev",
-    "start:eve": "eve start",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "dev": "eve dev",
+    "build": "eve build",
+    "start": "eve start",
+    "check-types": "tsc --noEmit"
   },
   "engines": {
     "node": ">=24"
@@ -37,7 +33,6 @@
     "lucide-react": "1.16.0",
     "motion": "12.40.0",
     "nanoid": "5.1.11",
-    "next": "16.2.6",
     "radix-ui": "1.4.3",
     "react": "19.2.6",
     "react-dom": "19.2.6",
