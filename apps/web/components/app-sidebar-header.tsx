@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 
-import { cn } from "@/lib/utils"
 import { Icon, Logo } from "@/components/icons"
 import {
   SidebarHeader,
@@ -16,31 +15,24 @@ const AppSidebarHeader = () => {
 
   return (
     <SidebarHeader className="flex h-12 flex-row items-center justify-start">
-      <Link
-        href="/dashboard"
-        className={cn(
-          "flex h-12 w-full items-center",
-          collapsed && "justify-center"
-        )}
-      >
-        {collapsed ? (
-          <div className="group/sb-trigger">
-            <Icon
-              className="h-6 w-auto shrink-0 group-hover/sb-trigger:hidden"
-              name="Logo"
-            />
-            <SidebarTrigger
-              size={"icon"}
-              className="hidden shrink-0 group-hover/sb-trigger:flex"
-            />
-          </div>
-        ) : (
-          <div className="flex items-center justify-between w-full">
+      {collapsed ? (
+        <div className="group/sb-trigger flex h-12 w-full items-center justify-center">
+          <Link href="/dashboard" className="group-hover/sb-trigger:hidden">
+            <Icon className="h-6 w-auto shrink-0" name="Logo" />
+          </Link>
+          <SidebarTrigger
+            size={"icon"}
+            className="hidden shrink-0 group-hover/sb-trigger:flex"
+          />
+        </div>
+      ) : (
+        <div className="flex h-12 w-full items-center justify-between">
+          <Link href="/dashboard" className="flex items-center">
             <Logo className="h-5 w-auto" />
-            <SidebarTrigger size={"icon"} />
-          </div>
-        )}
-      </Link>
+          </Link>
+          <SidebarTrigger size={"icon"} />
+        </div>
+      )}
     </SidebarHeader>
   )
 }
