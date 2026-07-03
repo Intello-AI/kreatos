@@ -1,28 +1,14 @@
+import type { Database, TablesInsert } from "@repo/supabase"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 
-/** Fila de la tabla `leads` tal como la escribe el agente. */
-export interface LeadRow {
-  place_id: string
-  name: string | null
-  category: string | null
-  business_type: string | null
-  google_types: string[]
-  description: string | null
-  address: string | null
-  phone: string | null
-  website: string | null
-  rating: number | null
-  reviews_count: number | null
-  maps_uri: string | null
-  city: string
-  fetched_at: string
-}
+/** Fila de la tabla `leads` tal como la escribe el agente (types generados vía `pnpm db:types`). */
+export type LeadRow = TablesInsert<"leads">
 
 /**
  * Cliente Supabase con service role. Solo corre en el runtime del agente
  * (server-side); la key nunca llega a un cliente.
  */
-export function getSupabaseClient(): SupabaseClient {
+export function getSupabaseClient(): SupabaseClient<Database> {
   const url = process.env.SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
@@ -32,7 +18,7 @@ export function getSupabaseClient(): SupabaseClient {
     )
   }
 
-  return createClient(url, serviceRoleKey, {
+  return createClient<Database>(url, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   })
 }

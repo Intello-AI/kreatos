@@ -34,6 +34,9 @@ importers:
       '@radix-ui/react-use-controllable-state':
         specifier: 1.2.2
         version: 1.2.2(@types/react@19.2.17)(react@19.2.6)
+      '@repo/supabase':
+        specifier: workspace:*
+        version: link:../../packages/supabase
       '@shikijs/core':
         specifier: 4.1.0
         version: 4.1.0

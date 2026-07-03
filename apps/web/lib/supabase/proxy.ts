@@ -51,7 +51,7 @@ export async function updateSession(request: NextRequest) {
   // Con sesión activa, "/" no debe mostrar el login.
   if (claims && pathname === "/") {
     const url = request.nextUrl.clone()
-    url.pathname = "/leads"
+    url.pathname = "/dashboard"
     return NextResponse.redirect(url)
   }
 

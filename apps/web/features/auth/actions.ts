@@ -27,7 +27,7 @@ export async function login(input: LoginInput): Promise<AuthFormState> {
   }
 
   revalidatePath("/", "layout")
-  redirect("/leads")
+  redirect("/dashboard")
 }
 
 export async function signup(input: SignupInput): Promise<AuthFormState> {
@@ -54,7 +54,7 @@ export async function signup(input: SignupInput): Promise<AuthFormState> {
   }
 
   revalidatePath("/", "layout")
-  redirect("/leads")
+  redirect("/dashboard")
 }
 
 export async function logout(): Promise<void> {
