@@ -23,8 +23,8 @@ Delega al subagente **lead-finder**, una categoría a la vez y en este orden:
 
 Para cada categoría pásale en el mensaje la categoría y la ciudad. lead-finder aplica sus
 criterios de calidad y guarda los calificados (tope global de 20 leads guardados por
-corrida: si sus resúmenes indican que ya se alcanzó, detente y no delegues más categorías).
+corrida: si sus respuestas indican que ya se alcanzó, detente y no delegues más categorías).
 
-No generes propuestas ni borradores de contacto en esta corrida; solo búsqueda.
-
-Al final, resume en una línea por categoría: candidatos, descartados y guardados.
+No generes propuestas ni borradores de contacto en esta corrida; solo búsqueda. Esta
+corrida es de background: no produzcas resumen final, los resultados quedan en la tabla
+`leads`.

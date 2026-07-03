@@ -1,6 +1,7 @@
 import { defineTool } from "eve/tools"
 import { z } from "zod"
 
+import { getSupabaseClient } from "../../../lib/supabase"
 import {
   DEFAULT_CITY,
   DETAILS_REQUEST_DELAY_MS,
@@ -28,7 +29,7 @@ export interface QualifiedLead {
 
 export default defineTool({
   description:
-    "Busca negocios locales de una categoría en Google Maps (Places API) y los devuelve como candidatos a lead, con o sin sitio web. `website` viene lleno cuando el negocio ya tiene sitio (candidato a rediseño) y null cuando no tiene (candidato a sitio nuevo).",
+    "Busca negocios locales de una categoría en Google Maps (Places API) y los devuelve como candidatos a lead, con o sin sitio web. Excluye automáticamente los negocios que ya están en la tabla `leads` (`alreadyInDatabase` reporta cuántos). `website` viene lleno cuando el negocio ya tiene sitio (candidato a rediseño) y null cuando no tiene (candidato a sitio nuevo).",
   inputSchema: z.object({
     category: z
       .string()
@@ -46,11 +47,24 @@ export default defineTool({
     const textQuery = `${category} en ${city}`
     const placeIds = await textSearchIds(textQuery)
 
+    // Descarta lo que ya está en la tabla `leads` ANTES de pedir detalles:
+    // no se re-procesan negocios conocidos ni se gasta Place Details en ellos.
+    const supabase = getSupabaseClient()
+    const { data: existing, error: existingError } = await supabase
+      .from("leads")
+      .select("place_id")
+      .in("place_id", placeIds)
+    if (existingError) {
+      throw new Error(`No se pudo consultar leads existentes: ${existingError.message}`)
+    }
+    const known = new Set((existing ?? []).map((row) => row.place_id))
+    const newPlaceIds = placeIds.filter((id) => !known.has(id))
+
     const leads: QualifiedLead[] = []
     let withWebsite = 0
 
     // Secuencial con delay: amable con el rate limit y con el costo.
-    for (const placeId of placeIds) {
+    for (const placeId of newPlaceIds) {
       if (leads.length >= MAX_LEADS_PER_RUN) break
 
       const details = await fetchPlaceDetails(placeId)
@@ -79,6 +93,7 @@ export default defineTool({
     return {
       query: textQuery,
       candidatesFound: placeIds.length,
+      alreadyInDatabase: known.size,
       withWebsite,
       qualifiedLeads: leads,
     }

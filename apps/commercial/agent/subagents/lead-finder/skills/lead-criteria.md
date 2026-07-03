@@ -39,9 +39,6 @@ candidatos de `search_businesses` valen la pena guardar.
 
 ## Zona gris
 
-- Pocas reseñas (1–4) pero con teléfono y dirección completos: guárdalo, márcalo mentalmente
-  como calidad media en tu resumen.
+- Pocas reseñas (1–4) pero con teléfono y dirección completos: guárdalo.
 - Rating muy bajo (< 3.0) con muchas reseñas: negocio activo pero con mala reputación;
   guárdalo — un sitio web puede ser parte de su recuperación.
-
-Cuando descartes leads por estos criterios, di cuántos y por qué regla en tu resumen final.
