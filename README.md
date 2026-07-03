@@ -1,3 +1,90 @@
+# Kreatos
+
+App interna multi-agente para generación de leads. **Stage 1**: el agente `lead-finder`
+busca negocios locales sin sitio web en Google Maps (Places API New) y los guarda como
+leads en Supabase. Plan completo: [`docs/stage-1-lead-finder-plan.md`](docs/stage-1-lead-finder-plan.md).
+
+## Agente lead-finder (Stage 1)
+
+### Estructura
+
+- `apps/web` — Next.js 16; monta el agente eve vía `withEve()` y sirve la página interna `/leads`.
+- `apps/commercial` — app eve (`lead-finder`): instrucciones, tools, skill y schedule bajo `apps/commercial/agent/`.
+- `supabase/` — stack local + migración de la tabla `leads`.
+
+### Variables de entorno
+
+Placeholders en [`.env.example`](.env.example). Copia los valores reales a:
+
+| Archivo | Lo carga | Necesita |
+| --- | --- | --- |
+| `apps/commercial/.env.local` | runtime eve (tools + model) | `GOOGLE_PLACES_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY` |
+| `apps/web/.env.local` | Next.js (`/leads`) | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` |
+
+Supabase local: `SUPABASE_URL=http://127.0.0.1:54321`; la service role key sale de
+`supabase status`. `OPENAI_API_KEY` sale del [dashboard de OpenAI](https://platform.openai.com/api-keys) —
+el agente usa el provider directo de OpenAI (`apps/commercial/agent/agent.ts`, model
+`gpt-5-nano`), sin AI Gateway. Cambiar de modelo/provider = editar esa línea de `agent.ts`.
+
+### Levantar el stack local (dev)
+
+Desde la raíz del monorepo (necesita Docker corriendo):
+
+```sh
+pnpm db:start        # supabase local (API :54321, DB :54322, Studio :54323)
+pnpm dev             # next dev (web) + eve montado en el mismo origin (:3000)
+```
+
+Primera vez / DB fresca: `pnpm db:reset` aplica las migraciones. `pnpm db:stop` apaga el stack.
+
+### Probar el agente
+
+```sh
+pnpm leads:search    # crea sesión: "busca restaurantes sin sitio web en Torreón"
+pnpm leads:daily     # dispara el schedule daily-leads a mano (ruta dev)
+pnpm agent:tui       # alternativa: REPL interactivo de eve (standalone)
+```
+
+`leads:search` devuelve `continuationToken` (follow-ups) y `sessionId`; el stream vive en
+`GET http://localhost:3000/eve/v1/session/<id>/stream`. No corras `agent:tui` y `pnpm dev`
+a la vez — cada uno levanta su propio dev server de eve.
+
+Los leads aparecen en `http://localhost:3000/leads`.
+
+### Cómo funciona el schedule
+
+`apps/commercial/agent/schedules/daily-leads.md` corre diario con cron `0 14 * * *`.
+**Vercel evalúa el cron en UTC**: 14:00 UTC = 8:00 AM America/Mexico_City (UTC-6).
+Ciudad y categorías se configuran editando ese mismo archivo.
+
+En dev el cron **no** dispara. Para probarlo a mano:
+
+```sh
+curl -X POST http://localhost:3000/eve/v1/dev/schedules/daily-leads
+```
+
+En Vercel, cada schedule se convierte en un Vercel Cron Job automáticamente.
+
+### ToS de Google Places
+
+Solo `place_id` se almacena indefinidamente. El resto de campos de `leads` (nombre,
+teléfono, dirección, rating) es cache refrescable con `fetched_at`; se re-hidrata con
+`fetchPlaceDetails(placeId)` en `apps/commercial/agent/lib/places.ts`.
+
+### Dónde enchufan los agentes de Stage 2
+
+- **Restructura (paso 0 de Stage 2)**: el root se renombró a orquestador `commercial` (apps/commercial; "kreatos" colisionaba con el package root del workspace) y
+  `lead-finder` baja a subagente declarado, simétrico con `proposal` y `outreach`:
+  `agent/subagents/{lead-finder, proposal, outreach}/` (cada uno con su propio `agent.ts`
+  con `description`, `instructions.md` y tools; eve delega del root al subagente). Decisión
+  registrada en `docs/stage-1-lead-finder-plan.md` §12.
+- **Site-builder**: agente hermano (p. ej. `apps/site-builder/` con el mismo patrón eve).
+- **Conexiones externas** (Figma, Gmail): `apps/commercial/agent/connections/` (MCP/OpenAPI).
+- El campo `status` de `leads` (`new → proposal_ready → contacted → won/lost`) ya modela
+  ese ciclo de vida.
+
+---
+
 # Turborepo starter
 
 This Turborepo starter is maintained by the Turborepo core team.
@@ -157,3 +244,4 @@ Learn more about the power of Turborepo:
 - [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
 - [Configuration Options](https://turborepo.dev/docs/reference/configuration)
 - [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+# kreatos

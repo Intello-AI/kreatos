@@ -3,7 +3,14 @@
   "private": true,
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "dev": "turbo run dev --filter=web",
+    "agent:tui": "pnpm --filter lead-finder dev",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:types": "supabase gen types typescript --local --schema public > packages/supabase/src/database.types.ts",
+    "leads:search": "curl -s -X POST http://localhost:3000/eve/v1/session -H 'content-type: application/json' -d '{\"message\":\"busca restaurantes sin sitio web en Torreón\"}'",
+    "leads:daily": "curl -s -X POST http://localhost:3000/eve/v1/dev/schedules/daily-leads",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types"
@@ -15,6 +22,12 @@
   },
   "packageManager": "pnpm@9.0.0",
   "engines": {
-    "node": ">=18"
+    "node": "24.x"
+  },
+  "pnpm": {
+    "overrides": {
+      "@types/react": "19.2.17",
+      "@types/react-dom": "19.2.3"
+    }
   }
 }

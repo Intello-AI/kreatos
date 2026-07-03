@@ -36,3 +36,19 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# eve build artifacts
+.eve/
+.output/
+.workflow-data/
+
+# TypeScript
+next-env.d.ts
+*.tsbuildinfo
+
+# Claude Code
+.claude/worktrees/
+
+# Supabase
+supabase/.temp/
+supabase/.branches/

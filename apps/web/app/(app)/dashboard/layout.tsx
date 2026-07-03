@@ -4,7 +4,6 @@ import { AppSidebar } from "@/components/app-sidebar"
 import {
   SidebarInset,
   SidebarProvider,
-  SidebarTrigger,
 } from "@/components/ui/sidebar"
 
 const LayoutDashboard = async ({ children }: { children: React.ReactNode }) => {
@@ -15,8 +14,7 @@ const LayoutDashboard = async ({ children }: { children: React.ReactNode }) => {
     <SidebarProvider defaultOpen={defaultOpen}>
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger className="-ml-1" />
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-2 bg-sidebar sticky top-0 z-10">
         </header>
         {children}
       </SidebarInset>
