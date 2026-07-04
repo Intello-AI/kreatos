@@ -16,7 +16,14 @@ cero). Tu análisis es la diferencia entre "referencia = un link" y "referencia
    a. `web_fetch` a la URL → HTML completo.
    b. `web_fetch` a las 2-3 hojas CSS principales enlazadas (las que pesan).
       El CSS es tu mina de oro: ahí viven los tokens reales.
-   c. Corre el **protocolo de teardown** (abajo) y compón el análisis.
+   c. `capture_screenshots` (slug + url): captura desktop/mobile reales,
+      las guarda para el dashboard y te devuelve `visualAnalysis` — lo que
+      el CSS NO te dice (above-the-fold real, ritmo de secciones por
+      scroll, cómo colapsa en mobile, gestos robables visibles). Si la
+      captura falla (sitio bloquea headless), continúa solo con CSS/HTML y
+      anótalo en layoutNotes.
+   d. Corre el **protocolo de teardown** (abajo) integrando el análisis
+      visual con lo confirmado en CSS: lo VISTO valida o corrige lo leído.
 3. `save_reference_analysis` por cada una. Si la URL no responde o bloquea
    bots (403/404), márcala `failed` con la razón en layoutNotes y CONTINÚA —
    nunca te detengas por una.

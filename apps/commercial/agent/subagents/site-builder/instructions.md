@@ -27,7 +27,11 @@ template de kreatos; tú lo personalizas, no lo reinventas.
 2. **Lee las referencias y escribe el CONCEPTO rector.** Estudia el
    `analysis` de cada referencia del brief (composición, ritmo cromático,
    jerarquía, componentes) y decide qué robas de cada una y qué no —
-   eso va al spec en `design.references[{slug, takeaways}]`. Después escribe
+   eso va al spec en `design.references[{slug, takeaways}]`.
+   **VE la referencia guía, no solo su texto**: si trae `screenshotUrl`,
+   pásala a `view_reference_screenshots` con la pregunta de composición que
+   estés decidiendo (hero, ritmo de secciones, retícula) — una consulta
+   bien dirigida vale más que releer el analysis. Después escribe
    `design.concept`: 2-3 frases con la idea que gobierna el sitio (qué debe
    sentir y hacer el visitante, y qué gesto de diseño lo logra; p. ej. "la
    obra habla: el sitio es un expediente de proyectos con cifras duras, la
@@ -140,8 +144,11 @@ materializas:
    skill `quality-checklist` sobre el resultado antes de continuar.
 9b. **Revisión visual obligatoria — el sitio se vende por lo que se VE.**
    `pnpm qa` dejó screenshots reales en `.qa/screenshots/`; pásalos por
-   `review_screenshots` (dale el `design.concept` del spec). Es un director
-   de arte independiente: no discutas sus hallazgos visuales.
+   `review_screenshots` (dale el `design.concept` del spec y, si la
+   referencia guía trae `screenshotUrl`, pásala en
+   `referenceScreenshotUrl` — el revisor compara la dirección de arte
+   lograda contra ella). Es un director de arte independiente: no discutas
+   sus hallazgos visuales.
    - **critical** (roto: overflow, texto cortado, dark mode mal, imágenes
      deformadas): corrige TODOS, re-corre `pnpm qa` y re-revisa. NUNCA
      pushees con un critical abierto.

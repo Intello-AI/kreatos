@@ -84,6 +84,11 @@ export default async function ReferencesPage() {
                   <ReferencePreview
                     url={ref.url}
                     title={`Preview de ${ref.slug}`}
+                    screenshotUrl={
+                      ref.screenshot_path
+                        ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/design-references/${ref.screenshot_path}`
+                        : null
+                    }
                   />
                   <div className="absolute top-2 right-2 bg-background h-fit w-fit flex">
                     <Badge

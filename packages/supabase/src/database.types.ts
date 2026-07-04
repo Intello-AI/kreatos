@@ -55,6 +55,7 @@ export type Database = {
           layout_notes: string | null
           palette: Json | null
           quality_score: number | null
+          screenshot_mobile_path: string | null
           screenshot_path: string | null
           slug: string
           source: string | null
@@ -75,6 +76,7 @@ export type Database = {
           layout_notes?: string | null
           palette?: Json | null
           quality_score?: number | null
+          screenshot_mobile_path?: string | null
           screenshot_path?: string | null
           slug: string
           source?: string | null
@@ -95,6 +97,7 @@ export type Database = {
           layout_notes?: string | null
           palette?: Json | null
           quality_score?: number | null
+          screenshot_mobile_path?: string | null
           screenshot_path?: string | null
           slug?: string
           source?: string | null

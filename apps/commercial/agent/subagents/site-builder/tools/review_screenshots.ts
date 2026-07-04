@@ -38,9 +38,16 @@ export default defineTool({
       .describe(
         "El design.concept del spec + 1-2 frases de qué gesto de diseño debería verse en pantalla. El revisor juzga contra esto.",
       ),
+    referenceScreenshotUrl: z
+      .string()
+      .url()
+      .optional()
+      .describe(
+        "screenshotUrl de la referencia GUÍA del brief (si existe): el revisor compara la dirección de arte lograda contra ella.",
+      ),
     maxImages: z.number().int().min(1).max(10).default(8),
   }),
-  async execute({ concept, maxImages }, ctx) {
+  async execute({ concept, referenceScreenshotUrl, maxImages }, ctx) {
     const sandbox = await ctx.getSandbox()
 
     const list = await sandbox.run({
@@ -81,6 +88,21 @@ export default defineTool({
       throw new Error("No se pudo leer ningún screenshot del sandbox.")
     }
 
+    // Referencia guía (opcional): el revisor compara la dirección lograda
+    // contra la que José eligió — dirección, no copia.
+    let referenceImage: Uint8Array | null = null
+    if (referenceScreenshotUrl) {
+      try {
+        const res = await fetch(referenceScreenshotUrl)
+        if (res.ok) {
+          const bytes = new Uint8Array(await res.arrayBuffer())
+          if (bytes.byteLength <= 12 * 1024 * 1024) referenceImage = bytes
+        }
+      } catch {
+        // sin referencia: el review procede igual
+      }
+    }
+
     const result = await generateText({
       model: openai("gpt-5.1"),
       messages: [
@@ -89,13 +111,26 @@ export default defineTool({
           content: [
             {
               type: "text",
-              text: `${REVIEW_PROMPT}\n\nCONCEPTO del sitio:\n${concept}\n\nScreenshots en orden: ${images.map((i) => i.name).join(", ")}`,
+              text: `${REVIEW_PROMPT}\n\nCONCEPTO del sitio:\n${concept}\n\nScreenshots en orden: ${images.map((i) => i.name).join(", ")}${
+                referenceImage
+                  ? "\n\nLa ÚLTIMA imagen es la REFERENCIA GUÍA elegida por el humano: evalúa si el sitio logró una dirección de arte del mismo nivel (composición, jerarquía, ritmo) SIN copiarla — pareceres de calidad, no de semejanza. Añade un campo \"referenceComparison\" al JSON con tu veredicto en 1-2 frases."
+                  : ""
+              }`,
             },
             ...images.map((img) => ({
               type: "image" as const,
               image: img.bytes,
               mediaType: "image/jpeg" as const,
             })),
+            ...(referenceImage
+              ? [
+                  {
+                    type: "image" as const,
+                    image: referenceImage,
+                    mediaType: "image/png" as const,
+                  },
+                ]
+              : []),
           ],
         },
       ],

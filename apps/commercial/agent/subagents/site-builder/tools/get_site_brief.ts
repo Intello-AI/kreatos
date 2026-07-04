@@ -82,7 +82,17 @@ export default defineTool({
       latestSpec: latestVersion?.spec ?? null,
       latestVersionN: latestVersion?.version_n ?? null,
       presets,
-      designReferences: references,
+      // Con screenshotUrl/screenshotMobileUrl: pásalas a
+      // view_reference_screenshots para VER la referencia (no solo su CSS).
+      designReferences: references.map((ref) => ({
+        ...ref,
+        screenshotUrl: ref.screenshot_path
+          ? `${supabaseUrl}/storage/v1/object/public/design-references/${ref.screenshot_path}`
+          : null,
+        screenshotMobileUrl: ref.screenshot_mobile_path
+          ? `${supabaseUrl}/storage/v1/object/public/design-references/${ref.screenshot_mobile_path}`
+          : null,
+      })),
       siblingSites: siblings,
     }
   },
