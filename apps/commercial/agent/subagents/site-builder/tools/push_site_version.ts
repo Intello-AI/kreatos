@@ -49,6 +49,41 @@ export default defineTool({
         "No hay cambios que commitear: el working tree está limpio. ¿Aplicaste la personalización sobre el clone? (Si el run anterior murió sin pushear, su trabajo se perdió con su sandbox: re-materializa el spec vigente antes de pushear.)",
       )
     }
+    // Guard anti-template (solo push FINAL): si site.config.ts sigue siendo
+    // el demo del template o no menciona al negocio, el repo NO está
+    // personalizado — pushearlo desplegaría el template pelón como preview.
+    if (!checkpoint) {
+      const config = await sandbox.readTextFile({ path: "site/site.config.ts" })
+      if (!config) {
+        throw new Error("No existe site/site.config.ts en el clone — ¿corriste clone_site_repo y materializaste el spec?")
+      }
+      const { getSupabaseClient } = await import("../../../lib/supabase")
+      const [{ data: lead }, { data: brand }] = await Promise.all([
+        getSupabaseClient()
+          .from("leads")
+          .select("name")
+          .eq("id", site.lead_id)
+          .maybeSingle(),
+        getSupabaseClient()
+          .from("lead_brand")
+          .select("short_name")
+          .eq("lead_id", site.lead_id)
+          .maybeSingle(),
+      ])
+      const configLower = config.toLowerCase()
+      const names = [lead?.name, brand?.short_name].filter(
+        (n): n is string => Boolean(n),
+      )
+      const mentionsBusiness =
+        names.length === 0 ||
+        names.some((n) => configLower.includes(n.toLowerCase()))
+      if (configLower.includes("lópez y asociados") || !mentionsBusiness) {
+        throw new Error(
+          `El repo sigue siendo el TEMPLATE sin personalizar (site.config.ts no menciona "${names.join('" ni "')}"${configLower.includes("lópez y asociados") ? ' y aún trae el demo "López y Asociados"' : ""}). El run anterior murió sin checkpoints y este clone salió de main: re-materializa TODO desde latestSpec (config, es.json, theme, fonts, imágenes, custom) ANTES de pushear. Un fix puntual sobre el template pelón NO es una versión.`,
+        )
+      }
+    }
+
     const message = checkpoint ? `wip: ${escaped}` : escaped
     const push = await sandbox.run({
       command: `cd site && git checkout -B ${branch} && git add -A && git commit -m "${message}" && git push -f origin ${branch}`,

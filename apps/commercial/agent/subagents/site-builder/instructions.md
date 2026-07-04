@@ -174,11 +174,22 @@ materializas:
     materializar el spec (antes de los ciclos de QA) y (b) tras cada
     corrección significativa de QA. Cuesta segundos y hace que cualquier run
     futuro retome tu trabajo.
-12. **Al retomar un trabajo muerto**: `clone_site_repo` detecta la rama
-    `v{N}` en origin (tus checkpoints) y deja el clone ahí —
-    `resumedFromBranch` te lo dice. Revisa `git log` y el estado real de los
-    archivos y CONTINÚA desde ese punto; solo re-materializas desde
-    `latestSpec` si no hubo checkpoints (clone limpio desde main).
+12. **Al retomar un trabajo muerto — protocolo OBLIGATORIO antes de tocar
+    nada**:
+    a. Lee `resumedFromBranch` de clone_site_repo y corre `git log --oneline
+       -5` + `git diff --stat origin/main...HEAD` para saber QUÉ trabajo
+       real hay en el clone.
+    b. Lee `site.config.ts`: ¿tiene los datos del NEGOCIO (nombre,
+       shortName, secciones del spec) o sigue siendo el demo del template
+       ("López y Asociados")?
+    c. Con checkpoints (`resumedFromBranch` = v{N} y config personalizado):
+       CONTINÚA desde ahí — no re-materialices lo que ya está.
+    d. SIN checkpoints (clone desde main = template pelón): re-materializa
+       TODO desde `latestSpec` (config, es.json, theme, fonts, imágenes,
+       custom sections) ANTES de cualquier corrección puntual. Un fix
+       aislado (p. ej. iconos) sobre el template sin personalizar produce
+       un preview vacío — push_site_version lo rechaza, pero no debes
+       llegar ahí.
 
 **Invariante versión = rama.** Cada versión del spec vive en su propia rama
 `v{N}` con su propio preview; `push_site_version` rechaza cualquier N que no
