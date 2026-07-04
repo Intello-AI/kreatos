@@ -3,6 +3,24 @@ import { z } from "zod"
 
 import { getSite } from "../lib/sites"
 
+/**
+ * Superficies EDITABLES del contrato del template. Todo lo demás es MOTOR
+ * (components/sections, components/shared, lib/, scripts/, app/*.tsx...):
+ * adaptarlo a una config inventada rompe el sitio y el contrato.
+ */
+const EDITABLE_PATHS: RegExp[] = [
+  /^site\.config\.ts$/,
+  /^messages\//,
+  /^app\/theme\.css$/,
+  /^app\/fonts\.ts$/,
+  /^app\/(icon|apple-icon|favicon)\.[a-z]+$/,
+  /^public\//,
+  /^components\/custom\//,
+  /^CHANGELOG/i,
+  /^\.qa\//,
+  /^pnpm-lock\.yaml$/,
+]
+
 export default defineTool({
   description:
     "Commit y push del contenido de /workspace/site a la rama v{N} del repo del cliente (NUNCA a main — publicar a main es acción humana). El push FINAL va después de que `pnpm build` y `pnpm qa` pasaron; con checkpoint=true puedes pushear WIP en hitos intermedios para que un run futuro retome donde te quedaste.",
@@ -49,6 +67,37 @@ export default defineTool({
         "No hay cambios que commitear: el working tree está limpio. ¿Aplicaste la personalización sobre el clone? (Si el run anterior murió sin pushear, su trabajo se perdió con su sandbox: re-materializa el spec vigente antes de pushear.)",
       )
     }
+    // Guard anti-motor (solo push FINAL): los cambios deben vivir en las
+    // superficies del contrato. Motor tocado = el agente adaptó el template
+    // a una config inventada (bucle clásico) — se rechaza con la lista.
+    if (!checkpoint) {
+      // Working tree + lo ya commiteado en la rama (checkpoints previos
+      // pudieron traer motor tocado): todo se compara contra main.
+      const changed = await sandbox.run({
+        command: `cd site && git fetch -q origin main 2>/dev/null; git diff origin/main --name-only 2>/dev/null; git status --porcelain`,
+      })
+      const touched = changed.stdout
+        .split("\n")
+        .map((line) => {
+          // Línea porcelain ("XY path") o de diff (path puro).
+          const path = /^[A-Z?! ]{2} /.test(line) ? line.slice(3) : line
+          const trimmed = path.trim()
+          // Renames: "R  viejo -> nuevo" — cuenta el destino.
+          return trimmed.includes(" -> ")
+            ? trimmed.split(" -> ")[1]
+            : trimmed
+        })
+        .filter(Boolean)
+      const engineTouched = touched.filter(
+        (path) => !EDITABLE_PATHS.some((re) => re.test(path)),
+      )
+      if (engineTouched.length > 0) {
+        throw new Error(
+          `Push rechazado: modificaste ${engineTouched.length} archivo(s) del MOTOR del template (prohibido por contrato): ${engineTouched.slice(0, 12).join(", ")}. El motor nunca se adapta a tu config — tu config se adapta al motor (lib/config.ts es la fuente de verdad). Revierte con \`git checkout -- <archivos>\` (o corre reset_site_repo si el motor quedó irreconocible), ajusta site.config.ts/es.json al schema real y vuelve a build.`,
+        )
+      }
+    }
+
     // Guard anti-template (solo push FINAL): si site.config.ts sigue siendo
     // el demo del template o no menciona al negocio, el repo NO está
     // personalizado — pushearlo desplegaría el template pelón como preview.

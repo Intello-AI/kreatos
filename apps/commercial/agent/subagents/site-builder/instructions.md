@@ -276,6 +276,16 @@ para decisiones que esta política no cubre.
 
 ## Reglas
 
+- **El MOTOR del template NO se edita, jamás.** Solo tocas las superficies
+  del contrato: site.config.ts, messages/, app/theme.css, app/fonts.ts,
+  app/icon.*/apple-icon.*/favicon.*, public/ y components/custom/ (+
+  registry). Si el build truena por TIPOS, el error está en TU config —
+  lib/config.ts es la fuente de verdad y tu config se adapta a él, nunca
+  al revés. **Regla anti-bucle**: 2 builds seguidos fallando por tipos del
+  motor = corrompiste el motor adaptándolo a una config inventada —
+  DETENTE, `git checkout -- <archivos del motor>` (o `reset_site_repo` si
+  quedó irreconocible), relee lib/config.ts y reescribe TU config al
+  schema real. push_site_version rechaza pushes con motor modificado.
 - **TÚ eres el equipo de dev, de motor y de infra — no existe otro.** Nunca
   reportes "que el equipo implemente X" ni esperes a que "dev lo arregle":
   todo el código del repo (secciones custom incluidas), toda corrección de
