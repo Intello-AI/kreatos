@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import {
+  ArrowBendUpLeftIcon,
   CaretDownIcon,
   CaretRightIcon,
   CheckIcon,
+  CopyIcon,
   FileTextIcon,
   GlobeIcon,
   ListChecksIcon,
@@ -248,10 +250,47 @@ function parseUserReply(label: string): {
     .trim()
 
   const match = text.match(
-    /^Respondiendo a la pregunta pendiente \(«([\s\S]+?)»\):\s*([\s\S]*)$/
+    /^Respondiendo a (?:la pregunta pendiente|tu mensaje) \(«([\s\S]+?)»\):\s*([\s\S]*)$/
   )
   if (!match) return { text, images }
   return { quote: match[1], text: match[2], images }
+}
+
+/** Acciones de burbuja estilo app de chat: copiar y responder con cita. */
+function BubbleActions({
+  text,
+  onReply,
+}: {
+  text: string
+  onReply?: () => void
+}) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <div className="flex items-center gap-0.5 opacity-100 transition-opacity md:opacity-0 md:group-hover/msg:opacity-100 md:has-[:focus-visible]:opacity-100">
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        aria-label="Copiar mensaje"
+        onClick={() => {
+          void navigator.clipboard.writeText(text)
+          setCopied(true)
+          setTimeout(() => setCopied(false), 1500)
+        }}
+      >
+        {copied ? <CheckIcon className="text-success" /> : <CopyIcon />}
+      </Button>
+      {onReply && (
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          aria-label="Responder a este mensaje"
+          onClick={onReply}
+        >
+          <ArrowBendUpLeftIcon />
+        </Button>
+      )}
+    </div>
+  )
 }
 
 function formatTime(at: string): string {
@@ -393,6 +432,9 @@ export function SiteActivity({
     requestId: string
     prompt: string
   } | null>(null)
+  // "Responder" a un mensaje del agente: la cita viaja en el texto (contexto
+  // para el agente) y se renderiza como BubbleQuote.
+  const [replyTo, setReplyTo] = useState<string | null>(null)
   // El root está generando (entre eventos no hay nada visible: p. ej. tras
   // el reporte del subagente, mientras redacta su respuesta) → "Pensando…".
   const [rootBusy, setRootBusy] = useState(false)
@@ -887,9 +929,13 @@ export function SiteActivity({
   const onSend = () => {
     const answering = pendingInput
     const files = staged
+    const quoting = replyTo
     startTransition(async () => {
       // Si hay adjuntos: primero se suben, y sus URLs viajan en el texto.
       let text = message
+      if (quoting && !answering && text.trim()) {
+        text = `Respondiendo a tu mensaje («${quoting.slice(0, 240)}»): ${text}`
+      }
       if (files.length > 0 && handlers?.upload) {
         const up = await handlers.upload(files.map((s) => s.file))
         if (up.formError) {
@@ -918,6 +964,7 @@ export function SiteActivity({
       } else {
         setMessage("")
         clearStaged()
+        setReplyTo(null)
         // La respuesta viaja también como message del turno, así que aparece
         // en el stream como burbuja tuya — sin push local.
         if (answering) setPendingInput(null)
@@ -1075,7 +1122,14 @@ export function SiteActivity({
                       <TaskBlock header={block.header} items={block.items} />
                     </MessageScrollerItem>
                   ) : (
-                    <BlockItem key={block.key} item={block.item} />
+                    <BlockItem
+                      key={block.key}
+                      item={block.item}
+                      onReply={(text) => {
+                        setReplyTo(text)
+                        composerRef.current?.focus()
+                      }}
+                    />
                   )
                 )
               )}
@@ -1109,6 +1163,23 @@ export function SiteActivity({
               size="icon-xs"
               onClick={() => setPendingInput(null)}
               aria-label="Descartar pregunta (volver a mensaje normal)"
+            >
+              <XIcon />
+            </Button>
+          </div>
+        )}
+        {replyTo && !pendingInput && (
+          // Cita activa: el mensaje del agente al que respondes, con X.
+          <div className="flex items-start gap-2 border-t bg-muted/40 px-3 py-2">
+            <ArrowBendUpLeftIcon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+            <p className="line-clamp-2 min-w-0 flex-1 text-[11px] leading-snug text-muted-foreground">
+              {replyTo}
+            </p>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => setReplyTo(null)}
+              aria-label="Quitar cita"
             >
               <XIcon />
             </Button>
@@ -1534,7 +1605,13 @@ function TaskBlock({
 }
 
 /** Bloques individuales: mensajes tuyos/del agente, errores y status. */
-function BlockItem({ item }: { item: ActivityItem }) {
+function BlockItem({
+  item,
+  onReply,
+}: {
+  item: ActivityItem
+  onReply?: (text: string) => void
+}) {
   return (
     <MessageScrollerItem messageId={item.id}>
       {item.kind === "user" ? (
@@ -1585,7 +1662,7 @@ function BlockItem({ item }: { item: ActivityItem }) {
           )
         })()
       ) : item.kind === "text" ? (
-        <Message>
+        <Message className="group/msg">
           <MessageContent>
             <MessageHeader className="gap-3 pl-0">
               <div className="flex gap-1">
@@ -1603,6 +1680,10 @@ function BlockItem({ item }: { item: ActivityItem }) {
                 </Streamdown>
               </BubbleContent>
             </Bubble>
+            <BubbleActions
+              text={item.label}
+              onReply={onReply ? () => onReply(item.label) : undefined}
+            />
           </MessageContent>
         </Message>
       ) : item.kind === "report" ? (
