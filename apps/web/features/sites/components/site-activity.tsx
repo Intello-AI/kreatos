@@ -26,6 +26,7 @@ import { toast } from "sonner"
 
 import { answerSiteInput, sendSiteMessage } from "@/features/sites/actions"
 import { Shimmer } from "@/components/ai-elements/shimmer"
+import { ClaudeAI, OpenAI } from "@/components/icons"
 import { formatTime as formatTimeInUserTz } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import {
@@ -90,6 +91,8 @@ interface ActivityItem {
   outputJson?: string
   /** Presente cuando la acción es una delegación a subagente. */
   subagentName?: string
+  /** modelId del runtime de la sesión que emitió el evento (session.started). */
+  model?: string
 }
 
 interface StreamEvent {
@@ -249,6 +252,24 @@ function formatTime(at: string): string {
   return formatTimeInUserTz(at)
 }
 
+/** Badge discreto con el modelo que emitió el mensaje (icono por proveedor). */
+function ModelBadge({ model }: { model?: string }) {
+  if (!model) return null
+  const short = model.split("/").pop() ?? model
+  const isClaude = /claude/i.test(model)
+  const isOpenAI = /gpt|openai|o\d/i.test(model)
+  return (
+    <span className="flex items-center gap-1 text-[10px] font-normal text-muted-foreground/70">
+      {isClaude ? (
+        <ClaudeAI className="size-3 shrink-0" />
+      ) : isOpenAI ? (
+        <OpenAI className="size-3 shrink-0 fill-current" />
+      ) : null}
+      {short}
+    </span>
+  )
+}
+
 export interface ActivityHandlers {
   send: (text: string) => Promise<{ formError?: string } | void>
   answer: (
@@ -302,6 +323,9 @@ export function SiteActivity({
     requestId: string
     prompt: string
   } | null>(null)
+  // El root está generando (entre eventos no hay nada visible: p. ej. tras
+  // el reporte del subagente, mientras redacta su respuesta) → "Pensando…".
+  const [rootBusy, setRootBusy] = useState(false)
 
   useEffect(() => {
     lifetimeAbort.current = new AbortController()
@@ -355,15 +379,46 @@ export function SiteActivity({
     event: StreamEvent,
     depth: 0 | 1,
     live: boolean,
-    runIdx: number
+    runIdx: number,
+    sessionMeta: { model?: string }
   ) => {
     const d = event.data ?? {}
     const at = event.meta?.at ?? ""
+    if (event.type === "session.started") {
+      const runtime = (d["runtime"] ?? {}) as Record<string, unknown>
+      if (runtime["modelId"]) sessionMeta.model = String(runtime["modelId"])
+      return
+    }
+    // Indicador "Pensando…" del root (solo run vivo): ocupado desde que
+    // arranca turno/step; libre cuando responde, pregunta, espera o falla.
+    if (live && depth === 0) {
+      if (
+        event.type === "turn.started" ||
+        event.type === "step.started" ||
+        event.type === "message.received"
+      ) {
+        setRootBusy(true)
+      } else if (
+        event.type === "message.completed" ||
+        event.type === "input.requested" ||
+        event.type === "session.waiting" ||
+        event.type === "turn.completed" ||
+        event.type === "turn.failed" ||
+        event.type === "session.failed" ||
+        event.type === "step.failed"
+      ) {
+        setRootBusy(false)
+      }
+    }
     // Orden cronológico REAL: (run, timestamp del evento). Ordenar por llegada
     // desordenaba root vs subagente (streams paralelos, replay a ritmos
     // distintos). Empates conservan orden de llegada (sort estable).
-    const add = (item: Omit<ActivityItem, "id" | "sortKey">) =>
-      push({ ...item, sortKey: runIdx * 1e13 + (Date.parse(at) || 0) })
+    const add = (item: Omit<ActivityItem, "id" | "sortKey" | "model">) =>
+      push({
+        ...item,
+        model: sessionMeta.model,
+        sortKey: runIdx * 1e13 + (Date.parse(at) || 0),
+      })
     switch (event.type) {
       case "actions.requested": {
         const actions = (d["actions"] ?? []) as Array<Record<string, unknown>>
@@ -515,6 +570,8 @@ export function SiteActivity({
   ) => {
     const controller = lifetimeAbort.current
     if (!controller) return
+    // Modelo de ESTA sesión (root o hijo), llenado por su session.started.
+    const sessionMeta: { model?: string } = {}
     const local = new AbortController()
     if (live && depth === 0) {
       // Un run vivo nuevo sustituye al anterior: se corta la conexión vieja.
@@ -550,7 +607,13 @@ export function SiteActivity({
         for (const line of lines) {
           if (!line.trim()) continue
           try {
-            handleEvent(JSON.parse(line) as StreamEvent, depth, live, runIdx)
+            handleEvent(
+              JSON.parse(line) as StreamEvent,
+              depth,
+              live,
+              runIdx,
+              sessionMeta
+            )
           } catch {
             // línea parcial: ignorar
           }
@@ -870,6 +933,20 @@ export function SiteActivity({
                     <BlockItem key={block.key} item={block.item} />
                   )
                 )
+              )}
+              {rootBusy && (
+                <MessageScrollerItem scrollAnchor={false}>
+                  <div className="flex items-center gap-2">
+                    <Image
+                      src="/avatar-agent.svg"
+                      alt=""
+                      width={16}
+                      height={16}
+                      className="size-4 shrink-0"
+                    />
+                    <Shimmer className="text-xs font-medium">Pensando…</Shimmer>
+                  </div>
+                </MessageScrollerItem>
               )}
             </MessageScrollerContent>
           </MessageScrollerViewport>
@@ -1194,8 +1271,9 @@ function ReportItem({ item }: { item: ActivityItem }) {
           <span aria-hidden className="w-0.5 bg-border" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-xs font-medium text-foreground mb-1">
+          <span className="mb-1 flex items-center gap-1.5 text-xs font-medium text-foreground">
             Reporte a Agente
+            <ModelBadge model={item.model} />
           </span>
           <p className="line-clamp-3 text-xs text-muted-foreground group-data-[state=open]/report:line-clamp-none">
             {item.label}
@@ -1239,6 +1317,7 @@ function TaskBlock({
           )}
         />
         <span className="shrink-0 font-medium text-foreground">{name}</span>
+        <ModelBadge model={items.find((i) => i.model)?.model} />
         {active ? (
           <Shimmer className="min-w-0 truncate text-xs">
             {current?.label ?? "Trabajando…"}
@@ -1354,6 +1433,7 @@ function BlockItem({ item }: { item: ActivityItem }) {
                 className="size-4 shrink-0"
               />
               Kreatos AI
+              <ModelBadge model={item.model} />
             </MessageHeader>
             <Bubble variant="muted">
               <BubbleContent>
@@ -1391,6 +1471,7 @@ function BlockItem({ item }: { item: ActivityItem }) {
                 className="size-4 shrink-0"
               />
               Kreatos AI — pregunta y espera tu respuesta
+              <ModelBadge model={item.model} />
             </MessageHeader>
             <Bubble variant="outline">
               <BubbleContent>

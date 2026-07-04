@@ -33,7 +33,8 @@ export async function getLeads({
   let query = supabase
     .from("leads")
     .select(
-      "id, place_id, name, category, business_type, google_types, description, address, phone, email, rating, reviews_count, maps_uri, city, status, status_updated_at, notes, site_instructions, fetched_at, created_at",
+      // sites(id): 1:1 por lead — decide "Generar sitio" vs "Ver sitio".
+      "id, place_id, name, category, business_type, google_types, description, address, phone, email, rating, reviews_count, maps_uri, city, status, status_updated_at, notes, site_instructions, fetched_at, created_at, website, sites(id)",
       { count: "exact" }
     )
 
@@ -60,7 +61,13 @@ export async function getLeads({
     return { leads: [], count: 0, error: error.message }
   }
 
-  return { leads: (data ?? []) as Lead[], count: count ?? 0, error: null }
+  // PostgREST devuelve la relación embebida como array aunque sea 1:1
+  // (unique en lead_id); se normaliza a objeto|null.
+  const leads = (data ?? []).map((row) => ({
+    ...row,
+    sites: Array.isArray(row.sites) ? (row.sites[0] ?? null) : row.sites,
+  })) as unknown as Lead[]
+  return { leads, count: count ?? 0, error: null }
 }
 
 /** Ciudades distintas presentes en leads, para el filtro. Server-only. */

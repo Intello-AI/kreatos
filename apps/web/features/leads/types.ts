@@ -10,8 +10,14 @@ export const LEAD_STATUSES = [
 
 export type LeadStatus = (typeof LEAD_STATUSES)[number]
 
-/** Fila de la tabla `leads` (generada), con `status` como unión estricta. */
-export type Lead = Omit<Tables<"leads">, "status"> & { status: LeadStatus }
+/**
+ * Fila de la tabla `leads` (generada), con `status` como unión estricta y el
+ * site 1:1 embebido (solo id) para linkear "Ver sitio" desde la tabla.
+ */
+export type Lead = Omit<Tables<"leads">, "status"> & {
+  status: LeadStatus
+  sites: { id: string } | null
+}
 
 /** Hito o nota en el timeline de un lead (tabla lead_activity). */
 export type LeadActivity = Tables<"lead_activity">

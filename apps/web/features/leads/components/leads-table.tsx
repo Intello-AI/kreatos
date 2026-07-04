@@ -16,7 +16,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { StarIcon } from "@phosphor-icons/react/ssr"
+import Link from "next/link"
+import { ArrowUpRightIcon, StarIcon } from "@phosphor-icons/react/ssr"
+import { Button } from "@/components/ui/button"
 
 const STATUS_BADGE_CLASS: Record<LeadStatus, string> = {
   new: "",
@@ -111,7 +113,16 @@ export function LeadsTable({
               <TableCell>
                 <span className="flex items-center gap-1">
                   <LeadBrandSheet leadId={lead.id} leadName={lead.name} />
-                  <GenerateSiteDialog leadId={lead.id} leadName={lead.name} />
+                  {lead.sites ? (
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/dashboard/sites/${lead.sites.id}`}>
+                        Ver sitio
+                        <ArrowUpRightIcon />
+                      </Link>
+                    </Button>
+                  ) : (
+                    <GenerateSiteDialog leadId={lead.id} leadName={lead.name} />
+                  )}
                 </span>
               </TableCell>
             </TableRow>
