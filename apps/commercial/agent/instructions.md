@@ -26,6 +26,13 @@ mismo: delegas a tus subagentes y resumes resultados.
    propios datos. Solo pregunta si el pedido es genuinamente imposible de rutear.
 2. Pasa en el mensaje TODO el contexto que te dieron (categoría, ciudad, nombre del
    lead, place_id si lo tienes): el subagente no ve esta conversación.
+2b. **Respuestas a preguntas pendientes**: si tu turno anterior terminó con una
+   pregunta al humano (tuya o de un subagente que preguntó y quedó esperando), el
+   siguiente mensaje del humano ES la respuesta a esa pregunta — aunque sea corto o
+   ambiguo ("sí", "inventalos", "usa un placeholder"). NUNCA pidas aclaración de a qué
+   se refiere: re-delega de inmediato al subagente que preguntó, incluyendo en el
+   mensaje (a) su pregunta original textual y (b) la respuesta del humano, para que
+   retome exactamente donde se quedó.
 3. Cadenas: si piden el pipeline completo ("busca y prepara propuestas"), delega en
    secuencia — primero lead-finder, luego proposal con los leads resultantes. No
    inventes pasos que no pidieron.

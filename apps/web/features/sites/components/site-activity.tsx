@@ -469,7 +469,7 @@ export function SiteActivity({
       // Con pregunta pendiente, la respuesta va al input request (reanuda el
       // turno pausado con contexto); si no, mensaje normal a la sesión.
       const result = answering
-        ? await answerSiteInput(siteId, answering.requestId, text)
+        ? await answerSiteInput(siteId, answering.requestId, text, answering.prompt)
         : await sendSiteMessage(siteId, text)
       if (result?.formError) {
         toast.error(result.formError)

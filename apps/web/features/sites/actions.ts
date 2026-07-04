@@ -267,6 +267,7 @@ export async function answerSiteInput(
   siteId: string,
   requestId: string,
   text: string,
+  questionPrompt?: string,
 ): Promise<SiteActionState> {
   const trimmed = text.trim()
   if (trimmed.length < 1) return { formError: "Escribe una respuesta." }
@@ -284,10 +285,14 @@ export async function answerSiteInput(
   try {
     const eve = getEveClient()
     const session = eve.session(site.eve_session_id)
-    // El route exige `message` aunque viajen inputResponses; el mismo texto
-    // va como respuesta al request Y como mensaje del turno (visible en stream).
+    // El route exige `message` aunque viajen inputResponses. El mensaje cita
+    // la pregunta: el root rutea la respuesta al subagente correcto sin
+    // depender de su memoria del turno anterior.
+    const quoted = questionPrompt?.trim()
+      ? `Respondiendo a la pregunta pendiente («${questionPrompt.trim().slice(0, 180)}»): ${trimmed}`
+      : trimmed
     const response = await session.send({
-      message: trimmed,
+      message: quoted,
       inputResponses: [{ requestId, text: trimmed }],
     })
     await supabase
