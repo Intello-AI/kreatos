@@ -31,9 +31,20 @@ export default defineTool({
       { name: "mobile", viewport: "390,844" },
     ]
     for (const shot of shots) {
-      const capture = await sandbox.run({
-        command: `cd /tmp && pnpm dlx playwright@1.55.0 screenshot --viewport-size="${shot.viewport}" --full-page --wait-for-timeout=4000 "${url}" ${shot.name}.png`,
-      })
+      const shotCommand = `cd /tmp && pnpm dlx playwright@1.55.0 screenshot --viewport-size="${shot.viewport}" --full-page --wait-for-timeout=4000 "${url}" ${shot.name}.png`
+      let capture = await sandbox.run({ command: shotCommand })
+      // Self-healing: si el snapshot del sandbox se cacheó sin chromium (el
+      // bootstrap traga errores), se instala aquí mismo y se reintenta.
+      if (
+        capture.exitCode !== 0 &&
+        `${capture.stderr}${capture.stdout}`.includes("playwright install")
+      ) {
+        await sandbox.run({
+          command:
+            "cd /tmp && pnpm dlx playwright@1.55.0 install chromium --with-deps",
+        })
+        capture = await sandbox.run({ command: shotCommand })
+      }
       if (capture.exitCode !== 0) {
         throw new Error(
           `La captura ${shot.name} falló (exit ${capture.exitCode}): ${[capture.stderr, capture.stdout].filter(Boolean).join("\n").slice(-500)}`,

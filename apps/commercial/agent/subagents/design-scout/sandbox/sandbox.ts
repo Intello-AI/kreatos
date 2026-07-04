@@ -7,7 +7,10 @@ import { defineSandbox, defaultBackend } from "eve/sandbox"
  */
 export default defineSandbox({
   backend: defaultBackend(),
-  revalidationKey: () => "design-scout-v1",
+  // v2: invalida el snapshot que quedó cacheado SIN chromium (el bootstrap
+  // tragaba el error de instalación y capture_screenshots moría con
+  // "Playwright was just installed or updated").
+  revalidationKey: () => "design-scout-v2",
   async bootstrap({ use }) {
     const sandbox = await use()
     await sandbox.run({

@@ -111,6 +111,49 @@ export async function listAnalyzedReferences(): Promise<
   return (data ?? []) as Array<{ slug: string; url: string }>
 }
 
+/**
+ * Re-análisis de una referencia (analizada, fallida o atorada): la regresa a
+ * `pending` y manda al scout a re-capturarla y sobreescribir su análisis.
+ */
+export async function reanalyzeReference(
+  id: string,
+): Promise<ReferenceActionState> {
+  const supabase = getAdminClient()
+  const { data: ref, error } = await supabase
+    .from("design_references")
+    .update({ status: "pending" })
+    .eq("id", id)
+    .select("slug, url")
+    .single()
+  if (error || !ref) {
+    return {
+      formError: `No se pudo marcar: ${error?.message ?? "la referencia no existe"}`,
+    }
+  }
+
+  let started = false
+  try {
+    const eve = getEveClient()
+    await eve
+      .session()
+      .send(
+        `Re-analiza la referencia de diseño ${ref.url} (slug ${ref.slug}): quedó marcada como pendiente. Vuelve a capturar sus screenshots y sobreescribe su análisis completo.`,
+      )
+    started = true
+  } catch {
+    started = false
+  }
+  if (!started) {
+    return {
+      formError:
+        "Quedó pendiente, pero no se pudo arrancar el agente; usa Analizar pendientes.",
+    }
+  }
+
+  revalidatePath("/dashboard/references")
+  return { ok: true, analysisStarted: true }
+}
+
 /** Manda al agente a analizar todas las referencias pendientes. */
 export async function analyzeReferences(): Promise<ReferenceActionState> {
   const supabase = getAdminClient()

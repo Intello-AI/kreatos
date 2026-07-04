@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { StarIcon, ArrowUpRightIcon } from "@phosphor-icons/react/ssr"
 
+import { ReanalyzeButton } from "@/features/references/components/reanalyze-button"
 import { ReferencePreview } from "@/features/references/components/reference-preview"
 import { ReferencesRefresh } from "@/features/references/components/references-refresh"
 import { ReferencesComposer } from "@/features/references/components/references-toolbar"
@@ -121,6 +122,7 @@ export default async function ReferencesPage() {
                       .replace(/\/$/, "")}{" "}
                     <ArrowUpRightIcon className="size-3" />
                   </Link>
+                  <ReanalyzeButton id={ref.id} />
                 </div>
               </li>
             ))}
