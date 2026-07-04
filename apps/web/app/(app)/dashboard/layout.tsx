@@ -1,13 +1,8 @@
 import { cookies } from "next/headers"
-import Link from "next/link"
 
 import { AppSidebar } from "@/components/app-sidebar"
-import { Logo } from "@/components/icons"
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar"
+import { DashboardHeader } from "@/components/dashboard-header"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
 const LayoutDashboard = async ({ children }: { children: React.ReactNode }) => {
   const cookieStore = await cookies()
@@ -17,18 +12,8 @@ const LayoutDashboard = async ({ children }: { children: React.ReactNode }) => {
     <SidebarProvider defaultOpen={defaultOpen}>
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-2 bg-sidebar sticky top-0 z-10">
-          {/* En mobile el sidebar es un Sheet cerrado: sin este trigger no
-              hay forma de abrirlo. En desktop el trigger vive en el sidebar. */}
-          <SidebarTrigger size="icon" className="md:hidden" />
-          <Link
-            href="/dashboard"
-            aria-label="Ir al dashboard"
-            className="flex items-center md:hidden"
-          >
-            <Logo className="h-5 w-auto" />
-          </Link>
-        </header>
+        {/* Oculto en /dashboard: el chat pone su propio header h-12. */}
+        <DashboardHeader />
         {children}
       </SidebarInset>
     </SidebarProvider>

@@ -67,6 +67,7 @@ import {
   MessageScrollerProvider,
   MessageScrollerViewport,
 } from "@/components/ui/message-scroller"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -849,8 +850,16 @@ export function SiteActivity({
   // al scrollear hasta arriba (sentinel), insertándose en su lugar.
   useEffect(() => {
     const lastRunId = runIds[runIds.length - 1]
-    if (!lastRunId || consumedRuns.current.has(lastRunId)) return
+    const claimed = consumedRuns.current
+    if (!lastRunId || claimed.has(lastRunId)) return
     startRun(lastRunId, true)
+    return () => {
+      // StrictMode (dev) desmonta/remonta: liberar el claim SÍNCRONO aquí
+      // (un delete en el finally async del consume llega tarde — el segundo
+      // effect corre antes que la microtask). El cursor por sesión evita
+      // duplicados si algo alcanzó a procesarse antes del abort.
+      claimed.delete(lastRunId)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runIdsKey])
 
@@ -1149,11 +1158,23 @@ export function SiteActivity({
                 </MessageScrollerItem>
               )}
               {blocks.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  {runIds.length === 0
-                    ? "Sin conversación todavía — escríbele abajo para empezar."
-                    : "Conectando al stream…"}
-                </p>
+                runIds.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Sin conversación todavía — escríbele abajo para empezar.
+                  </p>
+                ) : (
+                  // Replay en camino: esqueleto de conversación.
+                  <div className="space-y-5">
+                    <div className="flex justify-end">
+                      <Skeleton className="h-14 w-3/5" />
+                    </div>
+                    <div className="space-y-2">
+                      <Skeleton className="h-3.5 w-32" />
+                      <Skeleton className="h-20 w-4/5" />
+                    </div>
+                    <Skeleton className="h-9 w-full" />
+                  </div>
+                )
               ) : (
                 blocks.map((block) =>
                   block.type === "actions" ? (
