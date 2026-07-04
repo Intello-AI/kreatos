@@ -249,6 +249,9 @@ importers:
       '@types/react-dom':
         specifier: 19.2.3
         version: 19.2.3(@types/react@19.2.17)
+      commercial:
+        specifier: workspace:*
+        version: link:../commercial
       eslint:
         specifier: ^9
         version: 9.39.1(jiti@2.7.0)
