@@ -89,3 +89,24 @@ export function parseLeadStatus(
     ? (value as LeadStatus)
     : undefined
 }
+
+/** Detalle de un lead (todas las columnas + su site 1:1). Server-only. */
+export async function getLeadDetail(id: string): Promise<{
+  lead: Lead | null
+  error: string | null
+}> {
+  const supabase = getAdminClient()
+  const { data, error } = await supabase
+    .from("leads")
+    .select("*, sites(id)")
+    .eq("id", id)
+    .maybeSingle()
+
+  if (error) return { lead: null, error: error.message }
+  if (!data) return { lead: null, error: null }
+  const lead = {
+    ...data,
+    sites: Array.isArray(data.sites) ? (data.sites[0] ?? null) : data.sites,
+  } as unknown as Lead
+  return { lead, error: null }
+}

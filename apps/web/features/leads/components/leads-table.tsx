@@ -1,13 +1,7 @@
-import {
-  LEAD_STATUS_LABELS,
-  type Lead,
-  type LeadStatus,
-} from "@/features/leads/types"
+import { type Lead } from "@/features/leads/types"
 import { GenerateSiteDialog } from "@/features/sites/components/generate-site-dialog"
-import { LeadBrandSheet } from "@/features/leads/components/lead-brand-sheet"
+import { LeadStatusBadge } from "@/features/leads/components/lead-status-badge"
 import { formatDate } from "@/lib/dates"
-import { cn } from "@/lib/utils"
-import { Badge } from "@/components/ui/badge"
 import {
   Table,
   TableBody,
@@ -19,37 +13,6 @@ import {
 import Link from "next/link"
 import { ArrowUpRightIcon, StarIcon } from "@phosphor-icons/react/ssr"
 import { Button } from "@/components/ui/button"
-
-const STATUS_BADGE_CLASS: Record<LeadStatus, string> = {
-  new: "",
-  proposal_ready: "border-warning/30 bg-warning/10 dark:bg-warning/15",
-  contacted: "border-info/30 bg-info/10 dark:bg-info/15",
-  won: "border-success/30 bg-success/10 dark:bg-success/15",
-  lost: "border-error/30 bg-error/10 dark:bg-error/15",
-}
-
-const STATUS_DOT_CLASS: Record<LeadStatus, string> = {
-  new: "bg-muted-foreground/50",
-  proposal_ready: "bg-warning",
-  contacted: "bg-info",
-  won: "bg-success",
-  lost: "bg-error",
-}
-
-function LeadStatusBadge({ status }: { status: LeadStatus }) {
-  return (
-    <Badge
-      variant="outline"
-      className={cn("gap-1.5", STATUS_BADGE_CLASS[status])}
-    >
-      <span
-        aria-hidden
-        className={cn("size-1.5 rounded-full", STATUS_DOT_CLASS[status])}
-      />
-      {LEAD_STATUS_LABELS[status]}
-    </Badge>
-  )
-}
 
 export function LeadsTable({
   leads,
@@ -86,7 +49,14 @@ export function LeadsTable({
         <TableBody>
           {leads.map((lead) => (
             <TableRow key={lead.id}>
-              <TableCell className="font-medium">{lead.name ?? "—"}</TableCell>
+              <TableCell className="font-medium">
+                <Link
+                  href={`/dashboard/leads/${lead.id}`}
+                  className="underline-offset-2 hover:underline"
+                >
+                  {lead.name ?? "—"}
+                </Link>
+              </TableCell>
               <TableCell className="text-muted-foreground">
                 {lead.category ?? "—"}
               </TableCell>
@@ -112,7 +82,6 @@ export function LeadsTable({
               </TableCell>
               <TableCell>
                 <span className="flex items-center gap-1">
-                  <LeadBrandSheet leadId={lead.id} leadName={lead.name} />
                   {lead.sites ? (
                     <Button asChild variant="outline" size="sm">
                       <Link href={`/dashboard/sites/${lead.sites.id}`}>

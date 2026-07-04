@@ -10,14 +10,24 @@ export interface BrandActionState {
   formError?: string
 }
 
+export interface BrandVoice {
+  tone?: string
+  register?: "usted" | "tu"
+  personality?: string
+  keywords?: string[]
+  avoid?: string[]
+}
+
 export interface LeadBrandData {
   short_name: string | null
   logo_path: string | null
+  icon_path: string | null
   colors: string[]
   tagline: string | null
   services: Array<{ name: string; description: string }>
   differentiators: string | null
   notes: string | null
+  voice: BrandVoice | null
   images: string[]
   eve_run_ids: string[]
 }
@@ -36,12 +46,14 @@ export async function getLeadBrand(
   return {
     short_name: data.short_name,
     logo_path: data.logo_path,
+    icon_path: data.icon_path,
     colors: (data.colors as string[]) ?? [],
     tagline: data.tagline,
     services:
       (data.services as Array<{ name: string; description: string }>) ?? [],
     differentiators: data.differentiators,
     notes: data.notes,
+    voice: (data.voice as LeadBrandData["voice"]) ?? null,
     images: (data.images as string[]) ?? [],
     eve_run_ids: data.eve_run_ids ?? [],
   }

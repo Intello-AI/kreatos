@@ -335,6 +335,8 @@ export function SiteActivity({
   onClose,
   handlers,
   hideHeader = false,
+  title = "Monitor de actividad",
+  description = "Revisa que está haciendo el agente, puedes enviarle mensajes debajo.",
 }: {
   /** Cadena completa de runs de la sesión, en orden; el último es el vivo. */
   runIds: string[]
@@ -348,6 +350,9 @@ export function SiteActivity({
   handlers?: ActivityHandlers
   /** Oculta el header propio (cuando el host ya pone título, p. ej. sheet). */
   hideHeader?: boolean
+  /** Título y subtítulo del header (default: monitor del sitio). */
+  title?: string
+  description?: string
 }) {
   const router = useRouter()
   const [items, setItems] = useState<ActivityItem[]>([])
@@ -970,11 +975,8 @@ export function SiteActivity({
       {!hideHeader && (
         <div className="flex shrink-0 items-start justify-between gap-2 p-3">
           <div>
-            <h2 className="text-sm font-medium">Monitor de actividad</h2>
-            <p className="text-xs text-muted-foreground">
-              Revisa que está haciendo el agente, puedes enviarle mensajes
-              debajo.
-            </p>
+            <h2 className="text-sm font-medium">{title}</h2>
+            <p className="text-xs text-muted-foreground">{description}</p>
           </div>
           <div className="flex items-center gap-1">
             <Badge
