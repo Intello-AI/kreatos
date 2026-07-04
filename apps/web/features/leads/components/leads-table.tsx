@@ -3,6 +3,7 @@ import {
   type Lead,
   type LeadStatus,
 } from "@/features/leads/types"
+import { GenerateSiteDialog } from "@/features/sites/components/generate-site-dialog"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -75,6 +76,7 @@ export function LeadsTable({
             <TableHead>Rating</TableHead>
             <TableHead>Estado</TableHead>
             <TableHead>Creado</TableHead>
+            <TableHead>Sitio</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -107,6 +109,9 @@ export function LeadsTable({
                   month: "short",
                   year: "numeric",
                 })}
+              </TableCell>
+              <TableCell>
+                <GenerateSiteDialog leadId={lead.id} leadName={lead.name} />
               </TableCell>
             </TableRow>
           ))}

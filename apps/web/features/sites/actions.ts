@@ -1,0 +1,236 @@
+"use server"
+
+import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
+import { Client } from "eve/client"
+
+import { getAdminClient } from "@/lib/supabase/admin"
+import {
+  siteBriefSchema,
+  type SiteActionState,
+  type SiteBriefInput,
+} from "@/features/sites/schemas"
+
+/**
+ * Cliente del agente eve. withEve monta las rutas /eve/v1/* en este mismo
+ * deployment; en dev el canal acepta con localDev(). El host se puede
+ * sobreescribir con EVE_HOST.
+ */
+function getEveClient(): Client {
+  const host =
+    process.env.EVE_HOST ??
+    (process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "http://127.0.0.1:3000")
+  return new Client({ host })
+}
+
+function slugify(input: string): string {
+  return input
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60)
+}
+
+export async function createSiteBrief(
+  leadId: string,
+  input: SiteBriefInput,
+): Promise<SiteActionState> {
+  const parsed = siteBriefSchema.safeParse(input)
+  if (!parsed.success) {
+    return { formError: "Brief inválido." }
+  }
+
+  const supabase = getAdminClient()
+
+  const { data: lead, error: leadError } = await supabase
+    .from("leads")
+    .select("id, place_id, name, city, website, site_instructions")
+    .eq("id", leadId)
+    .maybeSingle()
+  if (leadError || !lead) {
+    return { formError: "Lead no encontrado." }
+  }
+
+  const slug = slugify(`${lead.name ?? lead.place_id}-${lead.city.split(",")[0]}`)
+
+  const { data: site, error: insertError } = await supabase
+    .from("sites")
+    .insert({
+      lead_id: leadId,
+      slug,
+      brief: parsed.data,
+    })
+    .select("id")
+    .single()
+  if (insertError) {
+    // 23505 = unique violation: ya hay sitio para este lead.
+    if (insertError.code === "23505") {
+      return { formError: "Este lead ya tiene un sitio. Ábrelo en Sitios." }
+    }
+    return { formError: `No se pudo crear el sitio: ${insertError.message}` }
+  }
+
+  await supabase.from("lead_activity").insert({
+    lead_id: leadId,
+    type: "site_brief_created",
+    note: `Brief creado para ${slug} (preset: ${parsed.data.preset}).`,
+    actor: "manual",
+  })
+
+  // Arranca la sesión del agente y responde de inmediato: la generación tarda
+  // minutos y el progreso se refleja en la BDD (status del site).
+  try {
+    const eve = getEveClient()
+    const session = eve.session()
+    const response = await session.send(
+      [
+        `Genera el sitio web para el site ${site.id} (lead "${lead.name}", ${lead.city}).`,
+        lead.website ? `Es un rediseño: el sitio actual es ${lead.website}.` : "",
+        parsed.data.instructions
+          ? `Instrucciones del brief: ${parsed.data.instructions}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" "),
+    )
+    await supabase
+      .from("sites")
+      .update({
+        eve_session_id: response.continuationToken,
+        eve_run_id: response.sessionId,
+      })
+      .eq("id", site.id)
+  } catch (error) {
+    // El brief quedó guardado; la generación se puede relanzar desde el detalle.
+    await supabase
+      .from("sites")
+      .update({ status: "failed" })
+      .eq("id", site.id)
+    return {
+      formError: `Brief guardado, pero no se pudo arrancar el agente: ${error instanceof Error ? error.message : "error desconocido"}`,
+    }
+  }
+
+  revalidatePath("/dashboard/sites")
+  redirect(`/dashboard/sites/${site.id}`)
+}
+
+/**
+ * Follow-up a la sesión eve del sitio. Si el sitio no tiene sesión (p. ej.
+ * falló al arrancar cuando se creó el brief), abre una sesión nueva y la guarda.
+ */
+async function sendFollowUp(
+  siteId: string,
+  message: string,
+): Promise<SiteActionState> {
+  const supabase = getAdminClient()
+  const { data: site, error } = await supabase
+    .from("sites")
+    .select("id, eve_session_id")
+    .eq("id", siteId)
+    .maybeSingle()
+  if (error || !site) return { formError: "Sitio no encontrado." }
+
+  try {
+    const eve = getEveClient()
+    const session = site.eve_session_id
+      ? eve.session(site.eve_session_id)
+      : eve.session()
+    const response = await session.send(message)
+    await supabase
+      .from("sites")
+      .update({
+        ...(site.eve_session_id ? {} : { eve_session_id: response.continuationToken }),
+        eve_run_id: response.sessionId,
+      })
+      .eq("id", siteId)
+  } catch (err) {
+    return {
+      formError: `No se pudo contactar al agente: ${err instanceof Error ? err.message : "error desconocido"}`,
+    }
+  }
+
+  revalidatePath(`/dashboard/sites/${siteId}`)
+  return {}
+}
+
+export async function approveSite(siteId: string): Promise<SiteActionState> {
+  const supabase = getAdminClient()
+  const { data: site } = await supabase
+    .from("sites")
+    .select("id, status, lead_id")
+    .eq("id", siteId)
+    .maybeSingle()
+  if (!site) return { formError: "Sitio no encontrado." }
+  if (site.status !== "preview") {
+    return { formError: "Solo se aprueba un sitio en preview." }
+  }
+
+  // Aprobar es acción humana directa en BDD; no pasa por el agente.
+  const { error } = await supabase
+    .from("sites")
+    .update({ status: "approved" })
+    .eq("id", siteId)
+  if (error) return { formError: error.message }
+
+  await supabase.from("lead_activity").insert({
+    lead_id: site.lead_id,
+    type: "site_approved",
+    note: "Sitio aprobado desde el dashboard.",
+    actor: "manual",
+  })
+
+  revalidatePath(`/dashboard/sites/${siteId}`)
+  return {}
+}
+
+export async function publishSite(siteId: string): Promise<SiteActionState> {
+  const supabase = getAdminClient()
+  const { data: site } = await supabase
+    .from("sites")
+    .select("id, status, current_version")
+    .eq("id", siteId)
+    .maybeSingle()
+  if (!site) return { formError: "Sitio no encontrado." }
+  if (site.status !== "approved") {
+    return { formError: "Aprueba el sitio antes de publicar." }
+  }
+
+  return sendFollowUp(
+    siteId,
+    `El humano aprobó y pidió publicar el site ${siteId}. Publica la versión v${site.current_version ?? 1} con publish_site.`,
+  )
+}
+
+/** Mensaje libre del humano a la sesión del sitio (desde el panel de actividad). */
+export async function sendSiteMessage(
+  siteId: string,
+  message: string,
+): Promise<SiteActionState> {
+  const trimmed = message.trim()
+  if (trimmed.length < 3) {
+    return { formError: "Escribe un mensaje." }
+  }
+  return sendFollowUp(
+    siteId,
+    `Mensaje del humano sobre el site ${siteId}: ${trimmed}`,
+  )
+}
+
+export async function requestSiteChanges(
+  siteId: string,
+  changes: string,
+): Promise<SiteActionState> {
+  const trimmed = changes.trim()
+  if (trimmed.length < 10) {
+    return { formError: "Describe los cambios (mínimo 10 caracteres)." }
+  }
+  return sendFollowUp(
+    siteId,
+    `Itera el site ${siteId} con estos cambios pedidos por el humano: ${trimmed}. Genera nueva versión del spec y nuevo preview.`,
+  )
+}

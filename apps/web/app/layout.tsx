@@ -30,7 +30,7 @@ export default function RootLayout({
       lang="es"
       suppressHydrationWarning
       className={cn(
-        "text-pretty antialiased selection:bg-chart-1 selection:text-chart-5",
+        "text-pretty antialiased selection:bg-primary/20 selection:text-primary",
         fontMono.variable,
         "font-sans",
         satoshi.variable

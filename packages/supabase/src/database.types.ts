@@ -9,6 +9,93 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      design_presets: {
+        Row: {
+          active: boolean
+          character: string
+          created_at: string
+          font_pairs: string[]
+          hero_variants: string[]
+          industries: string[]
+          slug: string
+          variation_notes: string | null
+        }
+        Insert: {
+          active?: boolean
+          character: string
+          created_at?: string
+          font_pairs: string[]
+          hero_variants: string[]
+          industries: string[]
+          slug: string
+          variation_notes?: string | null
+        }
+        Update: {
+          active?: boolean
+          character?: string
+          created_at?: string
+          font_pairs?: string[]
+          hero_variants?: string[]
+          industries?: string[]
+          slug?: string
+          variation_notes?: string | null
+        }
+        Relationships: []
+      }
+      design_references: {
+        Row: {
+          active: boolean
+          created_at: string
+          do_steal: string | null
+          dont_steal: string | null
+          id: string
+          industries: string[]
+          layout_notes: string | null
+          palette: Json | null
+          quality_score: number | null
+          screenshot_path: string | null
+          slug: string
+          source: string | null
+          style_tags: string[]
+          typography: Json | null
+          url: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          do_steal?: string | null
+          dont_steal?: string | null
+          id?: string
+          industries: string[]
+          layout_notes?: string | null
+          palette?: Json | null
+          quality_score?: number | null
+          screenshot_path?: string | null
+          slug: string
+          source?: string | null
+          style_tags: string[]
+          typography?: Json | null
+          url: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          do_steal?: string | null
+          dont_steal?: string | null
+          id?: string
+          industries?: string[]
+          layout_notes?: string | null
+          palette?: Json | null
+          quality_score?: number | null
+          screenshot_path?: string | null
+          slug?: string
+          source?: string | null
+          style_tags?: string[]
+          typography?: Json | null
+          url?: string
+        }
+        Relationships: []
+      }
       lead_activity: {
         Row: {
           actor: string | null
@@ -140,12 +227,148 @@ export type Database = {
         }
         Relationships: []
       }
+      site_versions: {
+        Row: {
+          actor: string | null
+          changelog: string | null
+          created_at: string
+          id: string
+          preview_url: string | null
+          qa_report: Json | null
+          site_id: string
+          spec: Json
+          version_n: number
+        }
+        Insert: {
+          actor?: string | null
+          changelog?: string | null
+          created_at?: string
+          id?: string
+          preview_url?: string | null
+          qa_report?: Json | null
+          site_id: string
+          spec: Json
+          version_n: number
+        }
+        Update: {
+          actor?: string | null
+          changelog?: string | null
+          created_at?: string
+          id?: string
+          preview_url?: string | null
+          qa_report?: Json | null
+          site_id?: string
+          spec?: Json
+          version_n?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_versions_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sites: {
+        Row: {
+          brief: Json
+          created_at: string
+          current_version: number | null
+          deploy_url: string | null
+          eve_run_id: string | null
+          eve_session_id: string | null
+          id: string
+          lead_id: string
+          repo_url: string | null
+          slug: string
+          status: string
+          status_updated_at: string | null
+          updated_at: string
+          vercel_project_id: string | null
+        }
+        Insert: {
+          brief: Json
+          created_at?: string
+          current_version?: number | null
+          deploy_url?: string | null
+          eve_run_id?: string | null
+          eve_session_id?: string | null
+          id?: string
+          lead_id: string
+          repo_url?: string | null
+          slug: string
+          status?: string
+          status_updated_at?: string | null
+          updated_at?: string
+          vercel_project_id?: string | null
+        }
+        Update: {
+          brief?: Json
+          created_at?: string
+          current_version?: number | null
+          deploy_url?: string | null
+          eve_run_id?: string | null
+          eve_session_id?: string | null
+          id?: string
+          lead_id?: string
+          repo_url?: string | null
+          slug?: string
+          status?: string
+          status_updated_at?: string | null
+          updated_at?: string
+          vercel_project_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sites_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_images: {
+        Row: {
+          created_at: string
+          dominant_tone: string | null
+          id: string
+          industry: string[]
+          orientation: string | null
+          path: string
+          source_url: string | null
+          tags: string[]
+        }
+        Insert: {
+          created_at?: string
+          dominant_tone?: string | null
+          id?: string
+          industry: string[]
+          orientation?: string | null
+          path: string
+          source_url?: string | null
+          tags?: string[]
+        }
+        Update: {
+          created_at?: string
+          dominant_tone?: string | null
+          id?: string
+          industry?: string[]
+          orientation?: string | null
+          path?: string
+          source_url?: string | null
+          tags?: string[]
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      hook_restrict_signup_domain: { Args: { event: Json }; Returns: Json }
     }
     Enums: {
       [_ in never]: never

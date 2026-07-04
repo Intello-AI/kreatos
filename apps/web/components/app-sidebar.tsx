@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
+  GlobeIcon,
   SignOutIcon,
   SquaresFourIcon,
   UsersThreeIcon,
@@ -33,6 +34,11 @@ const navItems = [
     title: "Leads",
     href: "/dashboard/leads",
     icon: UsersThreeIcon,
+  },
+  {
+    title: "Sitios",
+    href: "/dashboard/sites",
+    icon: GlobeIcon,
   },
 ]
 
