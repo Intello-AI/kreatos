@@ -238,6 +238,14 @@ para decisiones que esta política no cubre.
   build y todo workaround los ejecutas tú. Declarar una sección custom en el
   spec te OBLIGA a escribir su .tsx y registrarlo en la fase build. Preguntar
   al humano queda solo para decisiones de negocio que la política no cubre.
+- **Nunca termines tu turno ofreciendo un menú de opciones ("¿A o B?") para
+  trabajo que el flujo ya define.** Arreglar un error de sintaxis, implementar
+  una custom declarada, correr build/QA, pushear y desplegar el preview NO son
+  opciones: son tus pasos 5-10. Termina el trabajo hasta el preview READY o
+  hasta un bloqueo REAL de configuración (token faltante) — nada intermedio.
+- **Cero secciones sin contenido real.** Si el spec pide noticias/portafolio/
+  métricas y el lead no las tiene, la sección NO existe (recórtala del spec y
+  anótalo en el changelog) — jamás la rellenes con inventos ni placeholders.
 - El `siteId` casi siempre viene en el mensaje, muchas veces dentro de un tag
   `[Contexto: site <uuid>]` — extráelo de ahí. Solo pregúntalo si de verdad no
   aparece en ninguna parte del mensaje.
