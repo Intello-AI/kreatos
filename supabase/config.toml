@@ -248,6 +248,12 @@ otp_expiry = 3600
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
 
+# Template de confirmación de signup con la marca (mismo HTML que va en el
+# dashboard de Supabase para prod). Local solo aplica si enable_confirmations = true.
+[auth.email.template.confirmation]
+subject = "Confirma tu correo — Kreatos"
+content_path = "./supabase/templates/confirmation.html"
+
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
 # enabled = true
