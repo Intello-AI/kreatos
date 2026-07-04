@@ -5,16 +5,26 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import {
   CaretDownIcon,
+  CaretRightIcon,
   CheckIcon,
+  FileTextIcon,
+  GlobeIcon,
+  ListChecksIcon,
+  MagnifyingGlassIcon,
   PaperPlaneRightIcon,
   QuestionIcon,
+  RobotIcon,
+  SparkleIcon,
+  TerminalWindowIcon,
   WarningIcon,
+  WrenchIcon,
   XIcon,
 } from "@phosphor-icons/react"
 
 import { toast } from "sonner"
 
 import { answerSiteInput, sendSiteMessage } from "@/features/sites/actions"
+import { Shimmer } from "@/components/ai-elements/shimmer"
 import { formatTime as formatTimeInUserTz } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import { Bubble, BubbleContent, BubbleQuote } from "@/components/ui/bubble"
@@ -29,7 +39,7 @@ import {
   InputGroupButton,
   InputGroupTextarea,
 } from "@/components/ui/input-group"
-import { Marker, MarkerContent, MarkerIcon } from "@/components/ui/marker"
+import { Marker, MarkerContent } from "@/components/ui/marker"
 import {
   Message,
   MessageContent,
@@ -61,6 +71,12 @@ interface ActivityItem {
   callId?: string
   done?: boolean
   failed?: boolean
+  /** Nombre crudo de la tool (para icono y agrupación). */
+  toolName?: string
+  /** Input completo de la tool (JSON legible) para el detalle expandible. */
+  inputJson?: string
+  /** Presente cuando la acción es una delegación a subagente. */
+  subagentName?: string
 }
 
 interface StreamEvent {
@@ -141,17 +157,50 @@ const TOOL_LABELS: Record<
 function describeAction(action: Record<string, unknown>): {
   label: string
   detail?: string
+  toolName?: string
+  subagentName?: string
 } {
   if (action["kind"] === "subagent-call") {
-    return {
-      label: `Delegando a ${String(action["subagentName"] ?? action["name"] ?? "subagente")}`,
-    }
+    const name = String(
+      action["subagentName"] ?? action["name"] ?? "subagente",
+    )
+    return { label: `Delegando a ${name}`, subagentName: name }
   }
   const toolName = String(action["toolName"] ?? action["name"] ?? "herramienta")
   const input = (action["input"] ?? {}) as Record<string, unknown>
   const known = TOOL_LABELS[toolName]
-  if (known) return { label: known.label, detail: known.detail?.(input) }
-  return { label: toolName, detail: JSON.stringify(input).slice(0, 80) }
+  if (known)
+    return { label: known.label, detail: known.detail?.(input), toolName }
+  return {
+    label: toolName,
+    detail: JSON.stringify(input).slice(0, 80),
+    toolName,
+  }
+}
+
+/** Icono por tool, estilo Claude Code. */
+function ToolIcon({
+  toolName,
+  className,
+}: {
+  toolName?: string
+  className?: string
+}) {
+  const Icon =
+    toolName === "load_skill"
+      ? SparkleIcon
+      : toolName === "bash"
+        ? TerminalWindowIcon
+        : toolName === "read_file" || toolName === "write_file"
+          ? FileTextIcon
+          : toolName === "glob" || toolName === "grep"
+            ? MagnifyingGlassIcon
+            : toolName === "web_fetch" || toolName === "web_search"
+              ? GlobeIcon
+              : toolName === "todo"
+                ? ListChecksIcon
+                : WrenchIcon
+  return <Icon className={className} />
 }
 
 /**
@@ -261,13 +310,24 @@ export function SiteActivity({
       case "actions.requested": {
         const actions = (d["actions"] ?? []) as Array<Record<string, unknown>>
         for (const action of actions) {
-          const { label, detail } = describeAction(action)
+          const { label, detail, toolName, subagentName } =
+            describeAction(action)
+          let inputJson: string | undefined
+          try {
+            const raw = JSON.stringify(action["input"] ?? {}, null, 2)
+            inputJson = raw === "{}" ? undefined : raw.slice(0, 2000)
+          } catch {
+            inputJson = undefined
+          }
           add({
             at,
             depth,
             kind: "action",
             label,
             detail,
+            toolName,
+            subagentName,
+            inputJson,
             callId: action["callId"] ? String(action["callId"]) : undefined,
             done: false,
           })
@@ -504,15 +564,39 @@ export function SiteActivity({
     })
   }
 
-  // Acciones consecutivas del mismo nivel se agrupan en un MessageGroup;
-  // mensajes/errores/status van como bloques individuales.
+  // Estructura estilo Claude Code:
+  // - acciones consecutivas del root → grupo colapsable ("actions")
+  // - una delegación a subagente abre un bloque "task"; todo lo depth 1
+  //   posterior (tools, reporte, errores) se anida dentro de ese bloque
+  // - mensajes/errores/status del root → bloques individuales
   type Block =
     | { key: string; type: "actions"; items: ActivityItem[] }
+    | {
+        key: string
+        type: "task"
+        header: ActivityItem | null
+        items: ActivityItem[]
+      }
     | { key: string; type: "single"; item: ActivityItem }
   const blocks = items.reduce<Block[]>((acc, item) => {
+    if (item.depth === 1) {
+      const lastTask = [...acc]
+        .reverse()
+        .find((b): b is Extract<Block, { type: "task" }> => b.type === "task")
+      if (lastTask) {
+        lastTask.items.push(item)
+        return acc
+      }
+      acc.push({ key: item.id, type: "task", header: null, items: [item] })
+      return acc
+    }
+    if (item.kind === "action" && item.subagentName) {
+      acc.push({ key: item.id, type: "task", header: item, items: [] })
+      return acc
+    }
     if (item.kind === "action") {
       const last = acc[acc.length - 1]
-      if (last?.type === "actions" && last.items[0]?.depth === item.depth) {
+      if (last?.type === "actions") {
         last.items.push(item)
         return acc
       }
@@ -594,6 +678,10 @@ export function SiteActivity({
                   block.type === "actions" ? (
                     <MessageScrollerItem key={block.key} messageId={block.key}>
                       <ActionsBlock items={block.items} />
+                    </MessageScrollerItem>
+                  ) : block.type === "task" ? (
+                    <MessageScrollerItem key={block.key} messageId={block.key}>
+                      <TaskBlock header={block.header} items={block.items} />
                     </MessageScrollerItem>
                   ) : (
                     <BlockItem key={block.key} item={block.item} />
@@ -689,10 +777,10 @@ function ActionsBlock({ items }: { items: ActivityItem[] }) {
   const running = items.filter((i) => !i.done)
   const active = running.length > 0
   const failed = items.some((i) => i.failed)
+  // Colapsado siempre enseña el paso vivo: el que corre ahora (con shimmer)
+  // o el último ejecutado.
   const current = running[0] ?? items[items.length - 1]
-  const label = active
-    ? current?.label
-    : `${items.length} ${items.length === 1 ? "paso" : "pasos"}`
+  const label = current?.label ?? ""
 
   return (
     <Collapsible
@@ -702,18 +790,30 @@ function ActionsBlock({ items }: { items: ActivityItem[] }) {
       )}
     >
       <CollapsibleTrigger className="group flex w-full items-center gap-2 text-left text-xs">
-        <span className="flex size-4 shrink-0 items-center justify-center">
-          {failed ? (
-            <WarningIcon className="text-destructive" />
-          ) : active ? (
-            <Spinner />
-          ) : (
-            <CheckIcon className="text-success" />
-          )}
-        </span>
-        <span className="min-w-0 truncate font-medium text-foreground">
-          {label}
-        </span>
+        {/* Sin loader: el shimmer del label ya comunica "en ejecución". */}
+        {!active && (
+          <span className="flex size-4 shrink-0 items-center justify-center">
+            {failed ? (
+              <WarningIcon className="text-destructive" />
+            ) : (
+              <CheckIcon className="text-success" />
+            )}
+          </span>
+        )}
+        {active ? (
+          <Shimmer className="min-w-0 truncate text-xs font-medium">
+            {label}
+          </Shimmer>
+        ) : (
+          <span className="min-w-0 truncate font-medium text-foreground">
+            {label}
+          </span>
+        )}
+        {items.length > 1 && (
+          <span className="shrink-0 text-[10px] text-muted-foreground/70 tabular-nums">
+            · {items.length}
+          </span>
+        )}
         <span className="ml-auto flex shrink-0 items-center gap-1.5 text-[10px] text-muted-foreground/70 tabular-nums">
           {formatTime(current?.at ?? "")}
           <CaretDownIcon
@@ -733,35 +833,172 @@ function ActionsBlock({ items }: { items: ActivityItem[] }) {
   )
 }
 
-/** Fila compacta de una tool call (dentro de un MessageGroup de acciones). */
+/**
+ * Fila de tool call estilo Claude Code: icono de la tool + `Label(detalle)`;
+ * shimmer mientras corre, rojo si falló. Click expande el input completo.
+ */
 function ActionRow({ item }: { item: ActivityItem }) {
+  const expandable = Boolean(item.inputJson)
+  const running = !item.done
   return (
-    <Marker className="items-start">
-      <MarkerIcon className="mt-0.5">
-        {item.failed ? (
-          <WarningIcon className="text-destructive" />
-        ) : item.done ? (
-          <CheckIcon className="text-success" />
-        ) : (
-          <Spinner />
-        )}
-      </MarkerIcon>
-      <MarkerContent className="min-w-0 flex-1">
-        <span className="flex items-baseline justify-between gap-2">
-          <span className="truncate font-medium text-foreground">
-            {item.label}
-          </span>
-          <span className="shrink-0 text-[10px] text-muted-foreground/70 tabular-nums">
-            {formatTime(item.at)}
+    <Collapsible>
+      <CollapsibleTrigger
+        disabled={!expandable}
+        className="group/row flex w-full items-start gap-2 text-left"
+      >
+        <span className="mt-0.5 flex size-3.5 shrink-0 items-center justify-center">
+          {item.failed ? (
+            <WarningIcon className="size-3.5 text-destructive" />
+          ) : (
+            <ToolIcon
+              toolName={item.toolName}
+              className={cn(
+                "size-3.5",
+                running ? "text-muted-foreground" : "text-muted-foreground/70"
+              )}
+            />
+          )}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-baseline gap-1.5">
+            {running && !item.failed ? (
+              <Shimmer className="truncate text-xs font-medium">
+                {item.label}
+              </Shimmer>
+            ) : (
+              <span
+                className={cn(
+                  "truncate text-xs font-medium",
+                  item.failed ? "text-destructive" : "text-foreground"
+                )}
+              >
+                {item.label}
+              </span>
+            )}
+            {item.detail && (
+              <span className="min-w-0 truncate font-mono text-[11px] text-muted-foreground">
+                ({item.detail})
+              </span>
+            )}
           </span>
         </span>
-        {item.detail && (
-          <span className="block truncate font-mono text-[11px]">
-            {item.detail}
+        <span className="flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground/70 tabular-nums">
+          {formatTime(item.at)}
+          {expandable && (
+            <CaretRightIcon className="size-3 opacity-0 transition-all group-hover/row:opacity-100 group-data-[state=open]/row:opacity-100 group-data-[state=open]/row:rotate-90" />
+          )}
+        </span>
+      </CollapsibleTrigger>
+      {expandable && (
+        <CollapsibleContent>
+          <pre className="mt-1 ml-5 overflow-x-auto border bg-background p-2 font-mono text-[10px] leading-relaxed text-muted-foreground">
+            {item.inputJson}
+          </pre>
+        </CollapsibleContent>
+      )}
+    </Collapsible>
+  )
+}
+
+/** Reporte interno del subagente al orquestador (dentro de un TaskBlock). */
+function ReportItem({ item }: { item: ActivityItem }) {
+  return (
+    <div className="min-w-0">
+      <p className="flex items-baseline justify-between gap-2 text-[11px] font-medium text-muted-foreground">
+        Reporte al orquestador
+        <span className="shrink-0 text-[10px] text-muted-foreground/70 tabular-nums">
+          {formatTime(item.at)}
+        </span>
+      </p>
+      <p
+        className="line-clamp-3 text-xs text-muted-foreground"
+        title={item.label}
+      >
+        {item.label}
+      </p>
+    </div>
+  )
+}
+
+/**
+ * Bloque de subagente estilo "Task" de Claude Code: la delegación abre un
+ * contenedor con la actividad del subagente anidada (tools, reporte, errores).
+ * Colapsado muestra el nombre del subagente y su paso vivo.
+ */
+function TaskBlock({
+  header,
+  items,
+}: {
+  header: ActivityItem | null
+  items: ActivityItem[]
+}) {
+  const name = header?.subagentName ?? "subagente"
+  const runningChildren = items.filter((i) => i.kind === "action" && !i.done)
+  const active = header ? !header.done : runningChildren.length > 0
+  const failed =
+    Boolean(header?.failed) ||
+    items.some((i) => i.failed || i.kind === "error")
+  const current = runningChildren[0]
+
+  return (
+    <Collapsible className="border border-border/60">
+      <CollapsibleTrigger className="group flex w-full items-center gap-2 p-2 text-left text-xs">
+        <RobotIcon
+          className={cn(
+            "size-3.5 shrink-0",
+            failed ? "text-destructive" : "text-muted-foreground"
+          )}
+        />
+        <span className="shrink-0 font-medium text-foreground">{name}</span>
+        {active ? (
+          <Shimmer className="min-w-0 truncate text-xs">
+            {current?.label ?? "Trabajando…"}
+          </Shimmer>
+        ) : (
+          <span className="flex min-w-0 items-center gap-1 text-muted-foreground">
+            {failed ? (
+              <WarningIcon className="size-3 shrink-0 text-destructive" />
+            ) : (
+              <CheckIcon className="size-3 shrink-0 text-success" />
+            )}
+            <span className="truncate">
+              {items.filter((i) => i.kind === "action").length} acciones
+            </span>
           </span>
         )}
-      </MarkerContent>
-    </Marker>
+        <span className="ml-auto flex shrink-0 items-center gap-1.5 text-[10px] text-muted-foreground/70 tabular-nums">
+          {formatTime((header ?? items[0])?.at ?? "")}
+          <CaretDownIcon
+            aria-hidden
+            className="size-3 transition-transform group-data-[state=open]:rotate-180"
+          />
+        </span>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="space-y-2 border-t border-border/60 p-2 pl-3">
+          {items.map((item) =>
+            item.kind === "action" ? (
+              <ActionRow key={item.id} item={item} />
+            ) : item.kind === "report" ? (
+              <ReportItem key={item.id} item={item} />
+            ) : item.kind === "error" ? (
+              <p key={item.id} className="text-xs text-destructive">
+                {item.label}
+              </p>
+            ) : (
+              <p key={item.id} className="text-[11px] text-muted-foreground">
+                {item.label}
+              </p>
+            )
+          )}
+          {items.length === 0 && (
+            <p className="text-[11px] text-muted-foreground">
+              Delegado; esperando actividad…
+            </p>
+          )}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   )
 }
 
@@ -817,21 +1054,9 @@ function BlockItem({ item }: { item: ActivityItem }) {
           </MessageContent>
         </Message>
       ) : item.kind === "report" ? (
-        // Reporte del subagente al orquestador: mismo carril indentado que
-        // sus acciones (depth 1), tono de actividad — no es un chat contigo.
-        <div className="ml-5 min-w-0 border-l-2 border-border/60 py-0.5 pl-3">
-          <p className="flex items-baseline justify-between gap-2 text-[11px] font-medium text-muted-foreground">
-            Reporte al orquestador
-            <span className="shrink-0 text-[10px] text-muted-foreground/70 tabular-nums">
-              {formatTime(item.at)}
-            </span>
-          </p>
-          <p
-            className="line-clamp-3 text-xs text-muted-foreground"
-            title={item.label}
-          >
-            {item.label}
-          </p>
+        // Normalmente vive dentro de un TaskBlock; standalone como fallback.
+        <div className="ml-5 border-l-2 border-border/60 py-0.5 pl-3">
+          <ReportItem item={item} />
         </div>
       ) : item.kind === "error" ? (
         <Message>

@@ -96,6 +96,11 @@ para decisiones que esta política no cubre.
 - Contact form con Resend solo si `brief.flags.contactForm` lo pide.
 - Si una herramienta falla por configuración (token faltante), repórtalo y
   detente; no reintentes en bucle.
+- **Diagnóstico de builds/deploys fallidos**: usa `get_deployment_logs` (va
+  autenticado con el token de Vercel). NUNCA intentes leer dashboards de
+  Vercel o GitHub con `web_fetch`: requieren sesión y siempre devuelven
+  403/404. Si el sitio viejo de un lead (rediseño) devuelve 403/404 al
+  fetchearlo, continúa sin él — los datos del lead bastan.
 - En el bash del sandbox no hay stdin: nunca uses comandos que lean de stdin
   (`head`/`cat`/`grep` sin archivo, pipes rotos) — se cuelgan y congelan la
   sesión. Pasa siempre el archivo como argumento y termina pipes con un

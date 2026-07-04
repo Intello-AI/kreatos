@@ -116,6 +116,33 @@ export async function getLatestDeployment(input: {
 }
 
 /**
+ * Log de build de un deployment (API de eventos). Devuelve la cola del log —
+ * suficiente para diagnosticar por qué falló un build en Vercel.
+ */
+export async function getDeploymentBuildLog(input: {
+  deploymentUid: string
+  maxChars?: number
+}): Promise<string> {
+  const res = await vercelFetch(
+    `/v3/deployments/${input.deploymentUid}/events?builds=1&limit=-1`,
+  )
+  if (!res.ok) {
+    const body = await res.text()
+    throw new Error(`Lectura de eventos del deployment falló (${res.status}): ${body}`)
+  }
+  const events = (await res.json()) as Array<{
+    type?: string
+    payload?: { text?: string }
+  }>
+  const lines = (Array.isArray(events) ? events : [])
+    .map((e) => e.payload?.text)
+    .filter((t): t is string => Boolean(t))
+  const full = lines.join("\n")
+  const max = input.maxChars ?? 8000
+  return full.length > max ? `…(recortado)\n${full.slice(-max)}` : full
+}
+
+/**
  * URL pública preferida de un deployment: la URL directa lleva el hash del
  * deployment y Vercel Authentication la protege; los aliases son limpios.
  * - preview: alias de rama (contiene "-git-"), estable entre pushes.
