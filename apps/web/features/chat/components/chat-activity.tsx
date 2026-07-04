@@ -1055,7 +1055,7 @@ export function ChatActivity({
       composerRef.current?.focus()
     })
   }
-  const canSend = !pending && (message.trim().length >= 3 || staged.length > 0)
+  const canSend = !pending && (message.trim().length > 0 || staged.length > 0)
 
   // Clic en una opción de la pregunta: la respuesta ES el label (eve
   // resuelve follow-ups que matchean label/id/índice de opción).
@@ -1887,7 +1887,7 @@ function BlockItem({
                   </div>
                 )}
                 {text && (
-                  <Bubble variant="default" align="end">
+                  <Bubble variant="tinted" align="end">
                     <BubbleContent>{text}</BubbleContent>
                   </Bubble>
                 )}
@@ -1947,7 +1947,7 @@ function BlockItem({
               </div>
               <ModelBadge model={item.model} />
             </MessageHeader>
-            <Bubble variant="outline" className={item.chosen ? "mb-2" : undefined}>
+            <Bubble variant="muted" className={item.chosen ? "mb-2" : undefined}>
               {item.chosen && (
                 // Respuesta elegida como "reacción" colgada de la burbuja.
                 <BubbleReactions side="bottom" align="end" className="gap-1">

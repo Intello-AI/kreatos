@@ -36,7 +36,7 @@ export function ChatHome({
 
   const onSend = () => {
     const text = message.trim()
-    if (text.length < 3) return
+    if (text.length === 0) return
     startTransition(async () => {
       const result = await createConversation(text)
       if (result.formError) {
@@ -84,7 +84,7 @@ export function ChatHome({
             <InputGroupButton
               size="icon-sm"
               aria-label="Enviar"
-              disabled={pending || message.trim().length < 3}
+              disabled={pending || message.trim().length === 0}
               onClick={onSend}
             >
               {pending ? <Spinner className="size-3.5" /> : <PaperPlaneRightIcon />}

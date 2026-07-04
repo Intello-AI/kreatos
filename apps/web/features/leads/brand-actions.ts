@@ -130,7 +130,7 @@ export async function sendBrandMessage(
   message: string,
 ): Promise<BrandActionState> {
   const trimmed = message.trim()
-  if (trimmed.length < 3) return { formError: "Escribe un mensaje más largo." }
+  if (trimmed.length === 0) return { formError: "Escribe un mensaje." }
 
   const brand = await getBrandSession(leadId)
   try {

@@ -103,7 +103,7 @@ export async function createConversation(
   message: string
 ): Promise<ChatActionState> {
   const trimmed = message.trim()
-  if (trimmed.length < 3) return { formError: "Escribe un mensaje más largo." }
+  if (trimmed.length === 0) return { formError: "Escribe un mensaje." }
 
   const supabase = getAdminClient()
   const { data: row, error } = await supabase
@@ -141,7 +141,7 @@ export async function sendChatMessage(
   message: string
 ): Promise<ChatActionState> {
   const trimmed = message.trim()
-  if (trimmed.length < 3) return { formError: "Escribe un mensaje más largo." }
+  if (trimmed.length === 0) return { formError: "Escribe un mensaje." }
   const conversation = await getConversation(conversationId)
   if (!conversation) return { formError: "La conversación no existe." }
 

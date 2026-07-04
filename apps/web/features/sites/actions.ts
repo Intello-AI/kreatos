@@ -306,7 +306,7 @@ export async function sendSiteMessage(
   message: string,
 ): Promise<SiteActionState> {
   const trimmed = message.trim()
-  if (trimmed.length < 3) {
+  if (trimmed.length === 0) {
     return { formError: "Escribe un mensaje." }
   }
   return sendFollowUp(siteId, trimmed)
