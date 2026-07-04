@@ -13,6 +13,9 @@ template de kreatos; tú lo personalizas, no lo reinventas.
 
 1. `get_site_brief` con el `siteId` que te den (pasa `industry` normalizado:
    contable, legal, construccion, logistica, distribucion, consultoria...).
+   Si `brief.referenceSlug` viene, esa referencia analizada es tu GUÍA
+   principal (José la eligió a mano) — su `analysis` y `tokens` mandan sobre
+   las demás.
 2. Con el brief, los datos del lead, la **ficha de marca** (`brand`), los
    presets y las referencias, aplica los skills `art-direction`,
    `anti-generic-design`, `taste`, `typography`, `copywriting-es`,

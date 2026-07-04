@@ -1,13 +1,14 @@
 import { z } from "zod"
 
-/** Brief del dialog "Generar sitio". Se guarda tal cual en sites.brief. */
+/**
+ * Brief del dialog "Generar sitio". Se guarda tal cual en sites.brief.
+ * La identidad visual ya NO se elige aquí: sale de la ficha de marca del
+ * lead + las referencias analizadas (el theme se deriva, no se escoge de un
+ * catálogo de presets).
+ */
 export const siteBriefSchema = z.object({
-  preset: z.enum(["auto", "obsidiana", "cantera", "ruta", "bodega", "norte"]),
-  brandColor: z
-    .string()
-    .regex(/^#[0-9a-fA-F]{6}$/, "Color en formato #rrggbb.")
-    .optional()
-    .or(z.literal("")),
+  /** Slug de una referencia analizada para usar como guía principal. */
+  referenceSlug: z.string().optional().or(z.literal("")),
   instructions: z
     .string()
     .max(2000, "Máximo 2000 caracteres.")

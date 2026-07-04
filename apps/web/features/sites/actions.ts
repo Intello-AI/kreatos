@@ -71,7 +71,7 @@ export async function createSiteBrief(
   await supabase.from("lead_activity").insert({
     lead_id: leadId,
     type: "site_brief_created",
-    note: `Brief creado para ${slug} (preset: ${parsed.data.preset}).`,
+    note: `Brief creado para ${slug}${parsed.data.referenceSlug ? ` (referencia guía: ${parsed.data.referenceSlug})` : ""}.`,
     actor: "manual",
   })
 
@@ -84,6 +84,9 @@ export async function createSiteBrief(
       [
         `Genera el sitio web para el site ${site.id} (lead "${lead.name}", ${lead.city}).`,
         lead.website ? `Es un rediseño: el sitio actual es ${lead.website}.` : "",
+        parsed.data.referenceSlug
+          ? `Referencia guía elegida por el humano: ${parsed.data.referenceSlug} (prioriza su analysis).`
+          : "",
         parsed.data.instructions
           ? `Instrucciones del brief: ${parsed.data.instructions}`
           : "",

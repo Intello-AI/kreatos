@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import { PaletteIcon } from "@phosphor-icons/react"
 
 import { createSiteBrief } from "@/features/sites/actions"
-import { SITE_PRESETS } from "@/features/sites/types"
+import { listAnalyzedReferences } from "@/features/references/actions"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -15,7 +16,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -27,6 +27,12 @@ import {
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 
+/**
+ * Brief mínimo: la identidad visual ya no se elige aquí — sale de la ficha
+ * de marca del lead y de las referencias analizadas (el theme se deriva, no
+ * se escoge de un catálogo). Aquí solo va la referencia guía (opcional),
+ * instrucciones y el contact form.
+ */
 export function GenerateSiteDialog({
   leadId,
   leadName,
@@ -35,20 +41,31 @@ export function GenerateSiteDialog({
   leadName: string | null
 }) {
   const [open, setOpen] = useState(false)
-  const [preset, setPreset] = useState<string>("auto")
-  const [brandColor, setBrandColor] = useState("")
+  const [references, setReferences] = useState<
+    Array<{ slug: string; url: string }>
+  >([])
+  const [referenceSlug, setReferenceSlug] = useState<string>("auto")
   const [instructions, setInstructions] = useState("")
   const [contactForm, setContactForm] = useState(false)
   const [error, setError] = useState<string>()
   const [pending, startTransition] = useTransition()
+  const [loadingRefs, startLoadingRefs] = useTransition()
+
+  const onOpenChange = (next: boolean) => {
+    setOpen(next)
+    if (next) {
+      startLoadingRefs(async () => {
+        setReferences(await listAnalyzedReferences())
+      })
+    }
+  }
 
   const onSubmit = () => {
     setError(undefined)
     startTransition(async () => {
       // redirect() en la action lanza y navega; solo regresa si hubo error.
       const result = await createSiteBrief(leadId, {
-        preset: preset as "auto",
-        brandColor,
+        referenceSlug: referenceSlug === "auto" ? "" : referenceSlug,
         instructions,
         contactForm,
       })
@@ -57,7 +74,7 @@ export function GenerateSiteDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           Generar sitio
@@ -65,38 +82,44 @@ export function GenerateSiteDialog({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Generar sitio{leadName ? ` — ${leadName}` : ""}</DialogTitle>
+          <DialogTitle>
+            Generar sitio{leadName ? ` — ${leadName}` : ""}
+          </DialogTitle>
           <DialogDescription>
-            El brief se guarda en la base de datos y el agente site-builder
-            genera un preview. Tú apruebas antes de publicar.
+            El agente diseña con la ficha de marca del lead y la biblioteca de
+            referencias; genera un preview y tú apruebas antes de publicar.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
+          <div className="flex items-start gap-2 border border-dashed p-2.5 text-xs text-muted-foreground">
+            <PaletteIcon className="mt-0.5 size-3.5 shrink-0" />
+            <p>
+              Logo, colores, fotos y voz salen de la <b>ficha de marca</b> del
+              lead (icono de paleta en la tabla). Llénala antes de generar
+              para un resultado a la medida.
+            </p>
+          </div>
+
           <div className="space-y-2">
-            <Label htmlFor="site-preset">Preset de diseño</Label>
-            <Select value={preset} onValueChange={setPreset}>
-              <SelectTrigger id="site-preset" className="w-full">
-                <SelectValue />
+            <Label htmlFor="site-reference">Referencia guía (opcional)</Label>
+            <Select value={referenceSlug} onValueChange={setReferenceSlug}>
+              <SelectTrigger id="site-reference" className="w-full">
+                <SelectValue
+                  placeholder={loadingRefs ? "Cargando…" : "Automática"}
+                />
               </SelectTrigger>
               <SelectContent>
-                {SITE_PRESETS.map((p) => (
-                  <SelectItem key={p.value} value={p.value}>
-                    {p.label}
+                <SelectItem value="auto">
+                  Automática (el agente elige de la biblioteca)
+                </SelectItem>
+                {references.map((ref) => (
+                  <SelectItem key={ref.slug} value={ref.slug}>
+                    {ref.url.replace(/^https?:\/\/(www\.)?/, "")}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="site-color">Color de marca (opcional)</Label>
-            <Input
-              id="site-color"
-              placeholder="#1d4e89"
-              value={brandColor}
-              onChange={(e) => setBrandColor(e.target.value)}
-            />
           </div>
 
           <div className="space-y-2">
@@ -105,7 +128,7 @@ export function GenerateSiteDialog({
             </Label>
             <Textarea
               id="site-instructions"
-              placeholder="Tono, referencias, secciones que sí/no, detalles del negocio…"
+              placeholder="Tono, secciones que sí/no, detalles del negocio…"
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
               rows={4}

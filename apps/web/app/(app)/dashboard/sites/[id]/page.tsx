@@ -182,8 +182,9 @@ export default async function SiteDetailPage({
                   "—"
                 )}
               </MetaRow>
-              <MetaRow label="Preset">
-                {(site.brief as { preset?: string })?.preset ?? "auto"}
+              <MetaRow label="Referencia guía">
+                {(site.brief as { referenceSlug?: string })?.referenceSlug ||
+                  "Automática"}
               </MetaRow>
               <div className="col-span-2">
                 <MetaRow label="Dominios">

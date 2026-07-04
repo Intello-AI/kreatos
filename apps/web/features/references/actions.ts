@@ -97,6 +97,20 @@ export async function addReferences(
   }
 }
 
+/** Referencias analizadas (para el select de "referencia guía" del brief). */
+export async function listAnalyzedReferences(): Promise<
+  Array<{ slug: string; url: string }>
+> {
+  const supabase = getAdminClient()
+  const { data } = await supabase
+    .from("design_references")
+    .select("slug, url")
+    .eq("status", "analyzed")
+    .eq("active", true)
+    .order("quality_score", { ascending: false })
+  return (data ?? []) as Array<{ slug: string; url: string }>
+}
+
 /** Manda al agente a analizar todas las referencias pendientes. */
 export async function analyzeReferences(): Promise<ReferenceActionState> {
   const supabase = getAdminClient()

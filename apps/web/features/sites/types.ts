@@ -25,11 +25,3 @@ export const SITE_STATUS_LABELS: Record<SiteStatus, string> = {
   failed: "Falló",
 }
 
-export const SITE_PRESETS = [
-  { value: "auto", label: "Automático (el agente elige por giro)" },
-  { value: "obsidiana", label: "Obsidiana — despachos, dark editorial" },
-  { value: "cantera", label: "Cantera — construcción, industrial" },
-  { value: "ruta", label: "Ruta — logística, operativo" },
-  { value: "bodega", label: "Bodega — distribución, catálogo" },
-  { value: "norte", label: "Norte — premium minimal" },
-] as const
