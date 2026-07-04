@@ -50,7 +50,7 @@ export function ChatHome({
   }
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-2xl flex-col justify-center gap-8 p-4">
+    <div className="mx-auto flex min-h-[calc(100dvh-48px)] w-full max-w-2xl flex-col justify-center gap-8 p-4">
       <div className="space-y-6">
         <div className="flex flex-col items-center gap-3 text-center">
           <Icon name="Logo" className="h-8 w-auto" />

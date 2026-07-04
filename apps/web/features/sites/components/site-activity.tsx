@@ -40,7 +40,12 @@ import {
   AttachmentMedia,
   AttachmentTitle,
 } from "@/components/ui/attachment"
-import { Bubble, BubbleContent, BubbleQuote } from "@/components/ui/bubble"
+import {
+  Bubble,
+  BubbleContent,
+  BubbleQuote,
+  BubbleReactions,
+} from "@/components/ui/bubble"
 import {
   Collapsible,
   CollapsibleContent,
@@ -1827,28 +1832,31 @@ function BlockItem({
               </div>
               <ModelBadge model={item.model} />
             </MessageHeader>
-            <Bubble variant="outline">
+            <Bubble variant="outline" className={item.chosen ? "mb-2" : undefined}>
+              {item.chosen && (
+                // Respuesta elegida como "reacción" colgada de la burbuja.
+                <BubbleReactions side="bottom" align="end" className="gap-1">
+                  <CheckIcon className="size-3 text-success" />
+                  <span className="max-w-48 truncate">{item.chosen}</span>
+                </BubbleReactions>
+              )}
               <BubbleContent>
                 <Streamdown className="text-xs leading-relaxed [&_:not(pre)>code]:mx-0 [&_:not(pre)>code]:rounded-none [&_:not(pre)>code]:border [&_:not(pre)>code]:border-border [&_:not(pre)>code]:bg-background [&_:not(pre)>code]:px-1 [&_:not(pre)>code]:py-px [&_:not(pre)>code]:text-[11px] [&_:not(pre)>code]:whitespace-nowrap [&_li]:my-0.5 [&_ol]:my-1 [&_p]:my-1 [&_ul]:my-1">
                   {item.label}
                 </Streamdown>
-                {item.options && item.options.length > 0 && (
-                  // Contexto histórico: respondida → solo la elegida (con
-                  // check); pendiente → todas (las respondibles viven sobre
-                  // el composer del run vivo).
+                {item.options && item.options.length > 0 && !item.chosen && (
+                  // Pendiente: las opciones como contexto (las respondibles
+                  // viven sobre el composer del run vivo).
                   <span className="mt-1.5 flex flex-wrap gap-1">
-                    {(item.chosen ? [item.chosen] : item.options).map(
-                      (option) => (
-                        <Badge
-                          key={option}
-                          variant={item.chosen ? "default" : "outline"}
-                          className="gap-1 text-[10px] font-normal"
-                        >
-                          {item.chosen && <CheckIcon className="size-3" />}
-                          {option}
-                        </Badge>
-                      )
-                    )}
+                    {item.options.map((option) => (
+                      <Badge
+                        key={option}
+                        variant="outline"
+                        className="text-[10px] font-normal"
+                      >
+                        {option}
+                      </Badge>
+                    ))}
                   </span>
                 )}
               </BubbleContent>

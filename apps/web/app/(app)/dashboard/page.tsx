@@ -31,9 +31,9 @@ export default async function DashboardChatPage({
   const conversation = c ? await getConversation(c) : null
 
   return (
-    <main className="flex h-dvh w-full flex-col">
+    <main className="flex min-h-dvh w-full flex-col">
       <ChatHeader current={conversation ?? undefined} recent={conversations} />
-      <div className="min-h-0 flex-1">
+      <div className="flex flex-1 flex-col">
         {conversation ? (
           <ChatView conversation={conversation} />
         ) : (

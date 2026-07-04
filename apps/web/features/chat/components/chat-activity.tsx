@@ -39,7 +39,12 @@ import {
   AttachmentMedia,
   AttachmentTitle,
 } from "@/components/ui/attachment"
-import { Bubble, BubbleContent, BubbleQuote } from "@/components/ui/bubble"
+import {
+  Bubble,
+  BubbleContent,
+  BubbleQuote,
+  BubbleReactions,
+} from "@/components/ui/bubble"
 import {
   Collapsible,
   CollapsibleContent,
@@ -58,14 +63,6 @@ import {
   MessageGroup,
   MessageHeader,
 } from "@/components/ui/message"
-import {
-  MessageScroller,
-  MessageScrollerButton,
-  MessageScrollerContent,
-  MessageScrollerItem,
-  MessageScrollerProvider,
-  MessageScrollerViewport,
-} from "@/components/ui/message-scroller"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Badge } from "@/components/ui/badge"
@@ -451,6 +448,30 @@ export function ChatActivity({
   // Siguientes pasos sugeridos por el orquestador (<sugerencias> al final de
   // su respuesta): chips clickeables sobre el composer.
   const [suggestions, setSuggestions] = useState<string[]>([])
+  // Scroll a nivel de PÁGINA (no contenedor): seguimos el fondo mientras el
+  // usuario esté cerca de él; si scrollea arriba, dejamos de empujar.
+  const followRef = useRef(true)
+  const [atBottom, setAtBottom] = useState(true)
+  useEffect(() => {
+    const onScroll = () => {
+      const near =
+        window.innerHeight + window.scrollY >=
+        document.documentElement.scrollHeight - 120
+      followRef.current = near
+      setAtBottom(near)
+    }
+    window.addEventListener("scroll", onScroll, { passive: true })
+    onScroll()
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
+  // Empuja la página al fondo cuando llega contenido nuevo y el usuario
+  // estaba siguiendo el fondo (el anclaje nativo del navegador cubre los
+  // prepends de historial).
+  useEffect(() => {
+    if (followRef.current) {
+      window.scrollTo({ top: document.documentElement.scrollHeight })
+    }
+  }, [items])
   // El root está generando (entre eventos no hay nada visible: p. ej. tras
   // el reporte del subagente, mientras redacta su respuesta) → "Pensando…".
   const [rootBusy, setRootBusy] = useState(false)
@@ -1113,9 +1134,9 @@ export function ChatActivity({
   }, [])
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col" {...dndProps}>
+    <div className="relative flex min-h-full w-full flex-col" {...dndProps}>
       {dragging && (
-        <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center border-2 border-dashed border-primary bg-background/85">
+        <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center border-2 border-dashed border-primary bg-background/85">
           <div className="flex flex-col items-center gap-1.5 text-sm">
             <PaperclipIcon className="size-5 text-primary" />
             <span className="font-medium">Suelta los archivos aquí</span>
@@ -1126,19 +1147,10 @@ export function ChatActivity({
         </div>
       )}
 
-      {/* scrollEdgeThreshold amplio: imágenes que cargan tarde y collapsibles
-          mueven la altura unos px; sin margen, cada brinco saca al scroller
-          del modo "siguiendo el fondo". */}
-      <MessageScrollerProvider
-        defaultScrollPosition="end"
-        autoScroll
-        scrollEdgeThreshold={120}
-      >
-        <MessageScroller className="min-h-0 flex-1">
-          <MessageScrollerViewport className="p-3" preserveScrollOnPrepend>
-            <MessageScrollerContent className="gap-4">
+      {/* Scroll a nivel de página: el timeline fluye en el documento y el
+          composer va sticky al fondo (estilo Claude/ChatGPT). */}
+      <div className="flex flex-1 flex-col gap-4 p-3 pb-6">
               {runIds.length > 1 && !historyLoaded && (
-                <MessageScrollerItem scrollAnchor={false}>
                   <div ref={sentinelRef}>
                     <Marker variant="separator">
                       <MarkerContent>
@@ -1152,7 +1164,6 @@ export function ChatActivity({
                       </MarkerContent>
                     </Marker>
                   </div>
-                </MessageScrollerItem>
               )}
               {blocks.length === 0 ? (
                 runIds.length === 0 ? (
@@ -1180,13 +1191,13 @@ export function ChatActivity({
               ) : (
                 blocks.map((block) =>
                   block.type === "actions" ? (
-                    <MessageScrollerItem key={block.key} messageId={block.key}>
-                      <ActionsBlock items={block.items} />
-                    </MessageScrollerItem>
+                    <ActionsBlock key={block.key} items={block.items} />
                   ) : block.type === "task" ? (
-                    <MessageScrollerItem key={block.key} messageId={block.key}>
-                      <TaskBlock header={block.header} items={block.items} />
-                    </MessageScrollerItem>
+                    <TaskBlock
+                      key={block.key}
+                      header={block.header}
+                      items={block.items}
+                    />
                   ) : (
                     <BlockItem
                       key={block.key}
@@ -1200,20 +1211,31 @@ export function ChatActivity({
                 )
               )}
               {rootBusy && (
-                <MessageScrollerItem scrollAnchor={false}>
                   <div className="flex items-center gap-2">
                     <Icon className="size-3" />
                     <ThinkingIndicator />
                   </div>
-                </MessageScrollerItem>
               )}
-            </MessageScrollerContent>
-          </MessageScrollerViewport>
-          <MessageScrollerButton />
-        </MessageScroller>
-      </MessageScrollerProvider>
+      </div>
 
-      <div className="flex w-full flex-col">
+      <div className="sticky bottom-0 z-10 flex w-full flex-col bg-background">
+        {!atBottom && (
+          // Volver al fondo (sustituye al botón del message-scroller).
+          <Button
+            variant="outline"
+            size="icon-sm"
+            onClick={() =>
+              window.scrollTo({
+                top: document.documentElement.scrollHeight,
+                behavior: "smooth",
+              })
+            }
+            aria-label="Ir al final de la conversación"
+            className="absolute -top-11 left-1/2 -translate-x-1/2 rounded-full shadow-sm"
+          >
+            <CaretDownIcon />
+          </Button>
+        )}
         {pendingInput && (
           // Pregunta pendiente anclada sobre el composer (estilo Claude Code):
           // lo que escribas abajo la responde directamente.
@@ -1236,7 +1258,7 @@ export function ChatActivity({
         )}
         {suggestions.length > 0 && !pendingInput && (
           // Siguientes pasos sugeridos por el orquestador: un clic los envía.
-          <div className="flex shrink-0 flex-wrap gap-1.5 border-t px-3 py-2 sm:border-x">
+          <div className="flex shrink-0 flex-wrap items-center gap-1.5 pb-2">
             {suggestions.map((suggestion) => (
               <Button
                 key={suggestion}
@@ -1244,11 +1266,20 @@ export function ChatActivity({
                 size="sm"
                 disabled={pending}
                 onClick={() => sendSuggestion(suggestion)}
-                className="h-7 rounded-full text-xs font-normal"
+                className="font-normal"
               >
                 {suggestion}
               </Button>
             ))}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSuggestions([])}
+              aria-label="Descartar sugerencias"
+              className="font-normal"
+            >
+              Nada <XIcon />
+            </Button>
           </div>
         )}
         {pendingInput && pendingInput.options.length > 0 && (
@@ -1731,7 +1762,7 @@ function BlockItem({
   onReply?: (text: string) => void
 }) {
   return (
-    <MessageScrollerItem messageId={item.id}>
+    <div data-message-id={item.id}>
       {item.kind === "user" ? (
         (() => {
           const { quote, text, images } = parseUserReply(item.label)
@@ -1831,28 +1862,31 @@ function BlockItem({
               </div>
               <ModelBadge model={item.model} />
             </MessageHeader>
-            <Bubble variant="outline">
+            <Bubble variant="outline" className={item.chosen ? "mb-2" : undefined}>
+              {item.chosen && (
+                // Respuesta elegida como "reacción" colgada de la burbuja.
+                <BubbleReactions side="bottom" align="end" className="gap-1">
+                  <CheckIcon className="size-3 text-success" />
+                  <span className="max-w-48 truncate">{item.chosen}</span>
+                </BubbleReactions>
+              )}
               <BubbleContent>
                 <Streamdown className="text-xs leading-relaxed [&_:not(pre)>code]:mx-0 [&_:not(pre)>code]:rounded-none [&_:not(pre)>code]:border [&_:not(pre)>code]:border-border [&_:not(pre)>code]:bg-background [&_:not(pre)>code]:px-1 [&_:not(pre)>code]:py-px [&_:not(pre)>code]:text-[11px] [&_:not(pre)>code]:whitespace-nowrap [&_li]:my-0.5 [&_ol]:my-1 [&_p]:my-1 [&_ul]:my-1">
                   {item.label}
                 </Streamdown>
-                {item.options && item.options.length > 0 && (
-                  // Contexto histórico: respondida → solo la elegida (con
-                  // check); pendiente → todas (las respondibles viven sobre
-                  // el composer del run vivo).
+                {item.options && item.options.length > 0 && !item.chosen && (
+                  // Pendiente: las opciones como contexto (las respondibles
+                  // viven sobre el composer del run vivo).
                   <span className="mt-1.5 flex flex-wrap gap-1">
-                    {(item.chosen ? [item.chosen] : item.options).map(
-                      (option) => (
-                        <Badge
-                          key={option}
-                          variant={item.chosen ? "default" : "outline"}
-                          className="gap-1 text-[10px] font-normal"
-                        >
-                          {item.chosen && <CheckIcon className="size-3" />}
-                          {option}
-                        </Badge>
-                      )
-                    )}
+                    {item.options.map((option) => (
+                      <Badge
+                        key={option}
+                        variant="outline"
+                        className="text-[10px] font-normal"
+                      >
+                        {option}
+                      </Badge>
+                    ))}
                   </span>
                 )}
               </BubbleContent>
@@ -1864,6 +1898,6 @@ function BlockItem({
           <MarkerContent>{item.label}</MarkerContent>
         </Marker>
       )}
-    </MessageScrollerItem>
+    </div>
   )
 }

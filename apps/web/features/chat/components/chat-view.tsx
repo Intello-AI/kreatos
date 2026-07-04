@@ -51,7 +51,7 @@ export function ChatView({
   )
 
   return (
-    <div className="mx-auto h-full min-h-0 w-full max-w-3xl">
+    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col">
       <ChatActivity
         key={conversation.id}
         runIds={runIds}
