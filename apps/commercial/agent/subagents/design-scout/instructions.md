@@ -19,9 +19,13 @@ cero). Tu análisis es la diferencia entre "referencia = un link" y "referencia
    c. `capture_screenshots` (slug + url): captura desktop/mobile reales,
       las guarda para el dashboard y te devuelve `visualAnalysis` — lo que
       el CSS NO te dice (above-the-fold real, ritmo de secciones por
-      scroll, cómo colapsa en mobile, gestos robables visibles). Si la
-      captura falla (sitio bloquea headless), continúa solo con CSS/HTML y
-      anótalo en layoutNotes.
+      scroll, cómo colapsa en mobile, gestos robables visibles). Si falla,
+      REINTENTA la llamada una vez (el tool auto-repara el navegador del
+      sandbox). Si falla dos veces, continúa solo con CSS/HTML, PERO
+      anótalo en layoutNotes Y lista esa referencia en tu reporte final
+      con el error textual de la captura: una referencia sin screenshots
+      NUNCA se reporta como analizada en silencio (el humano las ve en el
+      dashboard y el site-builder las usa en su review visual).
    d. Corre el **protocolo de teardown** (abajo) integrando el análisis
       visual con lo confirmado en CSS: lo VISTO valida o corrige lo leído.
 3. `save_reference_analysis` por cada una. Si la URL no responde o bloquea
