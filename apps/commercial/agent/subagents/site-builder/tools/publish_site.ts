@@ -4,7 +4,11 @@ import { z } from "zod"
 import { addActivity } from "../../../lib/leads"
 import { getGithubEnv, mergeBranchToMain } from "../lib/github"
 import { getSite, setSiteStatus, updateSite } from "../lib/sites"
-import { getLatestDeployment, getPreferredUrl } from "../lib/vercel"
+import {
+  getDeploymentBuildLog,
+  getLatestDeployment,
+  getPreferredUrl,
+} from "../lib/vercel"
 
 const POLL_INTERVAL_MS = 10_000
 const TIMEOUT_MS = 6 * 60_000
@@ -32,12 +36,18 @@ export default defineTool({
     }
 
     const env = getGithubEnv()
-    await mergeBranchToMain(`${env.org}/${site.slug}`, `v${versionN}`)
+    const { mergeSha } = await mergeBranchToMain(
+      `${env.org}/${site.slug}`,
+      `v${versionN}`,
+    )
 
     const deadline = Date.now() + TIMEOUT_MS
     while (Date.now() < deadline) {
+      // Con mergeSha se espera el deployment de ESE commit (sin él, el poll
+      // podría agarrar un production deployment anterior ya READY).
       const deployment = await getLatestDeployment({
         projectId: site.vercel_project_id,
+        ...(mergeSha ? { commitSha: mergeSha } : {}),
       })
       if (deployment?.state === "READY" && deployment.url) {
         // Dominio limpio del proyecto (slug.vercel.app), no la URL con hash.
@@ -62,10 +72,17 @@ export default defineTool({
         return { state: "READY" as const, deployUrl }
       }
       if (deployment?.state === "ERROR") {
+        const buildLog = deployment.uid
+          ? await getDeploymentBuildLog({
+              deploymentUid: deployment.uid,
+              maxChars: 4000,
+            }).catch(() => null)
+          : null
         return {
           state: "ERROR" as const,
           deployUrl: null,
-          hint: "El merge se hizo pero el deployment de producción falló; revisa logs en Vercel.",
+          buildLog,
+          hint: "El merge se hizo pero el deployment de producción falló — el buildLog trae la causa; corrige y vuelve a publicar.",
         }
       }
       await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))

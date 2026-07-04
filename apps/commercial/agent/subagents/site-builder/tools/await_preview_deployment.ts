@@ -3,7 +3,11 @@ import { z } from "zod"
 
 import { addActivity } from "../../../lib/leads"
 import { getSite, setSiteStatus, setVersionPreview } from "../lib/sites"
-import { getLatestDeployment, getPreferredUrl } from "../lib/vercel"
+import {
+  getDeploymentBuildLog,
+  getLatestDeployment,
+  getPreferredUrl,
+} from "../lib/vercel"
 
 const POLL_INTERVAL_MS = 10_000
 const TIMEOUT_MS = 6 * 60_000
@@ -58,10 +62,18 @@ export default defineTool({
       }
 
       if (deployment?.state === "ERROR" || deployment?.state === "CANCELED") {
+        const buildLog =
+          deployment.state === "ERROR" && deployment.uid
+            ? await getDeploymentBuildLog({
+                deploymentUid: deployment.uid,
+                maxChars: 4000,
+              }).catch(() => null)
+            : null
         return {
           state: deployment.state,
           previewUrl: null,
-          hint: "Revisa los logs del deployment en Vercel; el build local pasó pero el de Vercel falló.",
+          buildLog,
+          hint: "El build local pasó pero el de Vercel falló — el buildLog trae la causa; corrige, re-pushea y reintenta.",
         }
       }
 

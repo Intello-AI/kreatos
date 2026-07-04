@@ -5,7 +5,7 @@ import { getSupabaseClient } from "../../../lib/supabase"
 
 export default defineTool({
   description:
-    "Lista las referencias de diseño pendientes de análisis (status='pending'), o una específica por URL si se pasa el filtro.",
+    "Lista las referencias de diseño por analizar (status pending, más las atoradas en analyzing por runs muertos — se re-reclaman), o una específica por URL si se pasa el filtro.",
   inputSchema: z.object({
     url: z
       .string()
@@ -15,10 +15,12 @@ export default defineTool({
   }),
   async execute({ url, limit }) {
     const supabase = getSupabaseClient()
+    // Incluye también las atoradas en "analyzing": si un run anterior murió
+    // tras reclamarlas quedarían huérfanas para siempre — se re-reclaman.
     let query = supabase
       .from("design_references")
-      .select("id, slug, url, source, created_at")
-      .eq("status", "pending")
+      .select("id, slug, url, source, status, created_at")
+      .in("status", ["pending", "analyzing"])
       .order("created_at", { ascending: true })
       .limit(limit)
     if (url) query = query.eq("url", url)

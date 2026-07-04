@@ -88,11 +88,12 @@ export function getAuthenticatedCloneUrl(fullName: string): string {
   return `https://x-access-token:${env.token}@github.com/${fullName}.git`
 }
 
-/** Merge de una rama a main vía API (publicación). */
+/** Merge de una rama a main vía API (publicación). Devuelve el sha del merge
+ *  commit (null si ya estaba mergeado) para esperar SU deployment exacto. */
 export async function mergeBranchToMain(
   fullName: string,
   branch: string,
-): Promise<void> {
+): Promise<{ mergeSha: string | null }> {
   const env = getGithubEnv()
   const res = await githubFetch(env, `/repos/${fullName}/merges`, {
     method: "POST",
@@ -102,9 +103,14 @@ export async function mergeBranchToMain(
       commit_message: `publish: merge ${branch} a main`,
     }),
   })
-  // 204 = ya estaba mergeado; 201 = merge creado.
+  // 204 = ya estaba mergeado (sin sha nuevo); 201 = merge creado.
   if (!res.ok && res.status !== 204) {
     const body = await res.text()
     throw new Error(`Merge de ${branch} a main falló (${res.status}): ${body}`)
   }
+  if (res.status === 201) {
+    const body = (await res.json()) as { sha?: string }
+    return { mergeSha: body.sha ?? null }
+  }
+  return { mergeSha: null }
 }
