@@ -59,9 +59,13 @@ template de kreatos; tú lo personalizas, no lo reinventas.
      (`curl -o public/images/logo.<ext> <url>`), decláralo en
      `business.logo` y úsalo en el header.
    - `iconUrl` (isotipo cuadrado elegido por el curador): descárgalo a
-     `public/images/icon.<ext>` y decláralo en `business.icon` — el motor
-     genera favicon y apple-icon desde ahí (convenciones de Next). Sin
-     isotipo, el motor cae al monograma con los colores del theme.
+     `public/images/icon.<ext>`, decláralo en `business.icon` y en fase
+     build GENERA los iconos como archivos ESTÁTICOS en `app/` según el
+     AGENT.md (icon.svg si es SVG; icon.png + favicon.ico + apple-icon.png
+     con ffmpeg si es raster — apple-icon SIEMPRE con fondo sólido del
+     theme y ~18% padding). Sin isotipo: escribe a mano `app/icon.svg`
+     con un monograma simple (fondo acento + inicial). NUNCA uses
+     ImageResponse/Satori para iconos: rompe el build en export.
    Si `brand` es null, aplica la política de datos faltantes (nunca inventes
    logo ni nombre corto que el negocio no usa).
 2c. **Secciones custom — tu herramienta contra lo genérico.** El template
