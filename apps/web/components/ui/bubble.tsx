@@ -82,6 +82,24 @@ function BubbleContent({
   )
 }
 
+/**
+ * Cita estilo WhatsApp dentro de una burbuja: el mensaje al que se responde,
+ * arriba del texto propio. Usa currentColor para funcionar sobre cualquier
+ * variante (primary, muted, outline...).
+ */
+function BubbleQuote({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="bubble-quote"
+      className={cn(
+        "mb-1.5 w-full min-w-0 border-l-2 border-current/40 bg-current/10 px-2 py-1.5 text-[11px] leading-snug opacity-90 wrap-break-word",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
 const bubbleReactionsVariants = cva(
   "absolute z-10 flex w-fit shrink-0 items-center justify-center gap-1 rounded-none bg-muted px-1.5 py-0.5 text-xs ring-2 ring-card has-[button]:p-0",
   {
@@ -122,4 +140,4 @@ function BubbleReactions({
   )
 }
 
-export { BubbleGroup, Bubble, BubbleContent, BubbleReactions }
+export { BubbleGroup, Bubble, BubbleContent, BubbleQuote, BubbleReactions }

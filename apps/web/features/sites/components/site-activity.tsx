@@ -15,7 +15,7 @@ import { toast } from "sonner"
 
 import { answerSiteInput, sendSiteMessage } from "@/features/sites/actions"
 import { cn } from "@/lib/utils"
-import { Bubble, BubbleContent } from "@/components/ui/bubble"
+import { Bubble, BubbleContent, BubbleQuote } from "@/components/ui/bubble"
 import {
   InputGroup,
   InputGroupAddon,
@@ -145,6 +145,18 @@ function describeAction(action: Record<string, unknown>): {
   const known = TOOL_LABELS[toolName]
   if (known) return { label: known.label, detail: known.detail?.(input) }
   return { label: toolName, detail: JSON.stringify(input).slice(0, 80) }
+}
+
+/**
+ * Detecta el formato de respuesta-a-pregunta que genera answerSiteInput
+ * («pregunta»: respuesta) para renderizarlo como cita estilo WhatsApp.
+ */
+function parseUserReply(label: string): { quote?: string; text: string } {
+  const match = label.match(
+    /^Respondiendo a la pregunta pendiente \(«([\s\S]+?)»\):\s*([\s\S]*)$/,
+  )
+  if (!match) return { text: label }
+  return { quote: match[1], text: match[2] }
 }
 
 function formatTime(at: string): string {
@@ -707,16 +719,24 @@ function BlockItem({ item }: { item: ActivityItem }) {
   return (
     <MessageScrollerItem messageId={item.id}>
       {item.kind === "user" ? (
-        <Message align="end">
-          <MessageContent>
-            <MessageHeader className="justify-end">
-              Tú · {formatTime(item.at)}
-            </MessageHeader>
-            <Bubble variant="default" align="end">
-              <BubbleContent>{item.label}</BubbleContent>
-            </Bubble>
-          </MessageContent>
-        </Message>
+        (() => {
+          const { quote, text } = parseUserReply(item.label)
+          return (
+            <Message align="end">
+              <MessageContent>
+                <MessageHeader className="justify-end">
+                  Tú · {formatTime(item.at)}
+                </MessageHeader>
+                <Bubble variant="default" align="end">
+                  <BubbleContent>
+                    {quote && <BubbleQuote>{quote}</BubbleQuote>}
+                    {text}
+                  </BubbleContent>
+                </Bubble>
+              </MessageContent>
+            </Message>
+          )
+        })()
       ) : item.kind === "text" ? (
         <Message>
           <MessageContent>
