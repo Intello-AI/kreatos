@@ -11,6 +11,8 @@ import {
   XIcon,
 } from "@phosphor-icons/react"
 
+import { toast } from "sonner"
+
 import { answerSiteInput, sendSiteMessage } from "@/features/sites/actions"
 import { cn } from "@/lib/utils"
 import { Bubble, BubbleContent } from "@/components/ui/bubble"
@@ -172,7 +174,6 @@ export function SiteActivity({
   const [items, setItems] = useState<ActivityItem[]>([])
   const [connected, setConnected] = useState(false)
   const [message, setMessage] = useState("")
-  const [sendError, setSendError] = useState<string>()
   const [pending, startTransition] = useTransition()
   const composerRef = useRef<HTMLTextAreaElement>(null)
   const seenChildren = useRef<Set<string>>(new Set())
@@ -462,7 +463,6 @@ export function SiteActivity({
   }, [historyLoaded, runIdsKey])
 
   const onSend = () => {
-    setSendError(undefined)
     const text = message
     const answering = pendingInput
     startTransition(async () => {
@@ -472,23 +472,12 @@ export function SiteActivity({
         ? await answerSiteInput(siteId, answering.requestId, text)
         : await sendSiteMessage(siteId, text)
       if (result?.formError) {
-        setSendError(result.formError)
+        toast.error(result.formError)
       } else {
         setMessage("")
-        if (answering) {
-          setPendingInput(null)
-          // La respuesta a un input request no viaja como message.received;
-          // se pinta localmente para que la conversación se lea completa.
-          push({
-            // Después de todo lo actual, antes del siguiente run (que arranca
-            // en runIds.length * 1e6 + 1).
-            sortKey: runIds.length * 1_000_000,
-            at: new Date().toISOString(),
-            depth: 0,
-            kind: "user",
-            label: text.trim(),
-          })
-        }
+        // La respuesta viaja también como message del turno, así que aparece
+        // en el stream como burbuja tuya — sin push local.
+        if (answering) setPendingInput(null)
         router.refresh()
       }
       // El foco regresa al composer para seguir la conversación con teclado.
@@ -607,11 +596,11 @@ export function SiteActivity({
         </MessageScroller>
       </MessageScrollerProvider>
 
-      <div className="flex w-full flex-col border-t">
+      <div className="flex w-full flex-col">
         {pendingInput && (
           // Pregunta pendiente anclada sobre el composer (estilo Claude Code):
           // lo que escribas abajo la responde directamente.
-          <div className="flex shrink-0 items-start gap-2 border-b border-warning/40 bg-warning/5 p-2.5">
+          <div className="flex shrink-0 items-start gap-2 border-y border-warning/40 bg-warning/5 p-2.5">
             <QuestionIcon className="mt-0.5 size-3.5 shrink-0 text-warning" />
             <div className="max-h-28 min-w-0 flex-1 overflow-y-auto text-xs">
               <Streamdown className="text-xs leading-relaxed [&_p]:my-0.5 [&_:not(pre)>code]:mx-0 [&_:not(pre)>code]:rounded-sm [&_:not(pre)>code]:border [&_:not(pre)>code]:border-border [&_:not(pre)>code]:bg-background [&_:not(pre)>code]:px-1 [&_:not(pre)>code]:py-px [&_:not(pre)>code]:text-[11px]">
@@ -676,7 +665,6 @@ export function SiteActivity({
             </InputGroupButton>
           </InputGroupAddon>
         </InputGroup>
-        {sendError && <p className="text-sm text-destructive">{sendError}</p>}
       </div>
     </div>
   )

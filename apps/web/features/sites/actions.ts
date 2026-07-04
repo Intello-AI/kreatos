@@ -175,6 +175,41 @@ async function sendFollowUp(
   return {}
 }
 
+/**
+ * "Stop" de un sitio en proceso: lo marca failed y desacopla el dashboard.
+ * eve no permite abortar el run en curso, pero el guard de transiciones
+ * (de failed solo se sale con generating) bloquea cualquier escritura de
+ * status del run huérfano — sus updates fallan y el agente se detiene.
+ */
+export async function stopSite(siteId: string): Promise<SiteActionState> {
+  const supabase = getAdminClient()
+  const { data: site } = await supabase
+    .from("sites")
+    .select("id, status, lead_id")
+    .eq("id", siteId)
+    .maybeSingle()
+  if (!site) return { formError: "Sitio no encontrado." }
+  if (site.status !== "brief" && site.status !== "generating") {
+    return { formError: "Solo se detiene un sitio en proceso." }
+  }
+
+  const { error } = await supabase
+    .from("sites")
+    .update({ status: "failed" })
+    .eq("id", siteId)
+  if (error) return { formError: error.message }
+
+  await supabase.from("lead_activity").insert({
+    lead_id: site.lead_id,
+    type: "site_status_change",
+    note: `${site.status} → failed: detenido manualmente desde el dashboard.`,
+    actor: "manual",
+  })
+
+  revalidatePath(`/dashboard/sites/${siteId}`)
+  return {}
+}
+
 export async function approveSite(siteId: string): Promise<SiteActionState> {
   const supabase = getAdminClient()
   const { data: site } = await supabase
@@ -249,7 +284,10 @@ export async function answerSiteInput(
   try {
     const eve = getEveClient()
     const session = eve.session(site.eve_session_id)
+    // El route exige `message` aunque viajen inputResponses; el mismo texto
+    // va como respuesta al request Y como mensaje del turno (visible en stream).
     const response = await session.send({
+      message: trimmed,
       inputResponses: [{ requestId, text: trimmed }],
     })
     await supabase
