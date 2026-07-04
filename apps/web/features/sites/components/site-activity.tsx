@@ -378,7 +378,7 @@ export function SiteActivity({
         </div>
       </div>
 
-      <MessageScrollerProvider defaultScrollPosition="end">
+      <MessageScrollerProvider defaultScrollPosition="end" autoScroll>
         <MessageScroller className="min-h-0 flex-1 border-t">
           <MessageScrollerViewport className="p-3">
             <MessageScrollerContent className="gap-4">
