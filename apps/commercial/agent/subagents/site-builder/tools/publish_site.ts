@@ -4,7 +4,7 @@ import { z } from "zod"
 import { addActivity } from "../../../lib/leads"
 import { getGithubEnv, mergeBranchToMain } from "../lib/github"
 import { getSite, setSiteStatus, updateSite } from "../lib/sites"
-import { getLatestDeployment } from "../lib/vercel"
+import { getLatestDeployment, getPreferredUrl } from "../lib/vercel"
 
 const POLL_INTERVAL_MS = 10_000
 const TIMEOUT_MS = 6 * 60_000
@@ -40,15 +40,23 @@ export default defineTool({
         projectId: site.vercel_project_id,
       })
       if (deployment?.state === "READY" && deployment.url) {
-        await updateSite(siteId, { deploy_url: deployment.url })
+        // Dominio limpio del proyecto (slug.vercel.app), no la URL con hash.
+        const deployUrl = deployment.uid
+          ? ((await getPreferredUrl({
+              deploymentUid: deployment.uid,
+              kind: "production",
+              fallback: deployment.url,
+            })) ?? deployment.url)
+          : deployment.url
+        await updateSite(siteId, { deploy_url: deployUrl })
         await setSiteStatus(siteId, "published")
         await addActivity({
           leadId: site.lead_id,
           type: "site_published",
-          note: `v${versionN} publicada: ${deployment.url}`,
+          note: `v${versionN} publicada: ${deployUrl}`,
           actor: "site-builder",
         })
-        return { state: "READY" as const, deployUrl: deployment.url }
+        return { state: "READY" as const, deployUrl }
       }
       if (deployment?.state === "ERROR") {
         return {

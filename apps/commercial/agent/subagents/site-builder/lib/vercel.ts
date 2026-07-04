@@ -66,6 +66,7 @@ export async function ensureVercelProject(input: {
 export interface DeploymentStatus {
   state: "READY" | "ERROR" | "BUILDING" | "QUEUED" | "CANCELED" | "INITIALIZING"
   url: string | null
+  uid: string | null
 }
 
 /** Último deployment del proyecto para un commit dado (o el más reciente). */
@@ -82,6 +83,7 @@ export async function getLatestDeployment(input: {
   }
   const data = (await res.json()) as {
     deployments: Array<{
+      uid?: string
       state: DeploymentStatus["state"]
       url: string
       meta?: { githubCommitSha?: string }
@@ -92,5 +94,35 @@ export async function getLatestDeployment(input: {
     ? deployments.find((d) => d.meta?.githubCommitSha === input.commitSha)
     : deployments[0]
   if (!match) return null
-  return { state: match.state, url: match.url ? `https://${match.url}` : null }
+  return {
+    state: match.state,
+    url: match.url ? `https://${match.url}` : null,
+    uid: match.uid ?? null,
+  }
+}
+
+/**
+ * URL pública preferida de un deployment: la URL directa lleva el hash del
+ * deployment y Vercel Authentication la protege; los aliases son limpios.
+ * - preview: alias de rama (contiene "-git-"), estable entre pushes.
+ * - production: dominio del proyecto (el alias más corto, ej. slug.vercel.app).
+ */
+export async function getPreferredUrl(input: {
+  deploymentUid: string
+  kind: "preview" | "production"
+  fallback: string | null
+}): Promise<string | null> {
+  const res = await vercelFetch(`/v2/deployments/${input.deploymentUid}/aliases`)
+  if (!res.ok) return input.fallback
+  const data = (await res.json()) as { aliases?: Array<{ alias?: string }> }
+  const aliases = (data.aliases ?? [])
+    .map((a) => a.alias)
+    .filter((a): a is string => Boolean(a))
+  if (aliases.length === 0) return input.fallback
+
+  const pick =
+    input.kind === "preview"
+      ? (aliases.find((a) => a.includes("-git-")) ?? aliases[0])
+      : aliases.reduce((best, a) => (a.length < best.length ? a : best))
+  return `https://${pick}`
 }

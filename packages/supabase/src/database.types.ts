@@ -278,6 +278,7 @@ export type Database = {
           current_version: number | null
           deploy_url: string | null
           eve_run_id: string | null
+          eve_run_ids: string[]
           eve_session_id: string | null
           id: string
           lead_id: string
@@ -294,6 +295,7 @@ export type Database = {
           current_version?: number | null
           deploy_url?: string | null
           eve_run_id?: string | null
+          eve_run_ids?: string[]
           eve_session_id?: string | null
           id?: string
           lead_id: string
@@ -310,6 +312,7 @@ export type Database = {
           current_version?: number | null
           deploy_url?: string | null
           eve_run_id?: string | null
+          eve_run_ids?: string[]
           eve_session_id?: string | null
           id?: string
           lead_id?: string

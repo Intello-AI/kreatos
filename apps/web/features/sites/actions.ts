@@ -112,6 +112,7 @@ export async function createSiteBrief(
       .update({
         eve_session_id: response.continuationToken,
         eve_run_id: response.sessionId,
+        eve_run_ids: [response.sessionId],
       })
       .eq("id", site.id)
   } catch (error) {
@@ -140,7 +141,7 @@ async function sendFollowUp(
   const supabase = getAdminClient()
   const { data: site, error } = await supabase
     .from("sites")
-    .select("id, eve_session_id")
+    .select("id, eve_session_id, eve_run_ids")
     .eq("id", siteId)
     .maybeSingle()
   if (error || !site) return { formError: "Sitio no encontrado." }
@@ -150,12 +151,18 @@ async function sendFollowUp(
     const session = site.eve_session_id
       ? eve.session(site.eve_session_id)
       : eve.session()
-    const response = await session.send(message)
+    // Solo una sesión NUEVA necesita contexto; la existente ya sabe qué site es.
+    const payload = site.eve_session_id
+      ? message
+      : `[Contexto: site ${siteId}] ${message}`
+    const response = await session.send(payload)
     await supabase
       .from("sites")
       .update({
-        ...(site.eve_session_id ? {} : { eve_session_id: response.continuationToken }),
+        // Cada send devuelve un token fresco; se guarda siempre el último.
+        eve_session_id: response.continuationToken,
         eve_run_id: response.sessionId,
+        eve_run_ids: [...(site.eve_run_ids ?? []), response.sessionId],
       })
       .eq("id", siteId)
   } catch (err) {
@@ -225,10 +232,7 @@ export async function sendSiteMessage(
   if (trimmed.length < 3) {
     return { formError: "Escribe un mensaje." }
   }
-  return sendFollowUp(
-    siteId,
-    `Mensaje del humano sobre el site ${siteId}: ${trimmed}`,
-  )
+  return sendFollowUp(siteId, trimmed)
 }
 
 export async function requestSiteChanges(

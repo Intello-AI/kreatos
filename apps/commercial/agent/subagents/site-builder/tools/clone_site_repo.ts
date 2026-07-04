@@ -35,8 +35,11 @@ export default defineTool({
       throw new Error(`git clone falló: ${clone.stderr}`)
     }
 
+    // El email debe corresponder a una cuenta GitHub del team de Vercel, si no
+    // Vercel bloquea el deployment ("commit author could not be matched").
+    const gitEmail = process.env.SITE_GIT_EMAIL ?? "jcampillo1207@gmail.com"
     await sandbox.run({
-      command: `cd site && git config user.name "kreatos site-builder" && git config user.email "bots@intelloai.com"`,
+      command: `cd site && git config user.name "kreatos site-builder" && git config user.email "${gitEmail}"`,
     })
 
     return { path: "/workspace/site", repo: fullName }
