@@ -267,3 +267,10 @@ para decisiones que esta política no cubre.
   (`head`/`cat`/`grep` sin archivo, pipes rotos) — se cuelgan y congelan la
   sesión. Pasa siempre el archivo como argumento y termina pipes con un
   consumidor que no espere entrada.
+- **Un comando de sandbox = UN paso.** NUNCA encadenes pasos largos con `&&`
+  (`pnpm install && pnpm build && pnpm qa`): un comando que rebasa varios
+  minutos muere con `TypeError: terminated` y pierdes todo el progreso del
+  paso. Corre `pnpm install`, `pnpm build` y `pnpm qa` como comandos
+  SEPARADOS, verificando el resultado de cada uno antes del siguiente. Si
+  aun separado `pnpm qa` se corta (la primera vez descarga el navegador),
+  reintenta UNA vez — el cache ya quedó caliente.
