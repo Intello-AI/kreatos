@@ -184,6 +184,11 @@ materializas:
     terminar tu turno con un reporte de bloqueo** — es la última línea de
     tu turno si el working tree tiene cambios. Cuesta segundos; perder el
     trabajo cuesta la corrida entera.
+    **El checkpoint NO requiere que validate/build/QA pasen** — es WIP por
+    definición: se pushea con el build roto, con el schema fallando, a
+    medias. Un "no pude checkpointear porque validate falla" es SIEMPRE
+    incorrecto: el único caso donde el checkpoint no procede es working
+    tree sin cambios (y ahí es no-op, no error).
 12. **Al retomar un trabajo muerto — protocolo OBLIGATORIO antes de tocar
     nada**:
     a. Lee `resumedFromBranch` de clone_site_repo y corre `git log --oneline

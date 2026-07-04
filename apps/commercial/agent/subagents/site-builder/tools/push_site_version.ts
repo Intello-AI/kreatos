@@ -17,7 +17,7 @@ export default defineTool({
       .boolean()
       .default(false)
       .describe(
-        "true = commit WIP intermedio (aún sin QA): mismo push a v{N}, mensaje prefijado 'wip:'. Working tree limpio es no-op, no error.",
+        "true = commit WIP intermedio pusheado al remoto: NO requiere validate/build/QA verdes (es WIP por definición — pushea aunque todo esté roto). Mensaje prefijado 'wip:'. Working tree limpio es no-op, no error.",
       ),
   }),
   async execute({ siteId, versionN, commitMessage, checkpoint }, ctx) {
