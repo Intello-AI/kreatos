@@ -20,7 +20,8 @@ const SURFACE_RULES: Record<string, string> = {
   "site-config": `El archivo es site.config.ts del template de kreatos.
 - TypeScript válido que respeta EXACTAMENTE la estructura del archivo base actual (imports, tipo del export, forma de las secciones).
 - Solo cambia los valores que el spec dicta; no inventes campos nuevos ni borres los requeridos.
-- Los campos opcionales sin dato real se OMITEN (nunca strings vacíos, ceros ni arrays vacíos de relleno).`,
+- Los campos REQUERIDOS del archivo base (address, geo, phone, hours, maps, social, seo, design, sections) SIEMPRE presentes — si el contenido no da un valor, conserva la forma del base con el valor que el contenido indique como mock.
+- SOLO los campos opcionales (founded, whatsapp, email, icon, logo...) se omiten sin dato real (nunca strings vacíos ni ceros de relleno).`,
   "theme-css": `El archivo es app/theme.css del template (tokens shadcn + Tailwind v4).
 - Mantén la estructura del archivo base: :root { ... } y .dark { ... } con las MISMAS variables, más el bloque @theme inline si el base lo tiene.
 - Usa EXACTAMENTE los valores de color/radius que dicta el spec — cero colores inventados.
@@ -119,6 +120,35 @@ export default defineTool({
       throw new Error(
         "draft_surface no escribe secciones custom: ese código es diseño y lo escribes tú con las herramientas del sandbox.",
       )
+    }
+    // El spec NO es el config: el schema del template (lib/config.ts) exige
+    // estos campos SIEMPRE. Rechazar aquí el contenido incompleto ahorra el
+    // whack-a-mole de errores de tipos build por build.
+    if (surface === "site-config") {
+      const required = [
+        "address",
+        "geo",
+        "phone",
+        "hours",
+        "maps",
+        "social",
+        "seo",
+        "design",
+        "sections",
+      ]
+      const missing = required.filter(
+        (key) => !new RegExp(`\\b${key}\\s*:`).test(content),
+      )
+      if (missing.length > 0) {
+        throw new Error(
+          `Tu contenido no trae campos REQUERIDOS del schema del template: ${missing.join(", ")}. ` +
+            "El spec no es el config — lee site/lib/config.ts y manda el objeto COMPLETO " +
+            "(business con address/geo/phone/hours/maps/social, seo, design del template " +
+            "(preset/fontPair/defaultMode/density/imageTreatment/motion — SIN concept ni " +
+            "variation_notes: esos viven solo en el spec), sections). Datos de contacto sin " +
+            'valor real → mock local marcado "// MOCK" (política de demo), nunca campos ausentes.',
+        )
+      }
     }
     const sandbox = await ctx.getSandbox()
 

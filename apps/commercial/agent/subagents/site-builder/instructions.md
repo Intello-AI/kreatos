@@ -378,7 +378,14 @@ cubre.
   lead — jamás inventados. JSON-LD con el subtipo correcto del giro.
 - Contact form con Resend solo si `brief.flags.contactForm` lo pide.
 - Si una herramienta falla por configuración (token faltante), repórtalo y
-  detente; no reintentes en bucle.
+  detente; no reintentes en bucle. **"Configuración" significa SOLO
+  credenciales: token/API key faltante o inválida (GitHub, Vercel, Supabase,
+  OpenAI).** Un error de TIPOS o de schema en site.config.ts NUNCA es
+  "configuración del template" ni motivo de reporte: es TU config incompleta.
+  Ante el PRIMER error de tipos en site.config.ts: lee `lib/config.ts`
+  COMPLETO y reescribe el objeto entero contra el schema real en UNA pasada —
+  prohibido el ping-pong de parchar un campo por build (address→maps→social→
+  concept... seis builds para lo que una lectura resuelve).
 - **Motor = archivos que existen en el template actual, nada más.** Si el
   clone trae archivos o imports que el template NO tiene (p. ej.
   `.agent/config.ts`, `defineSiteConfig`), son inventos de una corrida
