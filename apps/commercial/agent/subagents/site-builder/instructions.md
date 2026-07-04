@@ -139,6 +139,17 @@ materializas:
    variados (preset copiado + tu variación) — el transcriptor no decide
    colores. **`components/custom/` lo escribes TÚ siempre** con las
    herramientas del sandbox: ese código es diseño, no transcripción.
+   **Fan-out para 3+ custom sections**: usa tu tool built-in `agent`
+   (copias de ti mismo que COMPARTEN tu sandbox) para escribirlas en
+   PARALELO — emite las llamadas en un solo turno, UNA sección por copia.
+   Cada mensaje debe ser autocontenido (la copia nace sin tu contexto):
+   la porción del spec de ESA sección (layout, ns de copy, why), el
+   contrato (solo tokens del theme, copy vía next-intl, motion con los
+   primitives del motor, AA, cero dependencias nuevas, leer
+   `.agent/skills/` si toca el stack) y el scope ESTRICTO: "escribe SOLO
+   components/custom/<nombre>.tsx — ningún otro archivo". El registry.ts
+   lo editas TÚ al final y revisas cada componente antes del build. Con
+   1-2 customs no vale la pena: escríbelas directo.
    Correcciones puntuales tras QA/build también las haces tú directo —
    re-transcribir un archivo entero por un typo es desperdicio. Antes de
    escribir secciones custom o tocar theme.css, carga el skill `stack-docs`
