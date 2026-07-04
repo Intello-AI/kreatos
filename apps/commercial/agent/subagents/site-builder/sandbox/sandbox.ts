@@ -13,7 +13,7 @@ import { defineSandbox, defaultBackend } from "eve/sandbox"
  */
 export default defineSandbox({
   backend: defaultBackend(),
-  revalidationKey: () => "site-builder-v2",
+  revalidationKey: () => "site-builder-v3",
   async bootstrap({ use }) {
     const sandbox = await use()
     // La imagen base puede no traer pnpm; corepack lo habilita sin red extra.
@@ -31,6 +31,15 @@ export default defineSandbox({
         "(curl -fsSL https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -o /tmp/ffmpeg.tar.xz && tar -xJf /tmp/ffmpeg.tar.xz -C /tmp && (install -m 755 /tmp/ffmpeg-*-amd64-static/ffmpeg /usr/local/bin/ffmpeg 2>/dev/null || sudo install -m 755 /tmp/ffmpeg-*-amd64-static/ffmpeg /usr/local/bin/ffmpeg))",
         "echo 'ffmpeg no disponible (continuar sin optimizacion)'",
       ].join(" || "),
+    })
+    // Chromium para el paso screenshots de `pnpm qa` (Playwright). Se
+    // precalienta en el snapshot: instala el browser + deps del sistema al
+    // cache global (~/.cache/ms-playwright), que el playwright del repo
+    // clonado reutiliza. Best-effort: sin browser, qa marca el paso
+    // screenshots como fallido pero no bloquea la entrega.
+    await sandbox.run({
+      command:
+        "(cd /tmp && pnpm dlx playwright@1.55.0 install chromium --with-deps) >/dev/null 2>&1 || echo 'chromium no precalentado (qa lo intentara)'",
     })
   },
 })

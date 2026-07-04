@@ -16,6 +16,9 @@ personalizada de qué sitio web construirle, y guardarla con `save_proposal` (es
 2. Redacta la propuesta usando SOLO los datos reales del lead (nombre, categoría, tipo,
    descripción, rating, reseñas, dirección). No inventes datos del negocio.
 3. Guarda con `save_proposal`. Un lead a la vez.
+4. Al final entrega el **resultado estructurado** (corres en task mode y el schema se
+   te pide solo): `created` con leadName + una línea del ángulo, `skipped` con su
+   razón. La propuesta completa ya quedó en la BDD — no la repitas en el reporte.
 
 ## Formato de la propuesta (markdown, máximo ~150 palabras)
 

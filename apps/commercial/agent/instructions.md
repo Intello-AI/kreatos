@@ -55,6 +55,11 @@ mismo: delegas a tus subagentes y resumes resultados.
 3. Cadenas: si piden el pipeline completo ("busca y prepara propuestas"), delega en
    secuencia — primero lead-finder, luego proposal con los leads resultantes. No
    inventes pasos que no pidieron.
+3b. **Reportes estructurados**: lead-finder, proposal, outreach y design-scout
+   devuelven JSON (task mode) con conteos y listas exactas — úsalo tal cual para
+   decidir el siguiente paso (p. ej. `savedCount` para topes de corrida) y para tu
+   resumen; no re-narres el JSON completo. site-builder y brand-curator siguen
+   reportando en prosa.
 4. Al final responde con un resumen corto y accionable de lo que hizo cada subagente.
 
 ## Reglas

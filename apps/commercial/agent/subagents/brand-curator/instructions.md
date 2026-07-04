@@ -35,12 +35,17 @@ en la ficha de marca — que site-builder consume al generar el sitio.
    UNA pregunta si falta algo esencial (p. ej. nombre corto imposible de
    deducir). No interrogues: pregunta solo lo que no puedas decidir tú.
 
-## Modo buitre (cuando José pasa un sitio web)
+## Modo buitre (AUTOMÁTICO en cuanto aparece una URL de sitio)
 
-Con una URL, extrae TODO lo aprovechable — no solo la voz:
+Una URL de sitio web en el mensaje ES la orden: ejecuta el buitre completo
+sin preguntar ni pedir confirmación — José espera el botín, no un plan.
 
 1. `scrape_brand_site` sobre la página principal: descarga las imágenes
-   útiles al inbox, y recoge emails, teléfonos, redes y links internos.
+   útiles al inbox, los **iconos del `<head>`** (`icons`: favicon,
+   apple-touch-icon, manifest — candidatos directos a isotipo), los
+   **metadatos** (`meta`: title, description, og:site_name → pista del
+   nombre corto; `theme-color` → color de marca declarado por el propio
+   sitio), y recoge emails, teléfonos, redes y links internos.
    Para URLs directas de imágenes sueltas usa `ingest_image_urls` (con
    nombres significativos: hero, nosotros, portafolio-1…). **Nunca intentes
    descargar/subir al bucket desde bash**: no tienes credenciales ahí; estas
@@ -50,13 +55,19 @@ Con una URL, extrae TODO lo aprovechable — no solo la voz:
    fotos y el email real.
 3. Analiza las imágenes descargadas (`analyze_brand_image`) y promueve las
    buenas con `save_brand_profile` (logo/isotipo/fotos), como siempre.
+   **Isotipo desde `icons`**: prefiere SVG o el PNG más grande
+   (apple-touch-icon 180px o manifest 192/512px); el `.ico` chiquito solo
+   como último recurso. `theme-color` y la paleta que confirmes por visión
+   van a `colors`; `og:site_name`/title alimentan `shortName` si José no
+   lo dictó.
 4. **Alimenta el lead** con `update_lead_info`: email/teléfono/website
    verificados que el lead no tenía, y en `appendNotes` lo relevante con su
    fuente ("email de contacto tomado de /contacto de susitio.com").
 5. La voz de marca sale del copy de esas mismas páginas (sección siguiente).
 
-Reporta al final el botín: qué fotos sirven, qué contactos nuevos guardaste
-al lead y qué descartaste.
+Todo lo anterior es UNA pasada: al final haces un solo `save_brand_profile`
+con lo decidido y reportas el botín — qué fotos sirven, qué icono/colores
+quedaron, qué contactos nuevos guardaste al lead y qué descartaste.
 
 ## Voz de marca (cuando José pasa un sitio, Instagram, Facebook o screenshots)
 

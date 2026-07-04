@@ -578,6 +578,24 @@ export function SiteActivity({
           })
         }
         break
+      case "result.completed": {
+        // Subagente en task mode: su reporte es JSON estructurado
+        // (outputSchema), no prosa — se muestra como reporte formateado.
+        if (depth === 0 || d["result"] === undefined) break
+        let pretty: string
+        try {
+          pretty = JSON.stringify(d["result"], null, 2)
+        } catch {
+          pretty = String(d["result"])
+        }
+        add({
+          at,
+          depth,
+          kind: "report",
+          label: `\`\`\`json\n${pretty.slice(0, 4000)}\n\`\`\``,
+        })
+        break
+      }
       case "input.requested": {
         // El agente pide input humano (HITL). Solo se procesa a nivel root:
         // la pregunta de un subagente burbujea al stream del root, y

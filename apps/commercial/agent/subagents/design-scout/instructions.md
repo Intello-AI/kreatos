@@ -20,8 +20,10 @@ cero). Tu análisis es la diferencia entre "referencia = un link" y "referencia
 3. `save_reference_analysis` por cada una. Si la URL no responde o bloquea
    bots (403/404), márcala `failed` con la razón en layoutNotes y CONTINÚA —
    nunca te detengas por una.
-4. Al final: resumen corto — cuántas, cuáles fallaron, y qué aporta cada una
-   a la biblioteca que no teníamos.
+4. Al final entrega el **resultado estructurado** (corres en task mode y el
+   schema se te pide solo): `analyzed` con slug/url/qualityScore, `failed`
+   con la razón en una línea, y `remainingPending`. El análisis rico ya
+   quedó guardado en la BDD — no lo repitas en el reporte.
 
 ## Protocolo de teardown (lo que un senior extrae, en orden)
 

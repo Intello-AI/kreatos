@@ -202,6 +202,58 @@ export async function getDesignPresets(): Promise<DesignPresetRow[]> {
   return data ?? []
 }
 
+/**
+ * Firma estructural de la home (id:variant por sección, sin navbar/footer/
+ * contact que siempre existen) de los sitios más recientes — una por sitio,
+ * su versión más nueva. Para la regla anti-clon: dos sitios no comparten
+ * esqueleto aunque sean de giros distintos.
+ */
+export async function getRecentHomeSignatures(input: {
+  excludeSiteId: string
+  limit?: number
+}): Promise<Array<{ siteId: string; signature: string[] }>> {
+  const supabase = getSupabaseClient()
+  const { data, error } = await supabase
+    .from("site_versions")
+    .select("spec, site_id, created_at")
+    .neq("site_id", input.excludeSiteId)
+    .order("created_at", { ascending: false })
+    .limit(40)
+  if (error) throw new Error(`Lectura de specs previos falló: ${error.message}`)
+
+  const seen = new Set<string>()
+  const out: Array<{ siteId: string; signature: string[] }> = []
+  for (const row of data ?? []) {
+    if (seen.has(row.site_id)) continue
+    seen.add(row.site_id)
+    const spec = (row.spec ?? {}) as Record<string, unknown>
+    const sections = (spec["sections"] ?? []) as Array<Record<string, unknown>>
+    const signature = sections
+      .filter((s) => !["navbar", "footer", "contact"].includes(String(s["id"])))
+      .map((s) => {
+        const id = String(s["id"] ?? "")
+        const key = id === "custom" ? `custom:${s["component"] ?? ""}` : id
+        return `${key}:${s["variant"] ?? "-"}`
+      })
+    if (signature.length > 0) out.push({ siteId: row.site_id, signature })
+    if (out.length >= (input.limit ?? 6)) break
+  }
+  return out
+}
+
+/** ¿Hay referencias analizadas disponibles? (para exigir su uso en el spec) */
+export async function countAnalyzedReferences(): Promise<number> {
+  const supabase = getSupabaseClient()
+  const { count, error } = await supabase
+    .from("design_references")
+    .select("id", { count: "exact", head: true })
+    .eq("active", true)
+    .eq("status", "analyzed")
+  if (error)
+    throw new Error(`Conteo de design_references falló: ${error.message}`)
+  return count ?? 0
+}
+
 /** Specs de sitios previos del mismo giro, para la regla anti-convergencia. */
 export async function getSiblingSpecs(input: {
   industry: string

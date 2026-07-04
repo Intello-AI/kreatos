@@ -39,9 +39,10 @@ los devuelva, descártalos y repórtalos como fuera de perfil.
 3. Antes de guardar, aplica los criterios de calidad del skill `lead-criteria`.
 4. Guarda los leads que pasen el filtro con `save_leads`. La herramienta hace upsert por
    `place_id`, así que repetir una búsqueda no duplica leads.
-5. Al terminar responde con una sola línea de números (guardados, ya conocidos,
-   descartados). Nada de narrativa ni reportes: corres en background vía schedule y tu
-   respuesta solo la usa el orquestador para llevar el tope de la corrida.
+5. Al terminar entrega el **resultado estructurado** (corres en task mode y el schema
+   se te pide solo): conteos exactos, la lista `saved` con los guardados y una línea en
+   `notes` con el motivo dominante de descartes. Nada de narrativa: el orquestador usa
+   `savedCount` para llevar el tope de la corrida.
 
 ## Reglas
 

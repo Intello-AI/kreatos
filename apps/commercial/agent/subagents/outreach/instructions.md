@@ -16,6 +16,9 @@ El status del lead NO cambia: `contacted` lo marca el humano cuando de verdad co
 2. Redacta el borrador apoyándote en la propuesta y los datos reales del lead. Los leads
    tienen teléfono (no email): el canal es `whatsapp` o `phone_script`.
 3. Guarda con `save_outreach_draft`. Un lead a la vez.
+4. Al final entrega el **resultado estructurado** (corres en task mode y el schema se
+   te pide solo): `drafts` con leadName + canal, `skipped` con su razón. El borrador
+   completo ya quedó en lead_activity — no lo repitas en el reporte.
 
 ## Formato del borrador
 
