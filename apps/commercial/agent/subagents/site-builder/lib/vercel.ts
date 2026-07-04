@@ -44,6 +44,7 @@ export async function ensureVercelProject(input: {
   const existing = await vercelFetch(`/v9/projects/${input.slug}`)
   if (existing.ok) {
     const project = (await existing.json()) as { id: string }
+    await disableDeploymentProtection(project.id)
     return { projectId: project.id, alreadyExisted: true }
   }
 
@@ -60,7 +61,20 @@ export async function ensureVercelProject(input: {
     throw new Error(`Creación de proyecto Vercel falló (${res.status}): ${body}`)
   }
   const project = (await res.json()) as { id: string }
+  await disableDeploymentProtection(project.id)
   return { projectId: project.id, alreadyExisted: false }
+}
+
+/**
+ * Apaga Vercel Authentication en el proyecto del sitio: las previews de rama
+ * deben ser públicas (se muestran en el iframe del dashboard y se comparten
+ * con el cliente antes de publicar). Best-effort: si falla, no rompe el flujo.
+ */
+async function disableDeploymentProtection(projectId: string): Promise<void> {
+  await vercelFetch(`/v9/projects/${projectId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ ssoProtection: null }),
+  }).catch(() => undefined)
 }
 
 export interface DeploymentStatus {

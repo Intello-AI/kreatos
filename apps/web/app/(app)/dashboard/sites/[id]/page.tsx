@@ -58,6 +58,12 @@ export default async function SiteDetailPage({
     (v) => v.version_n === site.current_version
   )
   const previewUrl = currentVersion?.preview_url ?? null
+  // Publicado: el iframe muestra producción (dominio público); antes, la
+  // preview de rama. deploy_url manda cuando existe y el status es published.
+  const displayUrl =
+    site.status === "published" && site.deploy_url
+      ? site.deploy_url
+      : previewUrl
   const liveUrl = site.deploy_url ?? previewUrl
   const generating = site.status === "brief" || site.status === "generating"
   const runIds =
@@ -106,9 +112,9 @@ export default async function SiteDetailPage({
           {/* Card overview: preview a la izquierda, metadatos a la derecha */}
           <div className="grid grid-cols-1 border md:grid-cols-2">
             <div className="bg-muted/30 md:border-r">
-              {previewUrl ? (
+              {displayUrl ? (
                 <SitePreview
-                  url={previewUrl}
+                  url={displayUrl}
                   title={`Preview de ${site.slug}`}
                 />
               ) : (
