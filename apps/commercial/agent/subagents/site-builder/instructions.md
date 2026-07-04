@@ -197,7 +197,12 @@ materializas:
     d. SIN checkpoints (clone desde main = template pelón): re-materializa
        TODO desde `latestSpec` ANTES de cualquier corrección puntual — la
        vía rápida: `fetch_brand_assets` (assets+iconos) + `draft_surface`
-       para las 4 superficies + custom sections a mano. Un fix
+       para las 4 superficies + custom sections a mano.
+    e. **Motor desactualizado o repo inconsistente**: si `validate-config` o
+       el build fallan por reglas/archivos del MOTOR (schema que exige datos
+       que la política omite, bugs del template ya corregidos), NO parchees
+       el motor a mano: corre `reset_site_repo` (working tree = template
+       actual, historial intacto) y re-materializa con la vía rápida. Un fix
        aislado (p. ej. iconos) sobre el template sin personalizar produce
        un preview vacío — push_site_version lo rechaza, pero no debes
        llegar ahí.
