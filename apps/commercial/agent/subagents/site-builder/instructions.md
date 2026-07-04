@@ -59,14 +59,20 @@ template de kreatos; tú lo personalizas, no lo reinventas.
    template), úsala como punto de partida del theme.css — variándola: sigue
    aplicando anti-convergencia, la armonización con los colores de la ficha
    de marca, y ojo con `tokens.inferred` (eso es derivado, no confirmado).
-3. **Arquitectura de páginas.** El template soporta páginas interiores además
-   de la home (`pages` en site.config.ts: slug + title + description +
-   sections, con `ns` de traducción obligatorio por sección). Decide en el
-   spec qué páginas existen y por qué: `/servicios` cuando el giro tiene 6+
-   servicios reales que merecen detalle, `/nosotros` solo con historia o
-   equipo verificable. Una página sin contenido real que la home no pueda
-   cargar NO se crea. La home sigue siendo la conversión: las páginas
-   profundizan, no duplican.
+3. **Arquitectura de páginas — multi-página es la NORMA, no la excepción.**
+   Un sitio corporativo real tiene home + páginas interiores; un one-pager
+   se ve barato y limita el SEO. Default esperado:
+   - `/servicios` — casi siempre: con 3+ servicios reales ya hay página (el
+     teaser vive en la home, el detalle aquí). Es la página que más SEO
+     local captura.
+   - `/nosotros` — cuando hay CUALQUIER material real: historia, años,
+     equipo, certificaciones, fotos del negocio de la ficha.
+   - Otras por giro cuando el contenido exista: `/proyectos` (constructora),
+     `/menu` o `/carta` (restaurante), `/cobertura` (logística).
+   Solo entrega un one-pager cuando el negocio es genuinamente tan chico
+   que ninguna página tendría contenido propio — y justifícalo en el
+   changelog. Regla intacta: cero páginas de relleno; el copy interior
+   profundiza, nunca duplica la home.
 4. Corre el pre-flight del skill `taste` sobre el spec y luego
    `save_site_version` — si rechaza por anti-convergencia, varía el acento u
    otra decisión y reintenta.

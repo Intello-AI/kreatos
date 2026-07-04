@@ -48,7 +48,7 @@ export default defineTool({
       const { getSupabaseClient } = await import("../../../lib/supabase")
       const { data: brand } = await getSupabaseClient()
         .from("lead_brand")
-        .select("short_name, logo_path, icon_path, colors")
+        .select("short_name, logo_path, icon_path, colors, services")
         .eq("lead_id", site.lead_id)
         .maybeSingle()
       if (brand) {
@@ -80,6 +80,22 @@ export default defineTool({
               `la paleta del spec no usa ninguno de los colores de marca (${brandColors.join(", ")}) — armonízalos como base`,
             )
           }
+        }
+        // Multi-página es la norma: con 3+ servicios reales en la ficha, un
+        // one-pager es un spec flojo salvo justificación explícita.
+        const services = (brand.services as unknown[] | null) ?? []
+        const pages = (spec as Record<string, unknown>)["pages"] as
+          | unknown[]
+          | undefined
+        if (
+          Array.isArray(services) &&
+          services.length >= 3 &&
+          (!pages || pages.length === 0) &&
+          !changelog.toLowerCase().includes("one-pager")
+        ) {
+          problems.push(
+            `la ficha tiene ${services.length} servicios reales y el spec no declara páginas interiores (mínimo /servicios) — o justifica el one-pager escribiendo "one-pager" con la razón en el changelog`,
+          )
         }
         if (problems.length > 0) {
           throw new Error(

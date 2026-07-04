@@ -26,7 +26,7 @@ import { toast } from "sonner"
 
 import { answerSiteInput, sendSiteMessage } from "@/features/sites/actions"
 import { Shimmer } from "@/components/ai-elements/shimmer"
-import { ClaudeAI, OpenAI } from "@/components/icons"
+import { ClaudeAI, Icon, OpenAI } from "@/components/icons"
 import { formatTime as formatTimeInUserTz } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import {
@@ -986,13 +986,7 @@ export function SiteActivity({
               {rootBusy && (
                 <MessageScrollerItem scrollAnchor={false}>
                   <div className="flex items-center gap-2">
-                    <Image
-                      src="/avatar-agent.svg"
-                      alt=""
-                      width={16}
-                      height={16}
-                      className="size-4 shrink-0"
-                    />
+                    <Icon className="size-3" />
                     <ThinkingIndicator />
                   </div>
                 </MessageScrollerItem>
@@ -1075,7 +1069,9 @@ export function SiteActivity({
               <AttachmentGroup className="w-full">
                 {staged.map((item) => (
                   <Attachment key={item.id} size="sm" state="idle">
-                    <AttachmentMedia variant={item.previewUrl ? "image" : "icon"}>
+                    <AttachmentMedia
+                      variant={item.previewUrl ? "image" : "icon"}
+                    >
                       {item.previewUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={item.previewUrl} alt={item.file.name} />
@@ -1473,14 +1469,8 @@ function BlockItem({ item }: { item: ActivityItem }) {
       ) : item.kind === "text" ? (
         <Message>
           <MessageContent>
-            <MessageHeader className="gap-1.5">
-              <Image
-                src="/avatar-agent.svg"
-                alt="Agent avatar"
-                width={16}
-                height={16}
-                className="size-4 shrink-0"
-              />
+            <MessageHeader className="gap-1.5 pl-0">
+              <Icon className="size-3" />
               Kreatos AI
               <ModelBadge model={item.model} />
             </MessageHeader>
@@ -1511,15 +1501,9 @@ function BlockItem({ item }: { item: ActivityItem }) {
       ) : item.kind === "question" ? (
         <Message>
           <MessageContent>
-            <MessageHeader className="gap-1.5">
-              <Image
-                src="/avatar-agent.svg"
-                alt="Agent avatar"
-                width={16}
-                height={16}
-                className="size-4 shrink-0"
-              />
-              Kreatos AI — pregunta y espera tu respuesta
+            <MessageHeader className="gap-1.5 pl-0">
+              <Icon className="size-3" />
+              Kreatos AI
               <ModelBadge model={item.model} />
             </MessageHeader>
             <Bubble variant="outline">

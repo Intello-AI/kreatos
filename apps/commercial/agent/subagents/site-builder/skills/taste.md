@@ -98,11 +98,13 @@ El motor del template trae la capa de animación; tú la diriges desde
   hecha; si dudas, baja a `subtle` y entrega limpio.
 - `prefers-reduced-motion` lo respeta el motor siempre; no lo desactives.
 
-## Páginas interiores (si el spec las incluye)
+## Páginas interiores (la norma, no el extra)
 
-- Una página existe solo si tiene contenido real que la home no puede cargar:
-  /servicios con 6+ servicios reales detallados, /nosotros con historia o
-  equipo verificable. Página de relleno = peor que no tenerla.
+- Multi-página es el default de un sitio corporativo: /servicios con 3+
+  servicios reales, /nosotros con cualquier material verificable (historia,
+  años, fotos de la ficha), y las de giro (/proyectos, /carta, /cobertura)
+  cuando el contenido existe. Un one-pager solo para negocios genuinamente
+  mínimos, justificado. Página de relleno = peor que no tenerla.
 - El copy de una página interior nunca duplica el de la home: la home tiene
   el teaser, la página el detalle. Mismos datos, distinta profundidad.
 - Cada página interior cumple TODO este documento por sí sola (hero
