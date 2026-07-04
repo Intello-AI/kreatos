@@ -6,11 +6,12 @@ import { useRouter } from "next/navigation"
 import {
   CheckIcon,
   PaperPlaneRightIcon,
+  QuestionIcon,
   WarningIcon,
   XIcon,
 } from "@phosphor-icons/react"
 
-import { sendSiteMessage } from "@/features/sites/actions"
+import { answerSiteInput, sendSiteMessage } from "@/features/sites/actions"
 import { cn } from "@/lib/utils"
 import { Bubble, BubbleContent } from "@/components/ui/bubble"
 import {
@@ -184,6 +185,12 @@ export function SiteActivity({
   const runIdsKey = runIds.join(",")
 
   const [historyLoaded, setHistoryLoaded] = useState(false)
+  // Pregunta HITL pendiente del run vivo: el composer responde al request
+  // (con contexto) en vez de mandar un mensaje suelto al root.
+  const [pendingInput, setPendingInput] = useState<{
+    requestId: string
+    prompt: string
+  } | null>(null)
 
   useEffect(() => {
     lifetimeAbort.current = new AbortController()
@@ -299,6 +306,13 @@ export function SiteActivity({
             const prompt = input["prompt"] ?? request["prompt"]
             if (prompt) {
               add({ at, depth, kind: "question", label: String(prompt) })
+            }
+            // Solo el request del run vivo a nivel root es respondible.
+            if (live && depth === 0 && request["requestId"]) {
+              setPendingInput({
+                requestId: String(request["requestId"]),
+                prompt: String(prompt ?? ""),
+              })
             }
           }
           break
@@ -449,12 +463,32 @@ export function SiteActivity({
 
   const onSend = () => {
     setSendError(undefined)
+    const text = message
+    const answering = pendingInput
     startTransition(async () => {
-      const result = await sendSiteMessage(siteId, message)
+      // Con pregunta pendiente, la respuesta va al input request (reanuda el
+      // turno pausado con contexto); si no, mensaje normal a la sesión.
+      const result = answering
+        ? await answerSiteInput(siteId, answering.requestId, text)
+        : await sendSiteMessage(siteId, text)
       if (result?.formError) {
         setSendError(result.formError)
       } else {
         setMessage("")
+        if (answering) {
+          setPendingInput(null)
+          // La respuesta a un input request no viaja como message.received;
+          // se pinta localmente para que la conversación se lea completa.
+          push({
+            // Después de todo lo actual, antes del siguiente run (que arranca
+            // en runIds.length * 1e6 + 1).
+            sortKey: runIds.length * 1_000_000,
+            at: new Date().toISOString(),
+            depth: 0,
+            kind: "user",
+            label: text.trim(),
+          })
+        }
         router.refresh()
       }
       // El foco regresa al composer para seguir la conversación con teclado.
@@ -574,10 +608,34 @@ export function SiteActivity({
       </MessageScrollerProvider>
 
       <div className="flex w-full flex-col border-t">
+        {pendingInput && (
+          // Pregunta pendiente anclada sobre el composer (estilo Claude Code):
+          // lo que escribas abajo la responde directamente.
+          <div className="flex shrink-0 items-start gap-2 border-b border-warning/40 bg-warning/5 p-2.5">
+            <QuestionIcon className="mt-0.5 size-3.5 shrink-0 text-warning" />
+            <div className="max-h-28 min-w-0 flex-1 overflow-y-auto text-xs">
+              <Streamdown className="text-xs leading-relaxed [&_p]:my-0.5 [&_:not(pre)>code]:mx-0 [&_:not(pre)>code]:rounded-sm [&_:not(pre)>code]:border [&_:not(pre)>code]:border-border [&_:not(pre)>code]:bg-background [&_:not(pre)>code]:px-1 [&_:not(pre)>code]:py-px [&_:not(pre)>code]:text-[11px]">
+                {pendingInput.prompt}
+              </Streamdown>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => setPendingInput(null)}
+              aria-label="Descartar pregunta (volver a mensaje normal)"
+            >
+              <XIcon />
+            </Button>
+          </div>
+        )}
         <InputGroup className="shrink-0">
           <InputGroupTextarea
             ref={composerRef}
-            placeholder="Escríbele al agente (contexto, cambios, preguntas)…"
+            placeholder={
+              pendingInput
+                ? "Responde a la pregunta del agente…"
+                : "Escríbele al agente (contexto, cambios, preguntas)…"
+            }
             aria-label="Mensaje para el agente"
             value={message}
             onChange={(e) => setMessage(e.target.value)}

@@ -223,6 +223,53 @@ export async function publishSite(siteId: string): Promise<SiteActionState> {
   )
 }
 
+/**
+ * Responde un input request pendiente (pregunta HITL del agente). A diferencia
+ * de un mensaje suelto, esto reanuda el turno pausado CON el contexto de la
+ * pregunta — el agente recibe la respuesta donde la pidió.
+ */
+export async function answerSiteInput(
+  siteId: string,
+  requestId: string,
+  text: string,
+): Promise<SiteActionState> {
+  const trimmed = text.trim()
+  if (trimmed.length < 1) return { formError: "Escribe una respuesta." }
+
+  const supabase = getAdminClient()
+  const { data: site, error } = await supabase
+    .from("sites")
+    .select("id, eve_session_id, eve_run_ids")
+    .eq("id", siteId)
+    .maybeSingle()
+  if (error || !site?.eve_session_id) {
+    return { formError: "Sitio sin sesión de agente." }
+  }
+
+  try {
+    const eve = getEveClient()
+    const session = eve.session(site.eve_session_id)
+    const response = await session.send({
+      inputResponses: [{ requestId, text: trimmed }],
+    })
+    await supabase
+      .from("sites")
+      .update({
+        eve_session_id: response.continuationToken,
+        eve_run_id: response.sessionId,
+        eve_run_ids: [...(site.eve_run_ids ?? []), response.sessionId],
+      })
+      .eq("id", siteId)
+  } catch (err) {
+    return {
+      formError: `No se pudo responder al agente: ${err instanceof Error ? err.message : "error desconocido"}`,
+    }
+  }
+
+  revalidatePath(`/dashboard/sites/${siteId}`)
+  return {}
+}
+
 /** Mensaje libre del humano a la sesión del sitio (desde el panel de actividad). */
 export async function sendSiteMessage(
   siteId: string,
