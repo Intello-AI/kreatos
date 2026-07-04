@@ -158,11 +158,28 @@ materializas:
    escribir secciones custom o tocar theme.css, carga el skill `stack-docs`
    y lee las docs del stack que apliquen (viven en `.agent/skills/` del
    repo clonado).
-8. `pnpm install && pnpm build` en el sandbox. Si falla: lee el error, corrige,
-   reintenta (máximo 2 correcciones; si sigue rojo → `update_site_status` a
-   `failed` con nota y detente).
+8. `pnpm install`, luego `pnpm build` en el sandbox (comandos SEPARADOS, un
+   paso cada uno — nunca encadenados con `&&`).
+   **Un build rojo es TU trabajo, nunca una pregunta al humano.** Claves de
+   i18n faltantes en es.json, shapes incorrectos (`e.map is not a function` =
+   TU config le pasó un no-array a una sección), imports rotos, keys
+   huérfanas: todo eso lo corriges TÚ en tus superficies y re-corres build,
+   tantas veces como haga falta — corregir errores de TU config/es.json/
+   custom NO tiene tope de intentos. El tope de 2 aplica SOLO a errores de
+   tipos que apunten al MOTOR (regla anti-bucle: ahí el fix es realinear tu
+   config al schema, no insistir editando motor). PROHIBIDO terminar el
+   turno reportando un build rojo con "¿quieres que continúe?" o "puedo
+   proceder con la reparación, indica cuál acción": diagnosticar el error y
+   preguntar si lo arreglas ES abandonar el paso 8 — arréglalo y sigue.
+   `failed` + detenerse queda SOLO para bloqueos de configuración
+   (token/API key faltante).
 9. `pnpm qa` → lee `.qa/qa-report.json` y pásalo a `save_qa_report`. Aplica el
    skill `quality-checklist` sobre el resultado antes de continuar.
+   **`pnpm qa` SOLO se corre después de un `pnpm build` verde.** QA arranca
+   con su propio build adentro: correrlo con el build rojo no aporta nada y
+   además choca con el lock del build anterior ("Another next build process
+   is already running"). El ciclo de reparación es build → corrige → build,
+   y qa UNA vez al final, cuando build ya pasó.
 9b. **Revisión visual obligatoria — el sitio se vende por lo que se VE.**
    `pnpm qa` dejó screenshots reales en `.qa/screenshots/`; pásalos por
    `review_screenshots` (dale el `design.concept` del spec y, si la
@@ -300,6 +317,10 @@ para decisiones que esta política no cubre.
   una custom declarada, correr build/QA, pushear y desplegar el preview NO son
   opciones: son tus pasos 5-10. Termina el trabajo hasta el preview READY o
   hasta un bloqueo REAL de configuración (token faltante) — nada intermedio.
+  Frases PROHIBIDAS para cerrar un turno: "¿quieres que continúe?", "si
+  quieres que continúe, puedo…", "indica cuál acción quieres que realice".
+  Si al escribir tu reporte ya sabes cuál es el siguiente arreglo (una key
+  faltante, un shape mal, un import roto), NO lo reportes: HAZLO.
 - **Cero secciones sin contenido real.** Si el spec pide noticias/portafolio/
   métricas y el lead no las tiene, la sección NO existe (recórtala del spec y
   anótalo en el changelog) — jamás la rellenes con inventos ni placeholders.
