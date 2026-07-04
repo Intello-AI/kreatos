@@ -125,7 +125,7 @@ export default defineTool({
       downloaded,
       icons,
       problems: problems.length > 0 ? problems : undefined,
-      hint: "Declara business.logo/business.icon en site.config.ts con estas rutas y usa las brand-N.webp en los slots de imagen del spec (renómbralas con nombre semántico si quieres: hero.webp, nosotros.webp...).",
+      hint: "Declara business.logo/business.icon en site.config.ts con estas rutas. Las brand-N.webp RENÓMBRALAS SIEMPRE a nombre semántico antes de usarlas (hero.webp, nosotros.webp, servicio-1.webp): todos los repos deben navegarse igual para ediciones manuales.",
     }
   },
 })

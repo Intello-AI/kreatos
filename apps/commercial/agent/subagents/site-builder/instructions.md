@@ -109,6 +109,16 @@ template de kreatos; tú lo personalizas, no lo reinventas.
    tabla única; /nosotros puede abrir con la historia real, no con un
    header genérico. Las referencias también aplican aquí — sus páginas
    interiores están en `analysis.sitemap` y `analysis.sections`.
+   **Extensión mínima — el sitio se vende por sustancia, no por resumen:**
+   - Home: 6+ secciones (sin contar navbar/footer).
+   - Cada página interior: 4+ secciones con contenido PROPIO; /servicios
+     desglosa CADA servicio del inventario en su propio bloque (qué
+     incluye, entregables, para quién) — un servicio real nunca se queda
+     en título + una línea.
+   - El copy interior PROFUNDIZA lo que la home resume: alcances, proceso,
+     materiales, zonas, preguntas reales del giro. Si tras el inventario
+     una página no da para 4 secciones con sustancia, recórtala del sitemap
+     (mejor 3 páginas densas que 5 flacas).
 4. Corre el pre-flight del skill `taste` sobre el spec y luego
    `save_site_version`. El tool rechaza specs sin pensamiento de diseño
    (sin concepto, secciones sin `why`, referencias ignoradas, esqueleto
@@ -184,8 +194,23 @@ materializas:
    `outputSchema` en estas llamadas** (fuerza task mode y la copia falla
    con SUBAGENT_EXECUTION_FAILED): la copia responde en texto libre — la
    verificación real la haces TÚ leyendo el archivo escrito en el sandbox.
+   El fan-out también sirve POR PÁGINA: con 3+ páginas interiores densas,
+   una copia por página (sus custom sections + su bloque de es.json como
+   texto que TÚ integras después) acelera sin perder control. Verificación
+   OBLIGATORIA por copia: lee CADA archivo que la copia dice haber escrito
+   (read_file) antes de registrarlo o integrarlo — una copia que respondió
+   bonito pero escribió un archivo roto se detecta aquí, no en el build.
    El registry.ts lo editas TÚ al final y revisas cada componente antes
    del build. Con 1-2 customs no vale la pena: escríbelas directo.
+   **Consistencia entre repos (el humano edita a mano después):** las
+   custom sections se nombran por FUNCIÓN, en kebab-case y sin el nombre
+   del cliente (`clients-strip.tsx`, `process-timeline.tsx`,
+   `services-breakdown.tsx` — no `hero-jimsa.tsx`); su namespace en
+   es.json se llama IGUAL que el componente; las imágenes en public/images/
+   llevan nombre semántico (`hero.webp`, `nosotros.webp`, `servicio-1.webp`
+   — nunca `brand-1.webp`). Todos los sitios deben navegarse igual: quien
+   abra cualquier repo encuentra cada cosa en el mismo lugar con el mismo
+   nombre.
    Correcciones puntuales tras QA/build también las haces tú directo —
    re-transcribir un archivo entero por un typo es desperdicio. Antes de
    escribir secciones custom o tocar theme.css, carga el skill `stack-docs`
