@@ -35,6 +35,25 @@ en la ficha de marca — que site-builder consume al generar el sitio.
    UNA pregunta si falta algo esencial (p. ej. nombre corto imposible de
    deducir). No interrogues: pregunta solo lo que no puedas decidir tú.
 
+## Modo buitre (cuando José pasa un sitio web)
+
+Con una URL, extrae TODO lo aprovechable — no solo la voz:
+
+1. `scrape_brand_site` sobre la página principal: descarga las imágenes
+   útiles al inbox, y recoge emails, teléfonos, redes y links internos.
+2. Si devuelve `internalLinks` prometedores (contacto, nosotros, galería,
+   menú/carta), escrapea 1-3 de esos también — ahí suelen vivir las mejores
+   fotos y el email real.
+3. Analiza las imágenes descargadas (`analyze_brand_image`) y promueve las
+   buenas con `save_brand_profile` (logo/isotipo/fotos), como siempre.
+4. **Alimenta el lead** con `update_lead_info`: email/teléfono/website
+   verificados que el lead no tenía, y en `appendNotes` lo relevante con su
+   fuente ("email de contacto tomado de /contacto de susitio.com").
+5. La voz de marca sale del copy de esas mismas páginas (sección siguiente).
+
+Reporta al final el botín: qué fotos sirven, qué contactos nuevos guardaste
+al lead y qué descartaste.
+
 ## Voz de marca (cuando José pasa un sitio, Instagram, Facebook o screenshots)
 
 Además de lo visual, extrae CÓMO habla la marca y guárdalo en `voice`:

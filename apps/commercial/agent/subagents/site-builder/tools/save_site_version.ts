@@ -41,6 +41,53 @@ export default defineTool({
       .describe("Qué cambió en esta versión respecto a la anterior (o 'versión inicial')."),
   }),
   async execute({ siteId, spec, changelog }) {
+    // La ficha de marca es obligatoria cuando existe: un spec que la ignora
+    // produce el sitio genérico que la ficha vino a matar.
+    {
+      const site = await getSite(siteId)
+      const { getSupabaseClient } = await import("../../../lib/supabase")
+      const { data: brand } = await getSupabaseClient()
+        .from("lead_brand")
+        .select("short_name, logo_path, icon_path, colors")
+        .eq("lead_id", site.lead_id)
+        .maybeSingle()
+      if (brand) {
+        const business = spec.business as Record<string, unknown>
+        const problems: string[] = []
+        if (brand.short_name && !business["shortName"]) {
+          problems.push(
+            `la ficha tiene short_name="${brand.short_name}" y el spec no trae business.shortName`,
+          )
+        }
+        if (brand.logo_path && !business["logo"]) {
+          problems.push(
+            "la ficha tiene logo y el spec no declara business.logo (descárgalo en fase build a public/images/)",
+          )
+        }
+        if (brand.icon_path && !business["icon"]) {
+          problems.push(
+            "la ficha tiene isotipo y el spec no declara business.icon",
+          )
+        }
+        const brandColors = (brand.colors as string[]) ?? []
+        if (brandColors.length > 0) {
+          const specText = JSON.stringify(spec.design).toLowerCase()
+          const used = brandColors.some((c) =>
+            specText.includes(String(c).toLowerCase()),
+          )
+          if (!used) {
+            problems.push(
+              `la paleta del spec no usa ninguno de los colores de marca (${brandColors.join(", ")}) — armonízalos como base`,
+            )
+          }
+        }
+        if (problems.length > 0) {
+          throw new Error(
+            `Spec rechazado — ignora la ficha de marca del lead:\n- ${problems.join("\n- ")}\nRelee brand en get_site_brief e incorpóralo al spec.`,
+          )
+        }
+      }
+    }
     const sections = spec.sections as Array<Record<string, unknown>>
     const hero = sections.find((s) => s["id"] === "hero")
     const heroVariant = hero?.["variant"] as string | undefined
