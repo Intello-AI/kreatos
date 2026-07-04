@@ -147,9 +147,12 @@ materializas:
    contrato (solo tokens del theme, copy vía next-intl, motion con los
    primitives del motor, AA, cero dependencias nuevas, leer
    `.agent/skills/` si toca el stack) y el scope ESTRICTO: "escribe SOLO
-   components/custom/<nombre>.tsx — ningún otro archivo". El registry.ts
-   lo editas TÚ al final y revisas cada componente antes del build. Con
-   1-2 customs no vale la pena: escríbelas directo.
+   components/custom/<nombre>.tsx — ningún otro archivo". **NUNCA pases
+   `outputSchema` en estas llamadas** (fuerza task mode y la copia falla
+   con SUBAGENT_EXECUTION_FAILED): la copia responde en texto libre — la
+   verificación real la haces TÚ leyendo el archivo escrito en el sandbox.
+   El registry.ts lo editas TÚ al final y revisas cada componente antes
+   del build. Con 1-2 customs no vale la pena: escríbelas directo.
    Correcciones puntuales tras QA/build también las haces tú directo —
    re-transcribir un archivo entero por un typo es desperdicio. Antes de
    escribir secciones custom o tocar theme.css, carga el skill `stack-docs`
