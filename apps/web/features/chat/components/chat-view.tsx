@@ -12,9 +12,9 @@ import {
   type ChatConversation,
 } from "@/features/chat/actions"
 import {
-  SiteActivity,
-  type ActivityHandlers,
-} from "@/features/sites/components/site-activity"
+  ChatActivity,
+  type ChatHandlers,
+} from "@/features/chat/components/chat-activity"
 import { formatRelative } from "@/lib/dates"
 import { Button } from "@/components/ui/button"
 import {
@@ -35,7 +35,7 @@ export function ChatView({
   const router = useRouter()
   const [runIds, setRunIds] = useState(conversation.eve_run_ids)
 
-  const handlers = useMemo<ActivityHandlers>(
+  const handlers = useMemo<ChatHandlers>(
     () => ({
       // Tras cada envío se refetchea la fila: el run nuevo entra a
       // eve_run_ids y el chat conecta su stream en vivo.
@@ -66,7 +66,7 @@ export function ChatView({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b bg-sidebar px-3 py-1.5">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b bg-sidebar px-3 py-1.5 md:px-6">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -99,13 +99,11 @@ export function ChatView({
           </Link>
         </Button>
       </div>
-      <div className="min-h-0 flex-1">
-        <SiteActivity
+      <div className="mx-auto min-h-0 w-full max-w-3xl flex-1">
+        <ChatActivity
           key={conversation.id}
-          siteId={conversation.id}
           runIds={runIds}
           handlers={handlers}
-          hideHeader
         />
       </div>
     </div>
