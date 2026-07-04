@@ -1670,6 +1670,86 @@ function DelegationItem({ item }: { item: ActivityItem }) {
 }
 
 /**
+ * Transcript textual completo de un bloque de subagente (encargo, cada tool
+ * con input/output íntegros, reportes, errores) para copiar al portapapeles.
+ */
+function taskTranscript(
+  name: string,
+  header: ActivityItem | null,
+  items: ActivityItem[]
+): string {
+  const model = items.find((i) => i.model)?.model
+  const lines: string[] = [`## Subagente ${name}${model ? ` (${model})` : ""}`]
+  if (header) {
+    lines.push(
+      `Delegado a las ${formatTime(header.at)}${
+        header.failed ? " — FALLÓ" : header.done ? "" : " — en curso"
+      }`
+    )
+  }
+  for (const item of items) {
+    lines.push("")
+    const time = formatTime(item.at)
+    switch (item.kind) {
+      case "delegation":
+        lines.push(`[${time}] ENCARGO:`, item.label)
+        break
+      case "report":
+        lines.push(`[${time}] REPORTE:`, item.label)
+        break
+      case "error":
+        lines.push(`[${time}] ERROR: ${item.label}`)
+        break
+      case "question": {
+        lines.push(`[${time}] PREGUNTA: ${item.label}`)
+        if (item.options?.length)
+          lines.push(`  opciones: ${item.options.join(" | ")}`)
+        if (item.chosen) lines.push(`  respuesta: ${item.chosen}`)
+        break
+      }
+      case "action": {
+        const status = item.failed
+          ? " [ERROR]"
+          : item.done
+            ? ""
+            : " [en curso]"
+        lines.push(
+          `[${time}] ${item.toolName ?? "acción"}${status} — ${item.label}${
+            item.detail ? ` (${item.detail})` : ""
+          }`
+        )
+        if (item.inputJson) lines.push(`  input: ${item.inputJson}`)
+        if (item.outputJson) lines.push(`  output: ${item.outputJson}`)
+        break
+      }
+      default:
+        lines.push(`[${time}] ${item.label}`)
+    }
+  }
+  return lines.join("\n")
+}
+
+/** Botón de copiar la actividad completa de un TaskBlock, con feedback. */
+function CopyTaskButton({ getText }: { getText: () => string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <Button
+      variant="ghost"
+      size="icon-xs"
+      aria-label="Copiar toda la actividad del subagente"
+      className="shrink-0 text-muted-foreground"
+      onClick={() => {
+        void navigator.clipboard.writeText(getText())
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1500)
+      }}
+    >
+      {copied ? <CheckIcon className="text-success" /> : <CopyIcon />}
+    </Button>
+  )
+}
+
+/**
  * Bloque de subagente estilo "Task" de Claude Code: la delegación abre un
  * contenedor con la actividad del subagente anidada (tools, reporte, errores).
  * Colapsado muestra el nombre del subagente y su paso vivo.
@@ -1690,39 +1770,44 @@ function TaskBlock({
 
   return (
     <Collapsible className="border">
-      <CollapsibleTrigger className="group flex w-full items-center gap-2 bg-sidebar p-2 text-left text-xs">
-        <AirTrafficControlIcon
-          className={cn(
-            "size-3.5 shrink-0",
-            failed ? "text-destructive" : "text-muted-foreground"
-          )}
-        />
-        <span className="shrink-0 font-medium text-foreground">{name}</span>
-        <ModelBadge model={items.find((i) => i.model)?.model} />
-        {active ? (
-          <Shimmer className="min-w-0 truncate text-xs">
-            {current?.label ?? "Trabajando…"}
-          </Shimmer>
-        ) : (
-          <span className="flex min-w-0 items-center gap-1 text-muted-foreground">
-            {failed ? (
-              <WarningIcon className="size-3 shrink-0 text-destructive" />
-            ) : (
-              <CheckIcon className="size-3 shrink-0 text-success" />
+      {/* El trigger es un <button>: el botón de copiar va como hermano
+          (button anidado en button es HTML inválido). */}
+      <div className="flex w-full items-center bg-sidebar pr-1">
+        <CollapsibleTrigger className="group flex min-w-0 flex-1 items-center gap-2 p-2 text-left text-xs">
+          <AirTrafficControlIcon
+            className={cn(
+              "size-3.5 shrink-0",
+              failed ? "text-destructive" : "text-muted-foreground"
             )}
-            <span className="truncate">
-              {items.filter((i) => i.kind === "action").length} acciones
-            </span>
-          </span>
-        )}
-        <span className="ml-auto flex shrink-0 items-center gap-1.5 text-[10px] text-muted-foreground/70 tabular-nums">
-          {formatTime((header ?? items[0])?.at ?? "")}
-          <CaretDownIcon
-            aria-hidden
-            className="size-3 transition-transform group-data-[state=open]:rotate-180"
           />
-        </span>
-      </CollapsibleTrigger>
+          <span className="shrink-0 font-medium text-foreground">{name}</span>
+          <ModelBadge model={items.find((i) => i.model)?.model} />
+          {active ? (
+            <Shimmer className="min-w-0 truncate text-xs">
+              {current?.label ?? "Trabajando…"}
+            </Shimmer>
+          ) : (
+            <span className="flex min-w-0 items-center gap-1 text-muted-foreground">
+              {failed ? (
+                <WarningIcon className="size-3 shrink-0 text-destructive" />
+              ) : (
+                <CheckIcon className="size-3 shrink-0 text-success" />
+              )}
+              <span className="truncate">
+                {items.filter((i) => i.kind === "action").length} acciones
+              </span>
+            </span>
+          )}
+          <span className="ml-auto flex shrink-0 items-center gap-1.5 text-[10px] text-muted-foreground/70 tabular-nums">
+            {formatTime((header ?? items[0])?.at ?? "")}
+            <CaretDownIcon
+              aria-hidden
+              className="size-3 transition-transform group-data-[state=open]:rotate-180"
+            />
+          </span>
+        </CollapsibleTrigger>
+        <CopyTaskButton getText={() => taskTranscript(name, header, items)} />
+      </div>
       <CollapsibleContent>
         <div className="space-y-4 border-t border-border p-2 pl-3">
           {items.map((item) =>
