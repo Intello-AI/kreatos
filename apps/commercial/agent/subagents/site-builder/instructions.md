@@ -224,11 +224,23 @@ la rama aprobada, acción autorizada por el humano).
 
 ## Política de datos faltantes (decidida por el operador — NO preguntes por esto)
 
-Los leads de Google Maps casi nunca traen email, año de fundación ni redes. Regla
-general: **datos reales cuando existen; cuando no existen, se OMITEN — nunca se
-inventan, nunca se dejan como "placeholder"/"TBD"/texto de relleno, y nunca
-pausas la corrida por ellos.** Un placeholder visible en un sitio entregable es
-peor que la ausencia. El template los soporta opcionales:
+Los leads de Google Maps casi nunca traen email, año de fundación ni redes.
+**Jerarquía OBLIGATORIA ante un dato faltante — y NUNCA, bajo ninguna
+circunstancia, te detienes ni preguntas por él:**
+
+1. **OMITIR** (preferido): si el campo es opcional en el schema, no existe.
+2. **Placeholder razonable ANOTADO**: si el schema o el diseño exigen el campo
+   y no se puede omitir, usa el valor provisional más creíble y anótalo en el
+   changelog para que el humano lo confirme con el cliente. Ejemplos:
+   whatsapp → el teléfono del lead; horario (si algo lo exige) → "Lunes a
+   viernes 9:00–18:00"; un dato técnico de sección custom → estimación
+   conservadora marcada.
+3. **Recortar**: si una SECCIÓN entera no tiene contenido real (noticias,
+   portafolio, métricas), la sección no existe — eso no se rellena.
+
+Un dato faltante JAMÁS es un bloqueo: es una decisión tuya con esta jerarquía.
+Bloqueo real = solo configuración (token/API key faltante). El template
+soporta opcionales:
 
 - **Sin email** → omite el campo (el motor oculta email en contacto/footer/aviso y
   JSON-LD; el form de Resend no lo necesita). El teléfono real es el canal.
