@@ -362,6 +362,15 @@ export function SiteActivity({
   const liveAbort = useRef<AbortController | null>(null)
   const lifetimeAbort = useRef<AbortController | null>(null)
   const counterRef = useRef(0)
+  // Cursor de eventos ya consumidos por sesión: el stream de eve es durable y
+  // replayable (?startIndex=n), así que reconectar desde el cursor retoma
+  // exactamente donde se cortó sin duplicar eventos.
+  const streamCursors = useRef<Map<string, number>>(new Map())
+  // Sesiones que emitieron su evento terminal: no se reconectan más.
+  const terminalSessions = useRef<Set<string>>(new Set())
+  // Despertadores de los sleeps de backoff: al volver a la pestaña la
+  // reconexión es inmediata en vez de esperar el timer.
+  const reconnectKicks = useRef<Set<() => void>>(new Set())
   const runIdsKey = runIds.join(",")
 
   const [historyLoaded, setHistoryLoaded] = useState(false)
@@ -378,6 +387,21 @@ export function SiteActivity({
   useEffect(() => {
     lifetimeAbort.current = new AbortController()
     return () => lifetimeAbort.current?.abort()
+  }, [])
+
+  // Volver a la pestaña = reconectar YA los streams en backoff (mientras la
+  // pestaña estuvo oculta la conexión suele morir por timeout del server).
+  useEffect(() => {
+    const kick = () => {
+      if (document.visibilityState !== "visible") return
+      for (const wake of [...reconnectKicks.current]) wake()
+    }
+    document.addEventListener("visibilitychange", kick)
+    window.addEventListener("focus", kick)
+    return () => {
+      document.removeEventListener("visibilitychange", kick)
+      window.removeEventListener("focus", kick)
+    }
   }, [])
 
   // ——— Núcleo de consumo (funciones puras sobre refs/estado; estables entre
@@ -607,7 +631,10 @@ export function SiteActivity({
 
   /**
    * Consume el stream de un run. `live: false` = histórico: se reproduce y se
-   * corta tras 2.5s sin datos; `live: true` = run actual, conexión abierta.
+   * corta tras 2.5s sin datos; `live: true` = run actual, conexión abierta
+   * CON reconexión automática: si el fetch muere (timeout serverless, red,
+   * sleep de la laptop), se reataca el stream durable con ?startIndex=cursor
+   * y sigue exactamente donde quedó — sin heartbeats ni duplicados.
    * `runIdx` ancla los eventos al bloque de su run en el orden global.
    */
   const consume = async (
@@ -634,41 +661,74 @@ export function SiteActivity({
       clearTimeout(idleTimer)
       idleTimer = setTimeout(() => local.abort(), 2500)
     }
+    let backoff = 1_000
     try {
-      const res = await fetch(`/eve/v1/session/${sessionId}/stream`, {
-        signal: local.signal,
-      })
-      if (!res.ok || !res.body) return
-      if (depth === 0 && live) setConnected(true)
-      resetIdle()
-
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ""
       for (;;) {
-        const { done, value } = await reader.read()
-        if (done) break
-        resetIdle()
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split("\n")
-        buffer = lines.pop() ?? ""
-        for (const line of lines) {
-          if (!line.trim()) continue
-          try {
-            handleEvent(
-              JSON.parse(line) as StreamEvent,
-              depth,
-              live,
-              runIdx,
-              sessionMeta
-            )
-          } catch {
-            // línea parcial: ignorar
+        if (local.signal.aborted) break
+        let received = 0
+        try {
+          const cursor = streamCursors.current.get(sessionId) ?? 0
+          const res = await fetch(
+            `/eve/v1/session/${sessionId}/stream${cursor > 0 ? `?startIndex=${cursor}` : ""}`,
+            { signal: local.signal }
+          )
+          if (!res.ok || !res.body) throw new Error(`stream ${res.status}`)
+          if (depth === 0 && live) setConnected(true)
+          resetIdle()
+
+          const reader = res.body.getReader()
+          const decoder = new TextDecoder()
+          let buffer = ""
+          for (;;) {
+            const { done, value } = await reader.read()
+            if (done) break
+            resetIdle()
+            buffer += decoder.decode(value, { stream: true })
+            const lines = buffer.split("\n")
+            buffer = lines.pop() ?? ""
+            for (const line of lines) {
+              if (!line.trim()) continue
+              // Cada línea completa es un evento del índice del server: el
+              // cursor avanza aunque el parse falle, para no re-pedirla.
+              streamCursors.current.set(
+                sessionId,
+                (streamCursors.current.get(sessionId) ?? 0) + 1
+              )
+              received += 1
+              try {
+                const event = JSON.parse(line) as StreamEvent
+                if (
+                  event.type === "session.completed" ||
+                  event.type === "session.failed"
+                ) {
+                  terminalSessions.current.add(sessionId)
+                }
+                handleEvent(event, depth, live, runIdx, sessionMeta)
+              } catch {
+                // línea corrupta: ignorar
+              }
+            }
           }
+        } catch {
+          // abort (idle o unmount) o red: el guard de abajo decide
         }
+        // Históricos, unmount/sustitución, o sesión terminada: no reconectar.
+        if (!live || local.signal.aborted) break
+        if (terminalSessions.current.has(sessionId)) break
+        if (depth === 0) setConnected(false)
+        // Backoff: inmediato si venían llegando eventos; hasta 15s en reposo.
+        backoff = received > 0 ? 1_000 : Math.min(backoff * 2, 15_000)
+        await new Promise<void>((resolve) => {
+          const wake = () => {
+            clearTimeout(timer)
+            reconnectKicks.current.delete(wake)
+            resolve()
+          }
+          const timer = setTimeout(wake, backoff)
+          reconnectKicks.current.add(wake)
+          local.signal.addEventListener("abort", wake, { once: true })
+        })
       }
-    } catch {
-      // abort (idle o unmount) o red
     } finally {
       clearTimeout(idleTimer)
       controller.signal.removeEventListener("abort", onOuterAbort)
@@ -905,7 +965,9 @@ export function SiteActivity({
                 "gap-1.5",
                 connected
                   ? "border-none bg-success/30"
-                  : "bg-muted-foreground/40"
+                  : rootBusy
+                    ? "border-none bg-warning/30"
+                    : "bg-muted-foreground/40"
               )}
             >
               <span
@@ -914,10 +976,12 @@ export function SiteActivity({
                   "size-1.5 rounded-full",
                   connected
                     ? "animate-pulse bg-success"
-                    : "bg-muted-foreground/40"
+                    : rootBusy
+                      ? "animate-pulse bg-warning"
+                      : "bg-muted-foreground/40"
                 )}
               />
-              {connected ? "En vivo" : "Dormido"}
+              {connected ? "En vivo" : rootBusy ? "Reconectando…" : "Dormido"}
             </Badge>
             {onClose && (
               <Button
