@@ -10,6 +10,29 @@ import {
   insertSiteVersion,
 } from "../lib/sites"
 
+/**
+ * Validación laxa del spec: el contrato completo lo valida el template
+ * (scripts/validate-config.ts con zod estricto) durante el build. Aquí solo
+ * se exige la estructura mínima para que el historial sea útil.
+ */
+const specSchema = z
+  .object({
+    version: z.number().int().min(1),
+    mode: z.enum(["new", "redesign"]),
+    industry: z.string().min(1),
+    business: z.record(z.string(), z.unknown()),
+    design: z.object({
+      preset: z.string().min(1),
+      variation_notes: z.string().min(10),
+      palette: z.record(z.string(), z.unknown()),
+      fonts: z.record(z.string(), z.unknown()),
+    }).passthrough(),
+    sections: z.array(z.record(z.string(), z.unknown())).min(3),
+    seo: z.record(z.string(), z.unknown()),
+    flags: z.record(z.string(), z.unknown()),
+  })
+  .passthrough()
+
 /** Secciones commodity del motor: no requieren `why` creativo propio. */
 const COMMODITY_SECTIONS = new Set([
   "navbar",
@@ -36,28 +59,14 @@ function lcsLength(a: string[], b: string[]): number {
   return dp[b.length]
 }
 
-/**
- * Validación laxa del spec: el contrato completo lo valida el template
- * (scripts/validate-config.ts con zod estricto) durante el build. Aquí solo
- * se exige la estructura mínima para que el historial sea útil.
- */
-const specSchema = z
-  .object({
-    version: z.number().int().min(1),
-    mode: z.enum(["new", "redesign"]),
-    industry: z.string().min(1),
-    business: z.record(z.string(), z.unknown()),
-    design: z.object({
-      preset: z.string().min(1),
-      variation_notes: z.string().min(10),
-      palette: z.record(z.string(), z.unknown()),
-      fonts: z.record(z.string(), z.unknown()),
-    }).passthrough(),
-    sections: z.array(z.record(z.string(), z.unknown())).min(3),
-    seo: z.record(z.string(), z.unknown()),
-    flags: z.record(z.string(), z.unknown()),
-  })
-  .passthrough()
+/** Texto libre que puede venir como string o array de strings (Postel). */
+function asText(value: unknown): string {
+  if (typeof value === "string") return value
+  if (Array.isArray(value)) {
+    return value.filter((v): v is string => typeof v === "string").join(" ")
+  }
+  return ""
+}
 
 export default defineTool({
   description:
@@ -65,7 +74,7 @@ export default defineTool({
   inputSchema: z.object({
     siteId: z.string().uuid(),
     spec: specSchema.describe(
-      "Spec completo de la versión (contrato brief→código). Debe incluir design.variation_notes justificando cómo se varió el preset.",
+      "Spec completo de la versión (contrato brief→código). Debe incluir design.concept (idea rectora), design.variation_notes, design.references[{slug, takeaways}] y `why` en cada sección de contenido.",
     ),
     changelog: z
       .string()
@@ -73,10 +82,13 @@ export default defineTool({
       .describe("Qué cambió en esta versión respecto a la anterior (o 'versión inicial')."),
   }),
   async execute({ siteId, spec, changelog }) {
-    // La ficha de marca es obligatoria cuando existe: un spec que la ignora
-    // produce el sitio genérico que la ficha vino a matar.
+    // TODOS los problemas se juntan y se lanzan en UN solo error: el agente
+    // corrige todo en una pasada en vez de jugar ping-pong con el validador.
+    const problems: string[] = []
+    const site = await getSite(siteId)
+
+    // ——— Ficha de marca: obligatoria cuando existe ———
     {
-      const site = await getSite(siteId)
       const { getSupabaseClient } = await import("../../../lib/supabase")
       const { data: brand } = await getSupabaseClient()
         .from("lead_brand")
@@ -85,7 +97,6 @@ export default defineTool({
         .maybeSingle()
       if (brand) {
         const business = spec.business as Record<string, unknown>
-        const problems: string[] = []
         if (brand.short_name && !business["shortName"]) {
           problems.push(
             `la ficha tiene short_name="${brand.short_name}" y el spec no trae business.shortName`,
@@ -129,119 +140,109 @@ export default defineTool({
             `la ficha tiene ${services.length} servicios reales y el spec no declara páginas interiores (mínimo /servicios) — o justifica el one-pager escribiendo "one-pager" con la razón en el changelog`,
           )
         }
-        if (problems.length > 0) {
-          throw new Error(
-            `Spec rechazado — ignora la ficha de marca del lead:\n- ${problems.join("\n- ")}\nRelee brand en get_site_brief e incorpóralo al spec.`,
-          )
-        }
       }
     }
+
     const sections = spec.sections as Array<Record<string, unknown>>
     const hero = sections.find((s) => s["id"] === "hero")
     const heroVariant = hero?.["variant"] as string | undefined
     const design = spec.design as Record<string, unknown>
 
     // ——— Reglas de creatividad: el spec debe PENSAR, no rellenar el menú ———
-    {
-      const problems: string[] = []
 
-      // 1. Concepto rector: la idea que gobierna el sitio completo.
-      const concept = design["concept"]
-      if (typeof concept !== "string" || concept.trim().length < 60) {
-        problems.push(
-          "falta design.concept: la idea rectora del sitio en 2-3 frases (qué debe sentir y hacer el visitante, y qué gesto de diseño lo logra). Todo el spec se deriva de ella.",
-        )
-      }
-
-      // 2. Cada sección de contenido justifica su existencia y su layout.
-      const missingWhy = sections.filter(
-        (s) =>
-          !COMMODITY_SECTIONS.has(String(s["id"])) &&
-          (typeof s["why"] !== "string" || String(s["why"]).trim().length < 20),
+    // 1. Concepto rector: la idea que gobierna el sitio completo.
+    if (asText(design["concept"]).trim().length < 60) {
+      problems.push(
+        "falta design.concept: la idea rectora del sitio en 2-3 frases (qué debe sentir y hacer el visitante, y qué gesto de diseño lo logra). Todo el spec se deriva de ella.",
       )
-      if (missingWhy.length > 0) {
-        problems.push(
-          `secciones sin \`why\` (${missingWhy
-            .map((s) => String(s["component"] ?? s["id"]))
-            .join(", ")}): cada sección de contenido declara qué pregunta del visitante responde y por qué ESE layout la responde mejor.`,
-        )
-      }
+    }
 
-      // 3. Con biblioteca de referencias disponible, el spec cita qué robó.
-      const refsAvailable = await countAnalyzedReferences()
-      const declaredRefs = (design["references"] ?? []) as Array<
-        Record<string, unknown>
-      >
-      const withTakeaways = declaredRefs.filter(
-        (r) => typeof r["takeaways"] === "string" && String(r["takeaways"]).length > 20,
+    // 2. Cada sección de contenido justifica su existencia y su layout.
+    const missingWhy = sections.filter(
+      (s) =>
+        !COMMODITY_SECTIONS.has(String(s["id"])) &&
+        asText(s["why"] ?? s["rationale"]).trim().length < 20,
+    )
+    if (missingWhy.length > 0) {
+      problems.push(
+        `secciones sin \`why\` (${missingWhy
+          .map((s) => String(s["component"] ?? s["id"]))
+          .join(", ")}): cada sección de contenido declara qué pregunta del visitante responde y por qué ESE layout la responde mejor.`,
       )
-      if (refsAvailable > 0 && withTakeaways.length === 0) {
+    }
+
+    // 3. Con biblioteca de referencias disponible, el spec cita qué robó.
+    // Tolerante en shape: slug/refSlug/ref/id; takeaways string o array.
+    const refsAvailable = await countAnalyzedReferences()
+    const declaredRefs = (design["references"] ??
+      (spec as Record<string, unknown>)["references"] ??
+      []) as Array<Record<string, unknown>>
+    const withTakeaways = Array.isArray(declaredRefs)
+      ? declaredRefs.filter(
+          (r) =>
+            asText(
+              r["takeaways"] ?? r["takeaway"] ?? r["steal"] ?? r["notes"],
+            ).trim().length > 20,
+        )
+      : []
+    if (refsAvailable > 0 && withTakeaways.length === 0) {
+      const received = JSON.stringify(declaredRefs ?? []).slice(0, 400)
+      problems.push(
+        `hay ${refsAvailable} referencias analizadas y el spec no declara qué roba de las que recibió en el brief. Formato esperado: design.references = [{slug: "<slug de la referencia>", takeaways: "qué robas (composición, ritmo cromático, jerarquía) y qué no"}]. Lo que llegó: ${received}`,
+      )
+    }
+
+    // 4. Anti-clon estructural: dos sitios no comparten esqueleto, sea cual
+    // sea el giro. Se compara la secuencia id:variant de la home (sin
+    // navbar/footer/contact) contra los sitios más recientes.
+    const signature = sections
+      .filter((s) => !["navbar", "footer", "contact"].includes(String(s["id"])))
+      .map((s) => {
+        const id = String(s["id"] ?? "")
+        const key = id === "custom" ? `custom:${s["component"] ?? ""}` : id
+        return `${key}:${s["variant"] ?? "-"}`
+      })
+    const previous = await getRecentHomeSignatures({ excludeSiteId: siteId })
+    for (const prev of previous) {
+      const sim =
+        lcsLength(signature, prev.signature) /
+        Math.max(signature.length, prev.signature.length)
+      if (sim >= 0.75) {
         problems.push(
-          `hay ${refsAvailable} referencias analizadas en la biblioteca y el spec no declara design.references[{slug, takeaways}] — relee designReferences del brief y decide qué robas de cada una (composición, ritmo cromático, jerarquía) y qué no.`,
+          `la home comparte el ${Math.round(sim * 100)}% del esqueleto (orden + variants) con un sitio reciente [${prev.signature.join(" → ")}]. Recompón: cambia el ORDEN según tu concepto, sustituye variants del motor por secciones custom, o fusiona/parte secciones. El esqueleto canónico hero→trust-bar→services→about→faq→cta no es un default aceptable.`,
+        )
+        break
+      }
+    }
+
+    // 5. Páginas interiores diseñadas, no de plantilla: prohibido que TODAS
+    // sean `page-header + una sección + cta-band`.
+    const pages = (spec as Record<string, unknown>)["pages"] as
+      | Array<Record<string, unknown>>
+      | undefined
+    if (Array.isArray(pages) && pages.length > 0) {
+      const isMolde = (p: Record<string, unknown>) => {
+        const secs = (p["sections"] ?? []) as Array<Record<string, unknown>>
+        return (
+          secs.length <= 3 &&
+          String(secs[0]?.["id"]) === "page-header" &&
+          String(secs[secs.length - 1]?.["id"]) === "cta-band"
         )
       }
-
-      // 4. Anti-clon estructural: dos sitios no comparten esqueleto, sea cual
-      // sea el giro. Se compara la secuencia id:variant de la home (sin
-      // navbar/footer/contact) contra los sitios más recientes.
-      const signature = sections
-        .filter(
-          (s) => !["navbar", "footer", "contact"].includes(String(s["id"])),
-        )
-        .map((s) => {
-          const id = String(s["id"] ?? "")
-          const key = id === "custom" ? `custom:${s["component"] ?? ""}` : id
-          return `${key}:${s["variant"] ?? "-"}`
-        })
-      const previous = await getRecentHomeSignatures({ excludeSiteId: siteId })
-      for (const prev of previous) {
-        const sim =
-          lcsLength(signature, prev.signature) /
-          Math.max(signature.length, prev.signature.length)
-        if (sim >= 0.75) {
-          problems.push(
-            `la home comparte el ${Math.round(sim * 100)}% del esqueleto (orden + variants) con un sitio reciente [${prev.signature.join(" → ")}]. Recompón: cambia el ORDEN según tu concepto, sustituye variants del motor por secciones custom, o fusiona/parte secciones. El esqueleto canónico hero→trust-bar→services→about→faq→cta no es un default aceptable.`,
-          )
-          break
-        }
-      }
-
-      // 5. Páginas interiores diseñadas, no de plantilla: prohibido que TODAS
-      // sean `page-header + una sección + cta-band`.
-      const pages = (spec as Record<string, unknown>)["pages"] as
-        | Array<Record<string, unknown>>
-        | undefined
-      if (Array.isArray(pages) && pages.length > 0) {
-        const isMolde = (p: Record<string, unknown>) => {
-          const secs = (p["sections"] ?? []) as Array<Record<string, unknown>>
-          return (
-            secs.length <= 3 &&
-            String(secs[0]?.["id"]) === "page-header" &&
-            String(secs[secs.length - 1]?.["id"]) === "cta-band"
-          )
-        }
-        if (pages.every(isMolde)) {
-          problems.push(
-            "todas las páginas interiores son la plantilla `page-header + una sección + cta-band`. Una página interior es una PÁGINA: al menos una necesita estructura propia (4+ secciones, o una custom, o un layout que desglose el contenido — cada servicio con su ángulo, no una lista).",
-          )
-        }
-      }
-
-      if (problems.length > 0) {
-        throw new Error(
-          `Spec rechazado — le falta pensamiento de diseño:\n- ${problems.join("\n- ")}\nCorrige TODO en una pasada y reintenta save_site_version.`,
+      if (pages.every(isMolde)) {
+        problems.push(
+          "todas las páginas interiores son la plantilla `page-header + una sección + cta-band`. Una página interior es una PÁGINA: al menos una necesita estructura propia (4+ secciones, o una custom, o un layout que desglose el contenido — cada servicio con su ángulo, no una lista).",
         )
       }
     }
+
+    // ——— Anti-convergencia dentro del giro: preset + hero + acento ———
     const palette = (design["palette"] ?? {}) as Record<string, unknown>
     const dark = (palette["dark"] ?? palette["light"] ?? {}) as Record<
       string,
       unknown
     >
     const accent = dark["accent"] as string | undefined
-
-    // Anti-convergencia: dos clientes del mismo giro no comparten
-    // preset + hero + acento exactos.
     const siblings = await getSiblingSpecs({
       industry: spec.industry,
       excludeSiteId: siteId,
@@ -253,8 +254,14 @@ export default defineTool({
         s.accent === accent,
     )
     if (clash) {
+      problems.push(
+        `otro sitio del giro "${spec.industry}" ya usa preset=${clash.preset} + hero=${clash.heroVariant} + acento=${clash.accent}. Cambia al menos uno (normalmente el acento: varía el hue ±15-30°).`,
+      )
+    }
+
+    if (problems.length > 0) {
       throw new Error(
-        `Regla anti-convergencia: otro sitio del giro "${spec.industry}" ya usa preset=${clash.preset} + hero=${clash.heroVariant} + acento=${clash.accent}. Cambia al menos uno (normalmente el acento: varía el hue ±15-30°).`,
+        `Spec rechazado (${problems.length} ${problems.length === 1 ? "problema" : "problemas"} — TODOS listados, corrígelos en UNA pasada y reintenta):\n- ${problems.join("\n- ")}`,
       )
     }
 
@@ -265,7 +272,6 @@ export default defineTool({
       actor: "site-builder",
     })
 
-    const site = await getSite(siteId)
     await addActivity({
       leadId: site.lead_id,
       type: "site_version_created",
