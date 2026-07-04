@@ -2,7 +2,7 @@ import { defineTool } from "eve/tools"
 import { z } from "zod"
 
 import { addActivity } from "../../../lib/leads"
-import { getGithubEnv, mergeBranchToMain } from "../lib/github"
+import { getGithubEnv, getRepoFileText, mergeBranchToMain } from "../lib/github"
 import { getSite, setSiteStatus, updateSite } from "../lib/sites"
 import {
   getDeploymentBuildLog,
@@ -36,6 +36,36 @@ export default defineTool({
     }
 
     const env = getGithubEnv()
+
+    // Guard anti-mock: el preview es un demo de venta y ADMITE datos mock
+    // (marcados con "// MOCK" en site.config.ts); producción se indexa y NO.
+    // Se valida el config de la rama que se va a mergear.
+    {
+      const config = await getRepoFileText(
+        `${env.org}/${site.slug}`,
+        "site.config.ts",
+        `v${versionN}`,
+      )
+      if (config) {
+        const mockSignals = [
+          { re: /\/\/\s*MOCK/i, label: 'marcador "// MOCK"' },
+          { re: /0{3}[\s-]?0{2,4}/, label: "teléfono mock (000 0000)" },
+          { re: /ejemplo\.com|example\.com/i, label: "email/dominio de ejemplo" },
+          { re: /"zip":\s*"0{5}"/, label: "zip 00000" },
+        ]
+        const found = mockSignals.filter((s) => s.re.test(config))
+        if (found.length > 0) {
+          throw new Error(
+            `Publicación rechazada: site.config.ts de v${versionN} aún trae datos MOCK del demo (${found
+              .map((f) => f.label)
+              .join(
+                ", ",
+              )}). Producción se indexa: sustituye los mocks por los datos reales del cliente (nueva versión con el config corregido), re-aprueba y publica.`,
+          )
+        }
+      }
+    }
+
     const { mergeSha } = await mergeBranchToMain(
       `${env.org}/${site.slug}`,
       `v${versionN}`,

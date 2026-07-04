@@ -298,34 +298,37 @@ la rama aprobada, acción autorizada por el humano).
 
 ## Política de datos faltantes (decidida por el operador — NO preguntes por esto)
 
-Los leads de Google Maps casi nunca traen email, año de fundación ni redes.
-**Jerarquía OBLIGATORIA ante un dato faltante — y NUNCA, bajo ninguna
-circunstancia, te detienes ni preguntas por él:**
+**El preview que construyes es un DEMO DE VENTA.** José se lo manda al
+cliente para que decida comprar; los datos finos se corrigen DESPUÉS de
+cerrar. Los previews de Vercel llevan noindex (cero riesgo SEO). Por eso: un
+dato faltante JAMÁS te detiene ni te hace preguntar — el demo se construye
+COMPLETO, siempre. Bloqueo real = solo configuración (token/API key).
 
-1. **OMITIR** (preferido): si el campo es opcional en el schema, no existe.
-2. **Placeholder razonable ANOTADO**: si el schema o el diseño exigen el campo
-   y no se puede omitir, usa el valor provisional más creíble y anótalo en el
-   changelog para que el humano lo confirme con el cliente. Ejemplos:
-   whatsapp → el teléfono del lead; horario (si algo lo exige) → "Lunes a
-   viernes 9:00–18:00"; un dato técnico de sección custom → estimación
-   conservadora marcada.
-3. **Recortar**: si una SECCIÓN entera no tiene contenido real (noticias,
-   portafolio, métricas), la sección no existe — eso no se rellena.
+Jerarquía ante un dato faltante:
 
-Un dato faltante JAMÁS es un bloqueo: es una decisión tuya con esta jerarquía.
-Bloqueo real = solo configuración (token/API key faltante). El template
-soporta opcionales:
+1. **Datos de CONTACTO del negocio (teléfono, email, dirección exacta, zip,
+   geo, horario): MOCK creíble y local.** Un demo con contacto visible vende
+   más que uno con la sección amputada. Formato obligatorio del mock:
+   - teléfono → `+52 871 000 0000` (el patrón 000 0000 es detectable)
+   - email → `contacto@ejemplo.com`
+   - cada línea mock en site.config.ts lleva el comentario `// MOCK`
+   - TODOS los mocks listados en el changelog bajo "Datos por confirmar
+     con el cliente".
+   `publish_site` rechaza publicar a producción mientras queden mocks: el
+   demo los admite, el sitio indexado no. Si el lead SÍ trae el dato, usar
+   el real es obligatorio — el mock es solo para huecos.
+2. **Datos opcionales del schema sin valor real** (founded, redes): OMITIR
+   (el motor oculta el ítem). Nunca claims de años/premios sin dato real.
+3. **SECCIONES de contenido sin materia real** (portafolio sin fotos,
+   noticias, testimonials con <5 reseñas, logos de clientes): recortar la
+   sección o rediseñarla con lo que sí hay — el copy y el contenido visible
+   NUNCA se rellenan con lorem ni con inventos que parezcan hechos
+   ("+200 proyectos" sin fuente). Mock ≠ contenido inventado: el mock es
+   para CAMPOS de contacto, no para hechos del negocio.
+- **Sin fotos reales** → stock con treatment (skill image-style).
 
-- **Sin email** → omite el campo (el motor oculta email en contacto/footer/aviso y
-  JSON-LD; el form de Resend no lo necesita). El teléfono real es el canal.
-- **Sin founded** → omítelo (el trust-bar oculta el ítem de años y el JSON-LD omite
-  foundingDate). Nunca claims de años en el copy sin dato real.
-- **Pocas reseñas (<5)** → sin sección testimonials; rating agregado en trust-bar/hero.
-- **Sin fotos reales** → stock con treatment (skill image-style) o secciones sin imagen.
-
-Anota en el changelog de la versión qué se omitió por falta de dato, para que el
-humano lo complete tras hablar con el cliente. Preguntar al humano queda reservado
-para decisiones que esta política no cubre.
+Preguntar al humano queda reservado para decisiones que esta política no
+cubre.
 
 ## Reglas
 

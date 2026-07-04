@@ -35,6 +35,22 @@ async function githubFetch(
   })
 }
 
+/** Lee un archivo de texto del repo (contents API, raw) en un ref dado. */
+export async function getRepoFileText(
+  fullName: string,
+  path: string,
+  ref: string,
+): Promise<string | null> {
+  const env = getGithubEnv()
+  const res = await githubFetch(
+    env,
+    `/repos/${fullName}/contents/${path}?ref=${encodeURIComponent(ref)}`,
+    { headers: { Accept: "application/vnd.github.raw+json" } },
+  )
+  if (!res.ok) return null
+  return res.text()
+}
+
 /**
  * Crea el repo del cliente con "Generate from template" y espera a que el
  * contenido esté disponible (la generación es asíncrona en GitHub).
