@@ -16,7 +16,7 @@ import {
   LeadBrandProvider,
   LeadBrandTrigger,
 } from "@/features/leads/components/lead-brand-panel"
-import { LeadStatusBadge } from "@/features/leads/components/lead-status-badge"
+import { LeadStatusSelect } from "@/features/leads/components/lead-status-select"
 import { getLeadDetail } from "@/features/leads/queries"
 import { GenerateSiteDialog } from "@/features/sites/components/generate-site-dialog"
 import { formatDate } from "@/lib/dates"
@@ -107,7 +107,7 @@ export default async function LeadDetailPage({
                       {lead.name ?? "Lead"}
                     </h1>
                   </Link>
-                  <LeadStatusBadge status={lead.status} />
+                  <LeadStatusSelect leadId={lead.id} status={lead.status} />
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {[lead.category, lead.city].filter(Boolean).join(" · ")}
