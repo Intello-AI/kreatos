@@ -1315,10 +1315,6 @@ function ReportItem({ item }: { item: ActivityItem }) {
           <span aria-hidden className="w-0.5 bg-border" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="mb-1 flex items-center gap-1.5 text-xs font-medium text-foreground">
-            Reporte a Agente
-            <ModelBadge model={item.model} />
-          </span>
           <p className="line-clamp-3 text-xs text-muted-foreground group-data-[state=open]/report:line-clamp-none">
             {item.label}
           </p>
