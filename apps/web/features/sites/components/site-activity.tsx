@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useRef, useState, useTransition } from "react"
-import Image from "next/image"
 import { useRouter } from "next/navigation"
 import {
   CaretDownIcon,
@@ -14,7 +13,7 @@ import {
   PaperclipIcon,
   PaperPlaneRightIcon,
   QuestionIcon,
-  RobotIcon,
+  AirTrafficControlIcon,
   SparkleIcon,
   TerminalWindowIcon,
   WarningIcon,
@@ -1355,7 +1354,7 @@ function TaskBlock({
   return (
     <Collapsible className="border">
       <CollapsibleTrigger className="group flex w-full items-center gap-2 bg-sidebar p-2 text-left text-xs">
-        <RobotIcon
+        <AirTrafficControlIcon
           className={cn(
             "size-3.5 shrink-0",
             failed ? "text-destructive" : "text-muted-foreground"
@@ -1469,9 +1468,11 @@ function BlockItem({ item }: { item: ActivityItem }) {
       ) : item.kind === "text" ? (
         <Message>
           <MessageContent>
-            <MessageHeader className="gap-1.5 pl-0">
-              <Icon className="size-3" />
-              Kreatos AI
+            <MessageHeader className="gap-3 pl-0">
+              <div className="flex gap-1">
+                <Icon className="size-3" />
+                Kreatos AI
+              </div>
               <ModelBadge model={item.model} />
             </MessageHeader>
             <Bubble variant="muted">
@@ -1501,9 +1502,11 @@ function BlockItem({ item }: { item: ActivityItem }) {
       ) : item.kind === "question" ? (
         <Message>
           <MessageContent>
-            <MessageHeader className="gap-1.5 pl-0">
-              <Icon className="size-3" />
-              Kreatos AI
+            <MessageHeader className="gap-3 pl-0">
+              <div className="flex gap-1">
+                <Icon className="size-3" />
+                Kreatos AI
+              </div>
               <ModelBadge model={item.model} />
             </MessageHeader>
             <Bubble variant="outline">
