@@ -156,6 +156,7 @@ export type Database = {
           short_name: string | null
           tagline: string | null
           updated_at: string
+          voice: Json | null
         }
         Insert: {
           colors?: Json
@@ -172,6 +173,7 @@ export type Database = {
           short_name?: string | null
           tagline?: string | null
           updated_at?: string
+          voice?: Json | null
         }
         Update: {
           colors?: Json
@@ -188,6 +190,7 @@ export type Database = {
           short_name?: string | null
           tagline?: string | null
           updated_at?: string
+          voice?: Json | null
         }
         Relationships: [
           {

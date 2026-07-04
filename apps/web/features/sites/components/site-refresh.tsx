@@ -59,11 +59,32 @@ export function SiteRefresh({
     }
   }, [siteId, router])
 
+  // Heartbeat SIEMPRE (no solo generando): si realtime se cae o la
+  // publication no existe en ese entorno, el detalle nunca queda stale más
+  // de 10s/45s. Barato: es un re-render server de una sola página abierta.
   useEffect(() => {
-    if (!active) return
-    const interval = setInterval(() => router.refresh(), 10_000)
+    const interval = setInterval(
+      () => {
+        if (document.visibilityState === "visible") router.refresh()
+      },
+      active ? 10_000 : 45_000,
+    )
     return () => clearInterval(interval)
   }, [active, router])
+
+  // Al volver a la pestaña: refresh inmediato (mientras estuvo oculta pudo
+  // perderse cualquier cantidad de eventos).
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") router.refresh()
+    }
+    document.addEventListener("visibilitychange", onVisible)
+    window.addEventListener("focus", onVisible)
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible)
+      window.removeEventListener("focus", onVisible)
+    }
+  }, [router])
 
   return null
 }

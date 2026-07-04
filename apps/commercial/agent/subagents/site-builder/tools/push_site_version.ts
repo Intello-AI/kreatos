@@ -28,11 +28,23 @@ export default defineTool({
     const sandbox = await ctx.getSandbox()
 
     const escaped = commitMessage.replace(/"/g, '\\"')
+    // Guard explícito: sin cambios no hay versión que pushear — el error de
+    // "nothing to commit" enterrado en stdout confundía al agente.
+    const dirty = await sandbox.run({
+      command: `cd site && git status --porcelain | head -1`,
+    })
+    if (!dirty.stdout.trim()) {
+      throw new Error(
+        "No hay cambios que commitear: el working tree está limpio. ¿Aplicaste la personalización sobre el clone? (Si el run anterior murió sin pushear, su trabajo se perdió con su sandbox: re-materializa el spec vigente antes de pushear.)",
+      )
+    }
     const push = await sandbox.run({
       command: `cd site && git checkout -B ${branch} && git add -A && git commit -m "${escaped}" && git push -f origin ${branch}`,
     })
     if (push.exitCode !== 0) {
-      throw new Error(`git push falló: ${push.stderr}`)
+      throw new Error(
+        `git push falló (exit ${push.exitCode}):\n${[push.stderr, push.stdout].filter(Boolean).join("\n").slice(-1200)}`,
+      )
     }
 
     const sha = await sandbox.run({ command: `cd site && git rev-parse HEAD` })

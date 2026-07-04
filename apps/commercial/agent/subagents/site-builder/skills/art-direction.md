@@ -8,10 +8,18 @@ Orden de trabajo al componer un spec:
 
 1. **Lee el brief y `lead.site_instructions`.** Si José pidió algo concreto
    (colores, tono, referencia), eso manda sobre los defaults.
-2. **Elige el preset** por giro y tono usando los metadatos de `design_presets`
-   (llegan en `get_site_brief`): obsidiana (despachos), cantera (construcción),
-   ruta (logística), bodega (distribución), norte (consultoría/premium o cuando
-   ninguno encaja del todo).
+2. **El theme se DERIVA, no se elige de un catálogo.** Jerarquía estricta:
+   1. **Colores de la ficha de marca** (`brand.colors`): si existen, son la
+      base innegociable de la paleta — el cliente ya tiene identidad.
+   2. **Tokens de una referencia** (`analysis.tokens` de la referencia que
+      elegiste como guía): el sistema de contraste/neutros de esa referencia,
+      armonizado con los colores de marca.
+   3. **Preset** (`design_presets`): SOLO como fallback estructural cuando no
+      hay ni marca ni referencias con tokens — y aun así, variado.
+   En los casos 1-2, el preset que copies de `themes/` es solo el esqueleto
+   del archivo (estructura de vars): REESCRIBE sus valores con la paleta
+   derivada. Dos sitios del mismo giro con referencias distintas deben salir
+   con themes visiblemente distintos — así se mata el "todas se parecen".
 3. **Las referencias son tu fuente PRIMARIA de inspiración** — José las curó
    a mano; ignorarlas es diseñar de memoria. Toma 2–3 de `designReferences`
    y explota su `analysis` completo: `layout.composition` y `spacing` para

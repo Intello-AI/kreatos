@@ -19,6 +19,23 @@ export default defineTool({
       .optional(),
     differentiators: z.string().optional(),
     notes: z.string().optional(),
+    voice: z
+      .object({
+        tone: z
+          .string()
+          .describe(
+            'Tono en una frase: "corporativo y sobrio", "cercano y cálido", "premium minimalista"...',
+          ),
+        register: z.enum(["usted", "tu"]),
+        personality: z.string().describe("Personalidad de la marca en 1-2 frases."),
+        keywords: z.array(z.string()).default([]),
+        avoid: z
+          .array(z.string())
+          .default([])
+          .describe("Palabras/estilos que la marca NO usa."),
+      })
+      .optional()
+      .describe("Voz de marca extraída de su sitio/redes o dictada por José."),
     logoSourcePath: z
       .string()
       .optional()
@@ -101,6 +118,7 @@ export default defineTool({
         differentiators:
           input.differentiators ?? existing?.differentiators ?? null,
         notes: input.notes ?? existing?.notes ?? null,
+        voice: (input.voice ?? existing?.voice ?? null) as never,
         images: Array.from(new Set([...prevImages, ...images])) as never,
         ...(logoPath ? { logo_path: logoPath } : {}),
         ...(iconPath ? { icon_path: iconPath } : {}),

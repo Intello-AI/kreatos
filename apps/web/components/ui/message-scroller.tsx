@@ -73,7 +73,12 @@ function MessageScrollerItem({
       data-slot="message-scroller-item"
       scrollAnchor={scrollAnchor}
       className={cn(
-        "min-w-0 shrink-0 [contain-intrinsic-size:auto_10rem] [content-visibility:auto]",
+        // Sin content-visibility:auto: colapsar/expandir items al estimado
+        // (10rem) cambia la altura del contenido tras cada autoscroll y el
+        // primitive lo lee como "el usuario se alejó del fondo" → deja de
+        // seguir. El costo de render de un chat de cientos de items es menor
+        // que un autoscroll roto.
+        "min-w-0 shrink-0",
         className
       )}
       {...props}

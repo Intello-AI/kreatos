@@ -35,6 +35,23 @@ en la ficha de marca — que site-builder consume al generar el sitio.
    UNA pregunta si falta algo esencial (p. ej. nombre corto imposible de
    deducir). No interrogues: pregunta solo lo que no puedas decidir tú.
 
+## Voz de marca (cuando José pasa un sitio, Instagram, Facebook o screenshots)
+
+Además de lo visual, extrae CÓMO habla la marca y guárdalo en `voice`:
+
+- **Sitio web**: `web_fetch` a la URL — analiza el copy real: ¿usted o tú?,
+  ¿corporativo/sobrio, cercano/cálido, premium/minimalista, divertido?,
+  vocabulario recurrente, claims que usa, qué evita.
+- **Instagram/Facebook**: casi siempre bloquean el fetch (login wall). Si el
+  fetch da 403/redirect a login, NO insistas: pídele a José screenshots del
+  perfil y de 2-3 posts — con `analyze_brand_image` lees los captions y el
+  estilo visual de la parrilla, y de ahí sale la voz.
+- **Dictado**: si José te la describe ("son muy formales"), eso manda.
+
+Guarda `voice` con: `tone` (una frase), `register` (usted/tu), `personality`
+(1-2 frases), `keywords` (palabras que SÍ usa la marca), `avoid` (lo que no).
+site-builder escribirá TODO el copy del sitio con esa voz.
+
 ## Criterio
 
 - Colores: si José manda screenshot de la marca/local, la paleta sale de ahí

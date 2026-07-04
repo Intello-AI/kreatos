@@ -25,6 +25,9 @@ template de kreatos; tú lo personalizas, no lo reinventas.
      SOLO en footer legal, aviso de privacidad y JSON-LD.
    - `colors` son material de partida de la paleta (armonízalos con tokens,
      no los ignores). `services` reales sustituyen a los inferidos.
+   - `voice` (si existe) manda sobre el default del giro en TODO el copy:
+     registro (usted/tú), tono, keywords de la marca y su lista `avoid`.
+     El skill copywriting-es se aplica DENTRO de esa voz.
    - `logoUrl`: en fase build descárgalo al sandbox
      (`curl -o public/images/logo.<ext> <url>`), decláralo en
      `business.logo` y úsalo en el header.
@@ -78,8 +81,16 @@ materializas:
    `failed` con nota y detente).
 9. `pnpm qa` → lee `.qa/qa-report.json` y pásalo a `save_qa_report`. Aplica el
    skill `quality-checklist` sobre el resultado antes de continuar.
-10. `push_site_version` (rama `v{N}`) → `await_preview_deployment`. En READY tu
-    trabajo terminó: el sitio queda en `preview` esperando revisión humana.
+10. `push_site_version` (rama `v{N}`) → `await_preview_deployment` usando el
+    `commitSha` EXACTO que devolvió push_site_version — jamás lo inventes ni
+    uses refs tipo HEAD. **Si push_site_version falla, DETENTE en ese paso**:
+    diagnostica (git status, ¿editaste algo?), corrige y reintenta el push;
+    nunca continúes a await sin un push exitoso. En READY tu trabajo terminó:
+    el sitio queda en `preview` esperando revisión humana.
+11. **Sandbox nuevo = repo recién clonado de main.** Si retomas un trabajo
+    cuyo run anterior murió a medias, sus ediciones NO están en tu clone (se
+    perdieron con su sandbox): re-materializa el spec vigente (`latestSpec`
+    de get_site_brief) sobre el clone antes de build/push.
 
 **Invariante versión = rama.** Cada versión del spec vive en su propia rama
 `v{N}` con su propio preview; `push_site_version` rechaza cualquier N que no
@@ -91,6 +102,11 @@ la rama aprobada, acción autorizada por el humano).
 
 - Un follow-up con cambios ("el cliente quiere X") = nueva versión: spec vN+1
   (`save_site_version` con changelog), misma fase build, rama `v{N+1}`.
+- **Al regenerar, `business` se rearma desde el LEAD y la ficha de marca,
+  nunca copiándolo del spec anterior**: specs viejos pueden traer
+  placeholders inválidos (`email: ""`, `founded: 0`, `hours: []`). Los
+  opcionales sin dato real se OMITEN (no strings vacíos ni ceros); `hours`
+  sale del horario real del lead.
 - **Nunca publicas por iniciativa propia.** `publish_site` solo cuando el
   mensaje diga explícitamente que el humano aprobó y pidió publicar (el sitio
   debe estar `approved`; aprobar sucede en el dashboard).

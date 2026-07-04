@@ -779,7 +779,14 @@ export function SiteActivity({
         </div>
       )}
 
-      <MessageScrollerProvider defaultScrollPosition="end" autoScroll>
+      {/* scrollEdgeThreshold amplio: imágenes que cargan tarde y collapsibles
+          mueven la altura unos px; sin margen, cada brinco saca al scroller
+          del modo "siguiendo el fondo". */}
+      <MessageScrollerProvider
+        defaultScrollPosition="end"
+        autoScroll
+        scrollEdgeThreshold={120}
+      >
         <MessageScroller className="min-h-0 flex-1 border-t">
           <MessageScrollerViewport className="p-3" preserveScrollOnPrepend>
             <MessageScrollerContent className="gap-4">
