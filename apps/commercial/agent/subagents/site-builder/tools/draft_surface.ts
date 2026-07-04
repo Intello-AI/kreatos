@@ -52,6 +52,11 @@ async function validate(
     if (!/export\s/.test(content)) {
       return "el TypeScript no tiene ningún export"
     }
+    // El contrato del template: el config importa el tipo del motor. Un
+    // helper inventado (defineSiteConfig etc.) rompe el build de tipos.
+    if (surface === "site-config" && !content.includes('from "@/lib/config"')) {
+      return 'site.config.ts debe seguir el contrato del template: `import type { SiteConfig } from "@/lib/config"` + `const config: SiteConfig = {...}` + export default — sin helpers inventados'
+    }
     // Chequeo sintáctico real: atrapa TS roto aquí en vez de esperar al
     // `pnpm build` del sandbox (feedback mucho más tardío). Si typescript
     // no está disponible en el runtime, se omite sin fallar.
