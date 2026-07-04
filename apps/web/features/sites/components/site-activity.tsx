@@ -248,13 +248,15 @@ export function SiteActivity({
     event: StreamEvent,
     depth: 0 | 1,
     live: boolean,
-    nextKey: () => number,
+    runIdx: number,
   ) => {
     const d = event.data ?? {}
     const at = event.meta?.at ?? ""
-    // push con orden cronológico del run al que pertenece el evento.
+    // Orden cronológico REAL: (run, timestamp del evento). Ordenar por llegada
+    // desordenaba root vs subagente (streams paralelos, replay a ritmos
+    // distintos). Empates conservan orden de llegada (sort estable).
     const add = (item: Omit<ActivityItem, "id" | "sortKey">) =>
-      push({ ...item, sortKey: nextKey() })
+      push({ ...item, sortKey: runIdx * 1e13 + (Date.parse(at) || 0) })
     switch (event.type) {
       case "actions.requested": {
         const actions = (d["actions"] ?? []) as Array<Record<string, unknown>>
@@ -287,9 +289,8 @@ export function SiteActivity({
           const childId = d["childSessionId"] as string | undefined
           if (childId && depth === 0 && !seenChildren.current.has(childId)) {
             seenChildren.current.add(childId)
-            // El hijo comparte el contador del run del padre: sus eventos se
-            // intercalan cronológicamente con los del root.
-            void consume(childId, 1, live, nextKey)
+            // Mismo runIdx: los eventos del hijo se intercalan por timestamp.
+            void consume(childId, 1, live, runIdx)
           }
           break
         }
@@ -312,8 +313,10 @@ export function SiteActivity({
           }
           break
         case "input.requested": {
-          // El agente pide input humano (HITL): mostrar la pregunta para que
-          // se le pueda contestar desde el composer.
+          // El agente pide input humano (HITL). Solo se procesa a nivel root:
+          // la pregunta de un subagente burbujea al stream del root, y
+          // renderizarla también desde el stream del hijo la duplicaba.
+          if (depth !== 0) break
           const requests = (d["requests"] ?? []) as Array<Record<string, unknown>>
           for (const request of requests) {
             const action = (request["action"] ?? {}) as Record<string, unknown>
@@ -322,8 +325,8 @@ export function SiteActivity({
             if (prompt) {
               add({ at, depth, kind: "question", label: String(prompt) })
             }
-            // Solo el request del run vivo a nivel root es respondible.
-            if (live && depth === 0 && request["requestId"]) {
+            // Solo el request del run vivo es respondible desde el composer.
+            if (live && request["requestId"]) {
               setPendingInput({
                 requestId: String(request["requestId"]),
                 prompt: String(prompt ?? ""),
@@ -363,13 +366,13 @@ export function SiteActivity({
   /**
    * Consume el stream de un run. `live: false` = histórico: se reproduce y se
    * corta tras 2.5s sin datos; `live: true` = run actual, conexión abierta.
-   * `nextKey` genera el sortKey cronológico del run (compartido con sus hijos).
+   * `runIdx` ancla los eventos al bloque de su run en el orden global.
    */
   const consume = async (
     sessionId: string,
     depth: 0 | 1,
     live: boolean,
-    nextKey: () => number,
+    runIdx: number,
   ) => {
     const controller = lifetimeAbort.current
     if (!controller) return
@@ -408,7 +411,7 @@ export function SiteActivity({
         for (const line of lines) {
           if (!line.trim()) continue
           try {
-            handleEvent(JSON.parse(line) as StreamEvent, depth, live, nextKey)
+            handleEvent(JSON.parse(line) as StreamEvent, depth, live, runIdx)
           } catch {
             // línea parcial: ignorar
           }
@@ -426,15 +429,9 @@ export function SiteActivity({
     }
   }
 
-  /** sortKey por run: runIndex * 1e6 + secuencia de llegada. */
-  const makeKeyFactory = (runIdx: number) => {
-    let seq = 0
-    return () => runIdx * 1_000_000 + ++seq
-  }
-
   const startRun = (id: string, live: boolean) => {
     consumedRuns.current.add(id)
-    void consume(id, 0, live, makeKeyFactory(runIds.indexOf(id)))
+    void consume(id, 0, live, runIds.indexOf(id))
   }
 
   // Al montar: SOLO el run vivo (lo actual, al instante). Cuando la cadena
@@ -616,7 +613,7 @@ export function SiteActivity({
           // lo que escribas abajo la responde directamente.
           <div className="flex shrink-0 items-start gap-2 border-y border-warning/40 bg-warning/5 p-2.5">
             <QuestionIcon className="mt-0.5 size-3.5 shrink-0 text-warning" />
-            <div className="max-h-28 min-w-0 flex-1 overflow-y-auto text-xs">
+            <div className="max-h-[60dvh] min-w-0 flex-1 overflow-y-auto text-xs">
               <Streamdown className="text-xs leading-relaxed [&_p]:my-0.5 [&_:not(pre)>code]:mx-0 [&_:not(pre)>code]:rounded-sm [&_:not(pre)>code]:border [&_:not(pre)>code]:border-border [&_:not(pre)>code]:bg-background [&_:not(pre)>code]:px-1 [&_:not(pre)>code]:py-px [&_:not(pre)>code]:text-[11px]">
                 {pendingInput.prompt}
               </Streamdown>

@@ -47,8 +47,28 @@ materializas:
   debe estar `approved`; aprobar sucede en el dashboard).
 - Nunca hagas push a `main` desde el sandbox.
 
+## Política de datos faltantes (decidida por el operador — NO preguntes por esto)
+
+Los leads de Google Maps casi nunca traen email, año de fundación ni redes. Regla
+general: **datos reales cuando existen; cuando no existen, se omiten — nunca se
+inventan y nunca pausas la corrida por ellos.** El template los soporta opcionales:
+
+- **Sin email** → omite el campo (el motor oculta email en contacto/footer/aviso y
+  JSON-LD; el form de Resend no lo necesita). El teléfono real es el canal.
+- **Sin founded** → omítelo (el trust-bar oculta el ítem de años y el JSON-LD omite
+  foundingDate). Nunca claims de años en el copy sin dato real.
+- **Pocas reseñas (<5)** → sin sección testimonials; rating agregado en trust-bar/hero.
+- **Sin fotos reales** → stock con treatment (skill image-style) o secciones sin imagen.
+
+Anota en el changelog de la versión qué se omitió por falta de dato, para que el
+humano lo complete tras hablar con el cliente. Preguntar al humano queda reservado
+para decisiones que esta política no cubre.
+
 ## Reglas
 
+- El `siteId` casi siempre viene en el mensaje, muchas veces dentro de un tag
+  `[Contexto: site <uuid>]` — extráelo de ahí. Solo pregúntalo si de verdad no
+  aparece en ninguna parte del mensaje.
 - Responde siempre en español; todo el copy del sitio en español mexicano.
 - El spec es el contrato: nada aparece en el código que no esté en el spec.
 - Datos del negocio (nombre, dirección, teléfono, rating) siempre reales, del
