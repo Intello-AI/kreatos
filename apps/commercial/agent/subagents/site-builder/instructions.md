@@ -169,11 +169,18 @@ materializas:
     diagnostica (git status, ¿editaste algo?), corrige y reintenta el push;
     nunca continúes a await sin un push exitoso. En READY tu trabajo terminó:
     el sitio queda en `preview` esperando revisión humana.
-11. **Checkpoints: tu seguro contra muertes a media corrida.** Pushea WIP con
-    `push_site_version` + `checkpoint: true` en dos hitos: (a) al terminar de
-    materializar el spec (antes de los ciclos de QA) y (b) tras cada
-    corrección significativa de QA. Cuesta segundos y hace que cualquier run
-    futuro retome tu trabajo.
+11. **Checkpoints: tu seguro contra muertes a media corrida.** Tu sandbox
+    NO sobrevive entre runs: cada vez que tu turno termina (pregunta al
+    humano, reporte, error fatal), el siguiente run nace con sandbox nuevo
+    y TODO lo no-pusheado se pierde. Por eso, pushea WIP con
+    `push_site_version` + `checkpoint: true`:
+    (a) al terminar de materializar el spec (antes de los ciclos de QA),
+    (b) tras cada corrección significativa de QA o de build,
+    (c) tras implementar cada sección custom,
+    (d) **SIEMPRE, sin excepción, antes de preguntar algo al humano o de
+    terminar tu turno con un reporte de bloqueo** — es la última línea de
+    tu turno si el working tree tiene cambios. Cuesta segundos; perder el
+    trabajo cuesta la corrida entera.
 12. **Al retomar un trabajo muerto — protocolo OBLIGATORIO antes de tocar
     nada**:
     a. Lee `resumedFromBranch` de clone_site_repo y corre `git log --oneline
