@@ -84,6 +84,22 @@ export default defineTool({
       }
     }
 
+    // El REMOTO es la fuente de verdad: si la rama avanzó desde que este run
+    // clonó (otro run pusheó mientras tanto), un push -f pisaría ese trabajo.
+    // Compare-before-push: solo se fuerza cuando el local contiene al remoto.
+    await sandbox.run({
+      command: `cd site && git fetch origin ${branch} 2>/dev/null; true`,
+    })
+    const behind = await sandbox.run({
+      command: `cd site && git rev-list HEAD..origin/${branch} --count 2>/dev/null || echo 0`,
+    })
+    const behindCount = parseInt(behind.stdout.trim(), 10) || 0
+    if (behindCount > 0) {
+      throw new Error(
+        `La rama ${branch} en el REMOTO tiene ${behindCount} commit(s) que tu clone no tiene (otro run pusheó después de que clonaste). No se fuerza el push para no destruir ese trabajo. Corre clone_site_repo de nuevo (retomará desde el remoto actualizado), revisa git log, y re-aplica SOLO lo que falte antes de volver a pushear.`,
+      )
+    }
+
     const message = checkpoint ? `wip: ${escaped}` : escaped
     const push = await sandbox.run({
       command: `cd site && git checkout -B ${branch} && git add -A && git commit -m "${message}" && git push -f origin ${branch}`,
