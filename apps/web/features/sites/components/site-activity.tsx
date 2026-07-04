@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import {
+  CaretDownIcon,
   CheckIcon,
   PaperPlaneRightIcon,
   QuestionIcon,
@@ -17,6 +18,11 @@ import { answerSiteInput, sendSiteMessage } from "@/features/sites/actions"
 import { formatTime as formatTimeInUserTz } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import { Bubble, BubbleContent, BubbleQuote } from "@/components/ui/bubble"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import {
   InputGroup,
   InputGroupAddon,
@@ -49,7 +55,7 @@ interface ActivityItem {
   sortKey: number
   at: string
   depth: 0 | 1
-  kind: "action" | "text" | "user" | "status" | "error" | "question"
+  kind: "action" | "text" | "report" | "user" | "status" | "error" | "question"
   label: string
   detail?: string
   callId?: string
@@ -303,7 +309,15 @@ export function SiteActivity({
           break
         case "message.completed":
           if (d["message"]) {
-            add({ at, depth, kind: "text", label: String(d["message"]) })
+            // Solo el root te habla a ti (burbuja de chat). El mensaje final
+            // del subagente es su reporte interno al orquestador: se muestra
+            // como actividad discreta, no como chat.
+            add({
+              at,
+              depth,
+              kind: depth === 0 ? "text" : "report",
+              label: String(d["message"]),
+            })
           }
           break
         case "input.requested": {
@@ -579,16 +593,7 @@ export function SiteActivity({
                 blocks.map((block) =>
                   block.type === "actions" ? (
                     <MessageScrollerItem key={block.key} messageId={block.key}>
-                      <MessageGroup
-                        className={cn(
-                          "gap-1.5 border-l-2 border-border/60 py-0.5 pl-3",
-                          block.items[0]?.depth === 1 && "ml-5",
-                        )}
-                      >
-                        {block.items.map((item) => (
-                          <ActionRow key={item.id} item={item} />
-                        ))}
-                      </MessageGroup>
+                      <ActionsBlock items={block.items} />
                     </MessageScrollerItem>
                   ) : (
                     <BlockItem key={block.key} item={block.item} />
@@ -675,6 +680,59 @@ export function SiteActivity({
   )
 }
 
+/**
+ * Grupo de tool calls colapsable (estilo app de Claude): colapsado muestra
+ * solo el estado — la acción en curso con spinner, o "N pasos" al terminar —
+ * y al expandir se ve la lista completa de acciones.
+ */
+function ActionsBlock({ items }: { items: ActivityItem[] }) {
+  const running = items.filter((i) => !i.done)
+  const active = running.length > 0
+  const failed = items.some((i) => i.failed)
+  const current = running[0] ?? items[items.length - 1]
+  const label = active
+    ? current?.label
+    : `${items.length} ${items.length === 1 ? "paso" : "pasos"}`
+
+  return (
+    <Collapsible
+      className={cn(
+        "border-l-2 border-border/60 py-0.5 pl-3",
+        items[0]?.depth === 1 && "ml-5"
+      )}
+    >
+      <CollapsibleTrigger className="group flex w-full items-center gap-2 text-left text-xs">
+        <span className="flex size-4 shrink-0 items-center justify-center">
+          {failed ? (
+            <WarningIcon className="text-destructive" />
+          ) : active ? (
+            <Spinner />
+          ) : (
+            <CheckIcon className="text-success" />
+          )}
+        </span>
+        <span className="min-w-0 truncate font-medium text-foreground">
+          {label}
+        </span>
+        <span className="ml-auto flex shrink-0 items-center gap-1.5 text-[10px] text-muted-foreground/70 tabular-nums">
+          {formatTime(current?.at ?? "")}
+          <CaretDownIcon
+            aria-hidden
+            className="size-3 transition-transform group-data-[state=open]:rotate-180"
+          />
+        </span>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <MessageGroup className="gap-1.5 pt-1.5">
+          {items.map((item) => (
+            <ActionRow key={item.id} item={item} />
+          ))}
+        </MessageGroup>
+      </CollapsibleContent>
+    </Collapsible>
+  )
+}
+
 /** Fila compacta de una tool call (dentro de un MessageGroup de acciones). */
 function ActionRow({ item }: { item: ActivityItem }) {
   return (
@@ -758,6 +816,23 @@ function BlockItem({ item }: { item: ActivityItem }) {
             </Bubble>
           </MessageContent>
         </Message>
+      ) : item.kind === "report" ? (
+        // Reporte del subagente al orquestador: mismo carril indentado que
+        // sus acciones (depth 1), tono de actividad — no es un chat contigo.
+        <div className="ml-5 min-w-0 border-l-2 border-border/60 py-0.5 pl-3">
+          <p className="flex items-baseline justify-between gap-2 text-[11px] font-medium text-muted-foreground">
+            Reporte al orquestador
+            <span className="shrink-0 text-[10px] text-muted-foreground/70 tabular-nums">
+              {formatTime(item.at)}
+            </span>
+          </p>
+          <p
+            className="line-clamp-3 text-xs text-muted-foreground"
+            title={item.label}
+          >
+            {item.label}
+          </p>
+        </div>
       ) : item.kind === "error" ? (
         <Message>
           <MessageContent>

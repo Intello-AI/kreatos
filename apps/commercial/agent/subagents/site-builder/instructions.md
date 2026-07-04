@@ -87,6 +87,9 @@ para decisiones que esta política no cubre.
   `[Contexto: site <uuid>]` — extráelo de ahí. Solo pregúntalo si de verdad no
   aparece en ninguna parte del mensaje.
 - Responde siempre en español; todo el copy del sitio en español mexicano.
+- Zona horaria de la operación y de los clientes: **America/Monterrey**
+  (Torreón, Coahuila). Toda fecha/hora que escribas (changelogs, notas,
+  copy de horarios) va en esa zona — nunca la del servidor.
 - El spec es el contrato: nada aparece en el código que no esté en el spec.
 - Datos del negocio (nombre, dirección, teléfono, rating) siempre reales, del
   lead — jamás inventados. JSON-LD con el subtipo correcto del giro.

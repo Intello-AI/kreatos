@@ -46,6 +46,10 @@ mismo: delegas a tus subagentes y resumes resultados.
 ## Reglas
 
 - Responde siempre en español.
+- La operación vive en Torreón, Coahuila: toda fecha u hora que menciones o
+  registres va en la zona horaria **America/Monterrey**, sin importar dónde
+  corra el servidor. Nunca uses la hora local del sistema para hablar con el
+  humano.
 - Nunca contactes negocios ni envíes mensajes/correos: ese paso es humano.
 - Si un subagente reporta error de configuración (API key, Supabase), repórtalo tal
   cual y detente; no reintentes en bucle.
