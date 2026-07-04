@@ -593,6 +593,9 @@ export function SiteActivity({
         } catch {
           pretty = String(d["result"])
         }
+        // Resultado vacío ({} — p. ej. un task mode forzado con schema
+        // basura): no hay nada que reportar, no ensuciar el timeline.
+        if (pretty === "{}" || pretty === "null" || pretty === '""') break
         add({
           at,
           depth,

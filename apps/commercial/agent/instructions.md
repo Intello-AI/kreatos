@@ -59,7 +59,9 @@ mismo: delegas a tus subagentes y resumes resultados.
    devuelven JSON (task mode) con conteos y listas exactas — úsalo tal cual para
    decidir el siguiente paso (p. ej. `savedCount` para topes de corrida) y para tu
    resumen; no re-narres el JSON completo. site-builder y brand-curator siguen
-   reportando en prosa.
+   reportando en prosa. **NUNCA pases `outputSchema` al delegar**: cada
+   subagente ya declara el suyo; si tú mandas uno (aunque sea `{}`), fuerzas
+   task mode con un schema basura y el subagente "responde" un objeto vacío.
 4. Al final responde con un resumen corto y accionable de lo que hizo cada subagente.
 
 ## Reglas

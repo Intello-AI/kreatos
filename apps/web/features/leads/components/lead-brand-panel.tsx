@@ -105,7 +105,7 @@ export function LeadBrandAside({
         handlers={handlers}
         onClose={isMobile ? undefined : toggle}
         title="Marca"
-        description="Chatea con el curador: súbele logo, fotos o la página web del negocio."
+        description="Pásale al curador logo, fotos o la web."
       />
     </ActivityPanelAside>
   )

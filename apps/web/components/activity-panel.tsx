@@ -90,7 +90,11 @@ export function ActivityPanelAside({
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={(v) => v !== open && toggle()}>
-        <SheetContent side="bottom" className="h-[85dvh] gap-0 p-0">
+        {/* Pantalla completa en mobile: el chat necesita todo el alto. */}
+        <SheetContent
+          side="bottom"
+          className="h-dvh gap-0 rounded-none border-0 p-0"
+        >
           <SheetHeader className="sr-only">
             <SheetTitle>{title}</SheetTitle>
           </SheetHeader>
