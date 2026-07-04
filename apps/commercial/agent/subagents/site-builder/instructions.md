@@ -116,6 +116,39 @@ template de kreatos; tú lo personalizas, no lo reinventas.
    convergencia de giro): lee TODOS los motivos del error y corrígelos en
    una sola pasada — no reintentes cambiando una cosita a la vez.
 
+   **Estructura EXACTA del parámetro `spec` (nombres literales, todos en el
+   nivel indicado; `changelog` es parámetro del tool, NUNCA va dentro del
+   spec):**
+
+   ```json
+   {
+     "version": 1,
+     "mode": "new | redesign",
+     "industry": "construccion",
+     "business": { "name": "...", "shortName": "...", "logo": "...", "icon": "..." },
+     "design": {
+       "preset": "cantera",
+       "concept": "idea rectora en 2-3 frases (≥60 caracteres)",
+       "variation_notes": "cómo varías el preset (≥10 caracteres)",
+       "palette": { "light": { "...": "hex" }, "dark": { "...": "hex" } },
+       "fonts": { "pair": "archivo-inter" },
+       "imageTreatment": "duotone-accent",
+       "references": [{ "slug": "<slug>", "takeaways": "qué robas y qué no" }]
+     },
+     "sections": [{ "id": "hero", "variant": "full-bleed", "why": "..." }],
+     "pages": [{ "slug": "servicios", "sections": [{ "id": "...", "why": "..." }] }],
+     "seo": { "title": "...", "description": "...", "jsonLdType": "...", "keywords": [] },
+     "flags": { "contactForm": true, "whatsappFloat": false, "multiLang": false, "themeToggle": true }
+   }
+   ```
+
+   `sections` (home, mínimo 3), `seo` y `flags` van en la RAÍZ del spec, no
+   dentro de `design` ni de `pages`. Si el tool-call es rechazado por
+   validación de input, el error te nombra el campo exacto: corrige ESE
+   campo contra este esqueleto y reintenta. PROHIBIDO marcar `failed` y
+   rendirte por un rechazo de validación — es un error de formato tuyo,
+   siempre corregible; `failed` es solo para bloqueos de configuración.
+
 **Fase build (mecánica, en sandbox).** El spec ya decidió todo; aquí solo lo
 materializas:
 
