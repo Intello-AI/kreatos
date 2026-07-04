@@ -1,6 +1,8 @@
 import { cookies } from "next/headers"
+import Link from "next/link"
 
 import { AppSidebar } from "@/components/app-sidebar"
+import { Logo } from "@/components/icons"
 import {
   SidebarInset,
   SidebarProvider,

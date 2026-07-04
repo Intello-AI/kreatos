@@ -11,6 +11,31 @@ import {
 } from "../lib/sites"
 
 /**
+ * Sección que llega como string (objeto serializado por el modelo, a veces
+ * con comillas simples): se intenta reparar antes de rechazar, y si no se
+ * puede, el error incluye el texto recibido para que el modelo no reintente
+ * a ciegas el mismo payload.
+ */
+const sectionRecord = z.preprocess((value, ctx) => {
+  if (typeof value !== "string") return value
+  for (const candidate of [value, value.replace(/'/g, '"')]) {
+    try {
+      const parsed = JSON.parse(candidate)
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed
+      }
+    } catch {
+      // sigue con el siguiente candidato
+    }
+  }
+  ctx.addIssue({
+    code: "custom",
+    message: `elemento de sections[] llegó como STRING en vez de objeto JSON y no se pudo reparar. Reescribe esa sección como objeto ({"id": ..., "variant": ..., "why": ...}), con comillas dobles y sin serializarla. Recibido: ${value.slice(0, 300)}`,
+  })
+  return z.NEVER
+}, z.record(z.string(), z.unknown()))
+
+/**
  * Validación laxa del spec: el contrato completo lo valida el template
  * (scripts/validate-config.ts con zod estricto) durante el build. Aquí solo
  * se exige la estructura mínima para que el historial sea útil.
@@ -27,7 +52,7 @@ const specSchema = z
       palette: z.record(z.string(), z.unknown()),
       fonts: z.record(z.string(), z.unknown()),
     }).passthrough(),
-    sections: z.array(z.record(z.string(), z.unknown())).min(3),
+    sections: z.array(sectionRecord).min(3),
     seo: z.record(z.string(), z.unknown()),
     flags: z.record(z.string(), z.unknown()),
   })

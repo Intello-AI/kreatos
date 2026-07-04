@@ -3,10 +3,11 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
+  ChartLineUpIcon,
+  ChatCircleDotsIcon,
   GlobeIcon,
   SignOutIcon,
   SparkleIcon,
-  SquaresFourIcon,
   UsersThreeIcon,
 } from "@phosphor-icons/react"
 
@@ -27,9 +28,14 @@ import {
 
 const navItems = [
   {
-    title: "Dashboard",
+    title: "Chat",
     href: "/dashboard",
-    icon: SquaresFourIcon,
+    icon: ChatCircleDotsIcon,
+  },
+  {
+    title: "Analítica",
+    href: "/dashboard/analitica",
+    icon: ChartLineUpIcon,
   },
   {
     title: "Leads",
