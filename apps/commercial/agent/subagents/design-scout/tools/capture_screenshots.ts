@@ -35,11 +35,15 @@ export default defineTool({
     const sandbox = await ctx.getSandbox()
 
     const shots = [
-      { name: "desktop", viewport: "1440,900" },
-      { name: "mobile", viewport: "390,844" },
+      // Archivos temporales SIEMPRE prefijados por slug: el sandbox es uno
+      // solo y el agente captura varias referencias en paralelo — /tmp/
+      // desktop.png compartido mezclaba screenshots entre referencias (la
+      // card de una mostraba la captura de otra).
+      { name: "desktop", file: `${slug}-desktop`, viewport: "1440,900" },
+      { name: "mobile", file: `${slug}-mobile`, viewport: "390,844" },
     ]
     for (const shot of shots) {
-      const shotCommand = `cd /tmp && pnpm dlx playwright@1.61.1 screenshot --viewport-size="${shot.viewport}" --full-page --wait-for-timeout=4000 "${url}" ${shot.name}.png`
+      const shotCommand = `cd /tmp && pnpm dlx playwright@1.61.1 screenshot --viewport-size="${shot.viewport}" --full-page --wait-for-timeout=4000 "${url}" ${shot.file}.png`
       let capture = await sandbox.run({ command: shotCommand })
       // Self-healing: si el snapshot del sandbox se cacheó sin chromium o
       // sin las libs del sistema (browser descargado que muere con "error
@@ -63,7 +67,7 @@ export default defineTool({
       }
       // Versión reducida para visión (el full-page puede pesar >8MB).
       await sandbox.run({
-        command: `cd /tmp && (ffmpeg -y -i ${shot.name}.png -vf "scale='min(1100,iw)':-2" -q:v 6 ${shot.name}.review.jpg 2>/dev/null || cp ${shot.name}.png ${shot.name}.review.jpg)`,
+        command: `cd /tmp && (ffmpeg -y -i ${shot.file}.png -vf "scale='min(1100,iw)':-2" -q:v 6 ${shot.file}.review.jpg 2>/dev/null || cp ${shot.file}.png ${shot.file}.review.jpg)`,
       })
     }
 
@@ -73,8 +77,8 @@ export default defineTool({
     const reviewImages: Array<{ name: string; bytes: Uint8Array }> = []
 
     for (const shot of shots) {
-      const bytes = await sandbox.readBinaryFile({ path: `/tmp/${shot.name}.png` })
-      if (!bytes) throw new Error(`No se pudo leer ${shot.name}.png del sandbox.`)
+      const bytes = await sandbox.readBinaryFile({ path: `/tmp/${shot.file}.png` })
+      if (!bytes) throw new Error(`No se pudo leer ${shot.file}.png del sandbox.`)
       const path = `${slug}/${shot.name}.png`
       const { error } = await supabase.storage
         .from("design-references")
@@ -86,7 +90,7 @@ export default defineTool({
         `${supabaseUrl}/storage/v1/object/public/design-references/${path}`
 
       const review = await sandbox.readBinaryFile({
-        path: `/tmp/${shot.name}.review.jpg`,
+        path: `/tmp/${shot.file}.review.jpg`,
       })
       if (review && review.byteLength <= 8 * 1024 * 1024) {
         reviewImages.push({ name: shot.name, bytes: review })
