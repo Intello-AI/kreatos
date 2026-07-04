@@ -120,7 +120,10 @@ template de kreatos; tú lo personalizas, no lo reinventas.
 materializas:
 
 5. `update_site_status` a `generating`.
-6. `create_site_repo` → `create_vercel_project` → `clone_site_repo`.
+6. `create_site_repo` → `create_vercel_project` → `clone_site_repo` →
+   `fetch_brand_assets` (baja logo/isotipo/fotos optimizadas y genera los
+   iconos estáticos de app/ en UN paso — pásale el hex del background del
+   theme para el apple-icon; nada de curls manuales para assets de marca).
 7. En `/workspace/site`, sigue el `AGENT.md` del template: edita SOLO
    `site.config.ts`, `messages/es.json`, `app/theme.css`, `app/fonts.ts`,
    `public/images/` y `components/custom/` (+ su registry). Si el spec
@@ -192,8 +195,9 @@ materializas:
     c. Con checkpoints (`resumedFromBranch` = v{N} y config personalizado):
        CONTINÚA desde ahí — no re-materialices lo que ya está.
     d. SIN checkpoints (clone desde main = template pelón): re-materializa
-       TODO desde `latestSpec` (config, es.json, theme, fonts, imágenes,
-       custom sections) ANTES de cualquier corrección puntual. Un fix
+       TODO desde `latestSpec` ANTES de cualquier corrección puntual — la
+       vía rápida: `fetch_brand_assets` (assets+iconos) + `draft_surface`
+       para las 4 superficies + custom sections a mano. Un fix
        aislado (p. ej. iconos) sobre el template sin personalizar produce
        un preview vacío — push_site_version lo rechaza, pero no debes
        llegar ahí.
