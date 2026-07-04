@@ -76,7 +76,15 @@ interface ActivityItem {
   sortKey: number
   at: string
   depth: 0 | 1
-  kind: "action" | "text" | "report" | "user" | "status" | "error" | "question"
+  kind:
+    | "action"
+    | "text"
+    | "report"
+    | "delegation"
+    | "user"
+    | "status"
+    | "error"
+    | "question"
   label: string
   detail?: string
   callId?: string
@@ -564,10 +572,12 @@ export function SiteActivity({
         break
       }
       case "message.received":
-        // Solo del root: el message.received del hijo es el prompt interno
-        // de delegación y duplicaría ruido.
         if (depth === 0 && d["message"]) {
           add({ at, depth, kind: "user", label: String(d["message"]) })
+        } else if (depth !== 0 && d["message"]) {
+          // El prompt de delegación del orquestador al subagente: visible
+          // como encargo dentro del TaskBlock (simétrico al reporte).
+          add({ at, depth, kind: "delegation", label: String(d["message"]) })
         }
         break
       case "message.completed":
@@ -1415,6 +1425,30 @@ function ReportItem({ item }: { item: ActivityItem }) {
   )
 }
 
+/** Encargo del orquestador al subagente (el prompt de delegación). */
+function DelegationItem({ item }: { item: ActivityItem }) {
+  // Misma retícula que ReportItem; el prefijo lo distingue del reporte.
+  return (
+    <Collapsible className="group/delegation">
+      <CollapsibleTrigger className="flex w-full items-stretch gap-2 text-left">
+        <span className="flex w-3.5 shrink-0 justify-center">
+          <span aria-hidden className="w-0.5 bg-border" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <p className="line-clamp-2 text-xs text-muted-foreground/80 italic group-data-[state=open]/delegation:line-clamp-none">
+            <span className="font-medium not-italic">Encargo:</span>{" "}
+            {item.label}
+          </p>
+        </span>
+        <span className="flex shrink-0 items-center gap-1 self-start pt-0.5 text-[10px] text-muted-foreground/70 tabular-nums">
+          {formatTime(item.at)}
+          <CaretRightIcon className="size-3 opacity-0 transition-all group-hover/delegation:opacity-100 group-data-[state=open]/delegation:rotate-90 group-data-[state=open]/delegation:opacity-100" />
+        </span>
+      </CollapsibleTrigger>
+    </Collapsible>
+  )
+}
+
 /**
  * Bloque de subagente estilo "Task" de Claude Code: la delegación abre un
  * contenedor con la actividad del subagente anidada (tools, reporte, errores).
@@ -1476,6 +1510,8 @@ function TaskBlock({
               <ActionRow key={item.id} item={item} />
             ) : item.kind === "report" ? (
               <ReportItem key={item.id} item={item} />
+            ) : item.kind === "delegation" ? (
+              <DelegationItem key={item.id} item={item} />
             ) : item.kind === "error" ? (
               <p key={item.id} className="text-xs text-destructive">
                 {item.label}
@@ -1573,6 +1609,10 @@ function BlockItem({ item }: { item: ActivityItem }) {
         // Normalmente vive dentro de un TaskBlock; standalone como fallback.
         <div className="ml-5">
           <ReportItem item={item} />
+        </div>
+      ) : item.kind === "delegation" ? (
+        <div className="ml-5">
+          <DelegationItem item={item} />
         </div>
       ) : item.kind === "error" ? (
         <Message>
