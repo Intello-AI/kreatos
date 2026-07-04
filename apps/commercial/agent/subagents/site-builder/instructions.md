@@ -206,13 +206,19 @@ materializas:
    preguntar si lo arreglas ES abandonar el paso 8 — arréglalo y sigue.
    `failed` + detenerse queda SOLO para bloqueos de configuración
    (token/API key faltante).
-9. `pnpm qa` → lee `.qa/qa-report.json` y pásalo a `save_qa_report`. Aplica el
-   skill `quality-checklist` sobre el resultado antes de continuar.
-   **`pnpm qa` SOLO se corre después de un `pnpm build` verde.** QA arranca
-   con su propio build adentro: correrlo con el build rojo no aporta nada y
-   además choca con el lock del build anterior ("Another next build process
-   is already running"). El ciclo de reparación es build → corrige → build,
-   y qa UNA vez al final, cuando build ya pasó.
+9. `pnpm qa --skip-build` → lee `.qa/qa-report.json` y pásalo a
+   `save_qa_report`. Aplica el skill `quality-checklist` sobre el resultado
+   antes de continuar.
+   **`pnpm qa` SOLO se corre después de un `pnpm build` verde** — por eso el
+   `--skip-build`: tu build recién pasado cuenta, repetirlo dentro de qa
+   quema el presupuesto de tiempo del comando (el "terminated" clásico).
+   Con el build rojo, qa no aporta nada y además choca con el lock del build
+   anterior ("Another next build process is already running"). El ciclo de
+   reparación es build → corrige → build, y qa UNA vez al final.
+   Si `pnpm qa` muere con "terminated" aun así, NO lo reintentes idéntico en
+   bucle: corre los pasos sueltos (`pnpm validate-config`, luego
+   `pnpm screenshots`) y después `pnpm qa --skip-build` para consolidar el
+   reporte (los pasos ya corridos terminan rápido).
 9b. **Revisión visual obligatoria — el sitio se vende por lo que se VE.**
    `pnpm qa` dejó screenshots reales en `.qa/screenshots/`; pásalos por
    `review_screenshots` (dale el `design.concept` del spec y, si la

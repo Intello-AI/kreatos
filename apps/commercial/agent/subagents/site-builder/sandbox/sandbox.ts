@@ -13,7 +13,10 @@ import { defineSandbox, defaultBackend } from "eve/sandbox"
  */
 export default defineSandbox({
   backend: defaultBackend(),
-  revalidationKey: () => "site-builder-v3",
+  // v4: invalida snapshots que se cachearon SIN chromium (el bootstrap
+  // silenciaba el error y `pnpm qa` lo instalaba en runtime → 5+ min →
+  // "terminated" a media corrida).
+  revalidationKey: () => "site-builder-v4",
   async bootstrap({ use }) {
     const sandbox = await use()
     // La imagen base puede no traer pnpm; corepack lo habilita sin red extra.
@@ -35,11 +38,17 @@ export default defineSandbox({
     // Chromium para el paso screenshots de `pnpm qa` (Playwright). Se
     // precalienta en el snapshot: instala el browser + deps del sistema al
     // cache global (~/.cache/ms-playwright), que el playwright del repo
-    // clonado reutiliza. Best-effort: sin browser, qa marca el paso
-    // screenshots como fallido pero no bloquea la entrega.
+    // clonado reutiliza. SIN silenciar: un snapshot cacheado sin chromium
+    // obliga a instalarlo en runtime dentro de `pnpm qa` (5+ min →
+    // terminated). Fallback sin --with-deps si apt falla.
     await sandbox.run({
       command:
-        "(cd /tmp && pnpm dlx playwright@1.55.0 install chromium --with-deps) >/dev/null 2>&1 || echo 'chromium no precalentado (qa lo intentara)'",
+        "cd /tmp && (pnpm dlx playwright@1.55.0 install chromium --with-deps || pnpm dlx playwright@1.55.0 install chromium)",
+    })
+    // Verificación: si no quedó, que el snapshot lo diga a gritos en el log.
+    await sandbox.run({
+      command:
+        "ls ~/.cache/ms-playwright 2>/dev/null | grep -q chromium && echo 'chromium precalentado OK' || echo 'AVISO: chromium NO se precalento — pnpm qa lo instalara en runtime (lento)'",
     })
   },
 })
