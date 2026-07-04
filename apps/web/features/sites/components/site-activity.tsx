@@ -92,6 +92,8 @@ interface ActivityItem {
   callId?: string
   done?: boolean
   failed?: boolean
+  /** Opciones de una pregunta HITL (ask_question con options). */
+  options?: string[]
   /** Nombre crudo de la tool (para icono y agrupación). */
   toolName?: string
   /** Input completo de la tool (JSON legible) para el detalle expandible. */
@@ -431,6 +433,8 @@ export function SiteActivity({
   const [pendingInput, setPendingInput] = useState<{
     requestId: string
     prompt: string
+    options: string[]
+    allowFreeform: boolean
   } | null>(null)
   // "Responder" a un mensaje del agente: la cita viaja en el texto (contexto
   // para el agente) y se renderiza como BubbleQuote.
@@ -666,14 +670,32 @@ export function SiteActivity({
           const action = (request["action"] ?? {}) as Record<string, unknown>
           const input = (action["input"] ?? {}) as Record<string, unknown>
           const prompt = input["prompt"] ?? request["prompt"]
+          // ask_question puede traer opciones: strings o {id, label}.
+          const rawOptions = (input["options"] ??
+            request["options"] ??
+            []) as unknown[]
+          const options = (Array.isArray(rawOptions) ? rawOptions : [])
+            .map((o) =>
+              typeof o === "string"
+                ? o
+                : String(
+                    (o as Record<string, unknown>)["label"] ??
+                      (o as Record<string, unknown>)["id"] ??
+                      ""
+                  )
+            )
+            .filter(Boolean)
+          const allowFreeform = input["allowFreeform"] !== false
           if (prompt) {
-            add({ at, depth, kind: "question", label: String(prompt) })
+            add({ at, depth, kind: "question", label: String(prompt), options })
           }
           // Solo el request del run vivo es respondible desde el composer.
           if (live && request["requestId"]) {
             setPendingInput({
               requestId: String(request["requestId"]),
               prompt: String(prompt ?? ""),
+              options,
+              allowFreeform,
             })
           }
         }
@@ -976,6 +998,24 @@ export function SiteActivity({
   }
   const canSend = !pending && (message.trim().length >= 3 || staged.length > 0)
 
+  // Clic en una opción de la pregunta: la respuesta ES el label (eve
+  // resuelve follow-ups que matchean label/id/índice de opción).
+  const answerOption = (label: string) => {
+    const answering = pendingInput
+    if (!answering) return
+    startTransition(async () => {
+      const result = await (handlers?.answer
+        ? handlers.answer(answering.requestId, label, answering.prompt)
+        : answerSiteInput(siteId, answering.requestId, label, answering.prompt))
+      if (result?.formError) {
+        toast.error(result.formError)
+      } else {
+        setPendingInput(null)
+        router.refresh()
+      }
+    })
+  }
+
   // Estructura estilo Claude Code:
   // - acciones consecutivas del root → grupo colapsable ("actions")
   // - una delegación a subagente abre un bloque "task"; todo lo depth 1
@@ -1166,6 +1206,29 @@ export function SiteActivity({
             >
               <XIcon />
             </Button>
+          </div>
+        )}
+        {pendingInput && pendingInput.options.length > 0 && (
+          // Opciones como botones (estilo app de Claude): un clic responde.
+          // El textarea de abajo sigue siendo el "Otro" (respuesta libre).
+          <div className="flex shrink-0 flex-col gap-1.5 border-b p-2.5">
+            {pendingInput.options.map((option) => (
+              <Button
+                key={option}
+                variant="outline"
+                size="sm"
+                disabled={pending}
+                onClick={() => answerOption(option)}
+                className="h-auto justify-start px-3 py-2 text-left text-xs font-normal whitespace-normal"
+              >
+                {option}
+              </Button>
+            ))}
+            {pendingInput.allowFreeform && (
+              <p className="px-1 pt-0.5 text-[11px] text-muted-foreground">
+                O escribe otra respuesta abajo.
+              </p>
+            )}
           </div>
         )}
         {replyTo && !pendingInput && (
@@ -1718,6 +1781,21 @@ function BlockItem({
                 <Streamdown className="text-xs leading-relaxed [&_:not(pre)>code]:mx-0 [&_:not(pre)>code]:rounded-none [&_:not(pre)>code]:border [&_:not(pre)>code]:border-border [&_:not(pre)>code]:bg-background [&_:not(pre)>code]:px-1 [&_:not(pre)>code]:py-px [&_:not(pre)>code]:text-[11px] [&_:not(pre)>code]:whitespace-nowrap [&_li]:my-0.5 [&_ol]:my-1 [&_p]:my-1 [&_ul]:my-1">
                   {item.label}
                 </Streamdown>
+                {item.options && item.options.length > 0 && (
+                  // Contexto histórico: las opciones que ofreció (las
+                  // respondibles viven sobre el composer del run vivo).
+                  <span className="mt-1.5 flex flex-wrap gap-1">
+                    {item.options.map((option) => (
+                      <Badge
+                        key={option}
+                        variant="outline"
+                        className="text-[10px] font-normal"
+                      >
+                        {option}
+                      </Badge>
+                    ))}
+                  </span>
+                )}
               </BubbleContent>
             </Bubble>
           </MessageContent>
