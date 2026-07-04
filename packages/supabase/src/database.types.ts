@@ -231,34 +231,43 @@ export type Database = {
         Row: {
           actor: string | null
           changelog: string | null
+          commit_sha: string | null
           created_at: string
+          deployed_at: string | null
           id: string
           preview_url: string | null
           qa_report: Json | null
           site_id: string
           spec: Json
+          vercel_deployment_id: string | null
           version_n: number
         }
         Insert: {
           actor?: string | null
           changelog?: string | null
+          commit_sha?: string | null
           created_at?: string
+          deployed_at?: string | null
           id?: string
           preview_url?: string | null
           qa_report?: Json | null
           site_id: string
           spec: Json
+          vercel_deployment_id?: string | null
           version_n: number
         }
         Update: {
           actor?: string | null
           changelog?: string | null
+          commit_sha?: string | null
           created_at?: string
+          deployed_at?: string | null
           id?: string
           preview_url?: string | null
           qa_report?: Json | null
           site_id?: string
           spec?: Json
+          vercel_deployment_id?: string | null
           version_n?: number
         }
         Relationships: [
@@ -282,6 +291,7 @@ export type Database = {
           eve_session_id: string | null
           id: string
           lead_id: string
+          published_at: string | null
           repo_url: string | null
           slug: string
           status: string
@@ -299,6 +309,7 @@ export type Database = {
           eve_session_id?: string | null
           id?: string
           lead_id: string
+          published_at?: string | null
           repo_url?: string | null
           slug: string
           status?: string
@@ -316,6 +327,7 @@ export type Database = {
           eve_session_id?: string | null
           id?: string
           lead_id?: string
+          published_at?: string | null
           repo_url?: string | null
           slug?: string
           status?: string

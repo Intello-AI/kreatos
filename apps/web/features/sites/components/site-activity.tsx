@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner"
 
 import { answerSiteInput, sendSiteMessage } from "@/features/sites/actions"
+import { formatTime as formatTimeInUserTz } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import { Bubble, BubbleContent, BubbleQuote } from "@/components/ui/bubble"
 import {
@@ -163,14 +164,7 @@ function parseUserReply(label: string): { quote?: string; text: string } {
 
 function formatTime(at: string): string {
   if (!at) return ""
-  try {
-    return new Date(at).toLocaleTimeString("es-MX", {
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  } catch {
-    return ""
-  }
+  return formatTimeInUserTz(at)
 }
 
 export function SiteActivity({

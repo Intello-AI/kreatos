@@ -48,7 +48,10 @@ export default defineTool({
               fallback: deployment.url,
             })) ?? deployment.url)
           : deployment.url
-        await updateSite(siteId, { deploy_url: deployUrl })
+        await updateSite(siteId, {
+          deploy_url: deployUrl,
+          published_at: new Date().toISOString(),
+        })
         await setSiteStatus(siteId, "published")
         await addActivity({
           leadId: site.lead_id,

@@ -86,7 +86,12 @@ export async function updateSite(
   patch: Partial<
     Pick<
       SiteRow,
-      "status" | "repo_url" | "vercel_project_id" | "deploy_url" | "eve_session_id"
+      | "status"
+      | "repo_url"
+      | "vercel_project_id"
+      | "deploy_url"
+      | "eve_session_id"
+      | "published_at"
     >
   >,
 ): Promise<void> {
@@ -113,11 +118,18 @@ export async function setVersionPreview(input: {
   siteId: string
   versionN: number
   previewUrl: string
+  commitSha?: string
+  deploymentId?: string
 }): Promise<void> {
   const supabase = getSupabaseClient()
   const { error } = await supabase
     .from("site_versions")
-    .update({ preview_url: input.previewUrl })
+    .update({
+      preview_url: input.previewUrl,
+      commit_sha: input.commitSha ?? null,
+      vercel_deployment_id: input.deploymentId ?? null,
+      deployed_at: new Date().toISOString(),
+    })
     .eq("site_id", input.siteId)
     .eq("version_n", input.versionN)
   if (error) throw new Error(`Update de preview_url falló: ${error.message}`)

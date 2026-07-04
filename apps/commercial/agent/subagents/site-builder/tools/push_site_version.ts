@@ -15,7 +15,15 @@ export default defineTool({
       .describe("Mensaje de commit descriptivo de la versión."),
   }),
   async execute({ siteId, versionN, commitMessage }, ctx) {
-    await getSite(siteId) // valida existencia
+    const site = await getSite(siteId)
+    // Invariante: una versión = una rama. Solo se puede pushear la versión
+    // que save_site_version acaba de registrar como current_version.
+    if (versionN !== site.current_version) {
+      throw new Error(
+        `versionN=${versionN} no coincide con current_version=${site.current_version}. ` +
+          `Guarda primero el spec con save_site_version; la rama debe ser v{current_version}.`,
+      )
+    }
     const branch = `v${versionN}`
     const sandbox = await ctx.getSandbox()
 

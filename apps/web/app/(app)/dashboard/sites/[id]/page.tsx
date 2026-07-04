@@ -2,19 +2,34 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import {
+  ArrowLeftIcon,
   ArrowSquareOutIcon,
+  BrowserIcon,
   GitBranchIcon,
   GithubLogoIcon,
 } from "@phosphor-icons/react/ssr"
 
 import { SiteActions } from "@/features/sites/components/site-actions"
 import { SiteActivityPanel } from "@/features/sites/components/site-activity-panel"
-import { SitePreview } from "@/features/sites/components/site-preview"
+import {
+  SitePreview,
+  SitePreviewSkeleton,
+} from "@/features/sites/components/site-preview"
 import { SiteRefresh } from "@/features/sites/components/site-refresh"
 import { SiteStatusBadge } from "@/features/sites/components/site-status-badge"
 import { getSiteDetail } from "@/features/sites/queries"
+import { formatDate, formatRelative } from "@/lib/dates"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
 import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export const metadata: Metadata = {
   title: "Sitio — Kreatos",
@@ -66,6 +81,12 @@ export default async function SiteDetailPage({
       : previewUrl
   const liveUrl = site.deploy_url ?? previewUrl
   const generating = site.status === "brief" || site.status === "generating"
+  // La versión publicada (mergeada a main) se muestra arriba como
+  // producción; la lista de Versiones solo enseña las que viven en preview.
+  const previewVersions =
+    site.status === "published"
+      ? versions.filter((v) => v.version_n !== site.current_version)
+      : versions
   const runIds =
     site.eve_run_ids.length > 0
       ? site.eve_run_ids
@@ -76,16 +97,23 @@ export default async function SiteDetailPage({
   return (
     <main className="flex min-h-[calc(100vh-48px)] w-full items-stretch">
       <div className="min-w-0 flex-1">
-        <SiteRefresh siteId={site.id} />
+        <SiteRefresh siteId={site.id} active={generating} />
 
         <div className="mx-auto w-full max-w-4xl space-y-6 p-4 py-6">
           {/* Header estilo deployment: título + status + acciones primarias */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0 space-y-1">
               <div className="flex items-center gap-3">
-                <h1 className="truncate text-xl font-semibold md:text-2xl">
-                  {site.leads?.name ?? site.slug}
-                </h1>
+                <Link
+                  href="/dashboard/sites"
+                  aria-label="Volver a sitios"
+                  className="group flex min-w-0 items-center gap-2"
+                >
+                  <ArrowLeftIcon weight="bold" className="size-5 shrink-0 text-foreground" />
+                  <h1 className="truncate text-xl font-semibold md:text-2xl">
+                    {site.leads?.name ?? site.slug}
+                  </h1>
+                </Link>
                 <SiteStatusBadge status={site.status} />
               </div>
               <p className="text-sm text-muted-foreground">
@@ -109,38 +137,50 @@ export default async function SiteDetailPage({
             </div>
           </div>
 
-          {/* Card overview: preview a la izquierda, metadatos a la derecha */}
-          <div className="grid grid-cols-1 border md:grid-cols-2">
-            <div className="bg-muted/30 md:border-r">
+          {/* Overview estilo Vercel: preview con su propio borde (16:10
+              exacto), metadatos al lado sin card — alturas independientes */}
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-start">
+            <div className="aspect-[1280/800] w-full overflow-hidden border">
               {displayUrl ? (
                 <SitePreview
                   url={displayUrl}
                   title={`Preview de ${site.slug}`}
                 />
+              ) : generating ? (
+                <SitePreviewSkeleton />
               ) : (
-                <div className="flex h-full min-h-72 w-full items-center justify-center">
-                  <p className="text-sm text-muted-foreground">
-                    {generating
-                      ? "Generando preview…"
-                      : "Sin preview todavía."}
-                  </p>
-                </div>
+                <Empty className="h-full bg-muted/30">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <BrowserIcon />
+                    </EmptyMedia>
+                    <EmptyTitle>Sin preview todavía</EmptyTitle>
+                    <EmptyDescription>
+                      Genera una versión para ver el sitio aquí.
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
               )}
             </div>
 
-            <div className="grid grid-cols-2 content-start gap-4 p-4">
-              <MetaRow label="Creado">
-                {new Date(site.created_at).toLocaleDateString("es-MX", {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                })}
-              </MetaRow>
+            <div className="grid flex-1 grid-cols-2 content-start gap-4">
+              <MetaRow label="Creado">{formatDate(site.created_at)}</MetaRow>
               <MetaRow label="Estado">
                 <SiteStatusBadge status={site.status} />
               </MetaRow>
+              {site.published_at && (
+                <MetaRow label="Publicado">
+                  {formatRelative(site.published_at)}
+                </MetaRow>
+              )}
               <MetaRow label="Versión">
-                {site.current_version ? `v${site.current_version}` : "—"}
+                {site.current_version ? (
+                  `v${site.current_version}`
+                ) : generating ? (
+                  <Skeleton className="h-4 w-10" />
+                ) : (
+                  "—"
+                )}
               </MetaRow>
               <MetaRow label="Preset">
                 {(site.brief as { preset?: string })?.preset ?? "auto"}
@@ -168,13 +208,24 @@ export default async function SiteDetailPage({
                         {previewUrl.replace("https://", "")}
                       </Link>
                     )}
-                    {!previewUrl && !site.deploy_url && "—"}
+                    {!previewUrl &&
+                      !site.deploy_url &&
+                      (generating ? (
+                        <div className="space-y-1.5">
+                          <Skeleton className="h-4 w-48" />
+                          <Skeleton className="h-4 w-64" />
+                        </div>
+                      ) : (
+                        "—"
+                      ))}
                   </div>
                 </MetaRow>
               </div>
               <div className="col-span-2">
                 <MetaRow label="Repositorio">
-                  {site.repo_url ? (
+                  {!site.repo_url && generating ? (
+                    <Skeleton className="h-4 w-56" />
+                  ) : site.repo_url ? (
                     <div className="flex flex-col gap-1">
                       <Link
                         href={site.repo_url}
@@ -207,41 +258,99 @@ export default async function SiteDetailPage({
           <Separator />
 
           <div className="space-y-3">
-            <h2 className="text-sm font-medium">Historial de versiones</h2>
-            {versions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Aún no hay versiones; el spec v1 aparecerá aquí.
+            <div className="space-y-0.5">
+              <h2 className="text-sm font-medium">Versiones</h2>
+              <p className="text-xs text-muted-foreground">
+                Cada versión es una rama del repositorio con su propio preview.
+                La versión publicada vive arriba, en producción.
               </p>
+            </div>
+            {previewVersions.length === 0 ? (
+              <Empty className="border border-dashed">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <GitBranchIcon />
+                  </EmptyMedia>
+                  <EmptyTitle>
+                    {versions.length === 0
+                      ? "Aún no hay versiones"
+                      : "Sin versiones en preview"}
+                  </EmptyTitle>
+                  <EmptyDescription>
+                    {versions.length === 0
+                      ? "El spec v1 aparecerá aquí cuando el agente lo guarde."
+                      : "La versión publicada está arriba, en producción."}
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             ) : (
               <ul className="divide-y border">
-                {versions.map((version) => (
-                  <li key={version.id} className="p-3 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1.5 font-medium">
-                        <GitBranchIcon className="size-3.5" />v
-                        {version.version_n}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(version.created_at).toLocaleString("es-MX")}
-                      </span>
-                    </div>
-                    {version.changelog && (
-                      <p className="mt-1 text-muted-foreground">
-                        {version.changelog}
-                      </p>
-                    )}
-                    {version.preview_url && (
-                      <Link
-                        href={version.preview_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-1 inline-block text-xs underline underline-offset-2"
-                      >
-                        {version.preview_url.replace("https://", "")}
-                      </Link>
-                    )}
-                  </li>
-                ))}
+                {previewVersions.map((version) => {
+                  const isCurrent = version.version_n === site.current_version
+                  const branchUrl = site.repo_url
+                    ? `${site.repo_url}/tree/v${version.version_n}`
+                    : null
+                  return (
+                    <li
+                      key={version.id}
+                      className="flex items-center justify-between gap-4 p-3 text-sm"
+                    >
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium">
+                            v{version.version_n}
+                          </span>
+                          {branchUrl ? (
+                            <Link
+                              href={branchUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 text-xs text-muted-foreground underline-offset-2 hover:underline"
+                            >
+                              <GitBranchIcon className="size-3.5" />v
+                              {version.version_n}
+                            </Link>
+                          ) : null}
+                          {isCurrent && (
+                            <Badge variant="outline" className="text-xs">
+                              Actual
+                            </Badge>
+                          )}
+                          <span className="text-xs text-muted-foreground">
+                            {formatRelative(
+                              version.deployed_at ?? version.created_at
+                            )}
+                          </span>
+                        </div>
+                        {version.changelog && (
+                          <p
+                            className="line-clamp-1 text-xs text-muted-foreground"
+                            title={version.changelog}
+                          >
+                            {version.changelog}
+                          </p>
+                        )}
+                      </div>
+                      {version.preview_url && (
+                        <Button
+                          asChild
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0"
+                        >
+                          <Link
+                            href={version.preview_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Previsualizar
+                            <ArrowSquareOutIcon />
+                          </Link>
+                        </Button>
+                      )}
+                    </li>
+                  )
+                })}
               </ul>
             )}
           </div>

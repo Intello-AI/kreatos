@@ -3,6 +3,7 @@ import Link from "next/link"
 
 import { SiteStatusBadge } from "@/features/sites/components/site-status-badge"
 import { getSites } from "@/features/sites/queries"
+import { formatDate } from "@/lib/dates"
 import {
   Table,
   TableBody,
@@ -69,11 +70,7 @@ export default async function SitesPage() {
                     {site.current_version ? `v${site.current_version}` : "—"}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {new Date(site.created_at).toLocaleDateString("es-MX", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
+                    {formatDate(site.created_at)}
                   </TableCell>
                 </TableRow>
               ))}

@@ -14,29 +14,46 @@ template de kreatos; tú lo personalizas, no lo reinventas.
 1. `get_site_brief` con el `siteId` que te den (pasa `industry` normalizado:
    contable, legal, construccion, logistica, distribucion, consultoria...).
 2. Con el brief, los datos del lead, los presets y las referencias, aplica los
-   skills `art-direction`, `anti-generic-design`, `typography`, `copywriting-es`,
-   `section-patterns`, `image-style` y `seo-local` para componer el **spec
-   completo** (paleta final light/dark, fuentes, secciones con copy definitivo,
-   imágenes con alt, SEO). Si `lead.website` existe, es un rediseño: aplica
-   también el skill `redesign`.
-3. `save_site_version` — si rechaza por anti-convergencia, varía el acento u
+   skills `art-direction`, `anti-generic-design`, `taste`, `typography`,
+   `copywriting-es`, `section-patterns`, `image-style` y `seo-local` para
+   componer el **spec completo** (paleta final light/dark, fuentes, secciones
+   con copy definitivo, imágenes con alt, SEO). Si `lead.website` existe, es un
+   rediseño: aplica también el skill `redesign`.
+3. **Arquitectura de páginas.** El template soporta páginas interiores además
+   de la home (`pages` en site.config.ts: slug + title + description +
+   sections, con `ns` de traducción obligatorio por sección). Decide en el
+   spec qué páginas existen y por qué: `/servicios` cuando el giro tiene 6+
+   servicios reales que merecen detalle, `/nosotros` solo con historia o
+   equipo verificable. Una página sin contenido real que la home no pueda
+   cargar NO se crea. La home sigue siendo la conversión: las páginas
+   profundizan, no duplican.
+4. Corre el pre-flight del skill `taste` sobre el spec y luego
+   `save_site_version` — si rechaza por anti-convergencia, varía el acento u
    otra decisión y reintenta.
 
 **Fase build (mecánica, en sandbox).** El spec ya decidió todo; aquí solo lo
 materializas:
 
-4. `update_site_status` a `generating`.
-5. `create_site_repo` → `create_vercel_project` → `clone_site_repo`.
-6. En `/workspace/site`, sigue el `AGENT.md` del template: edita SOLO
+5. `update_site_status` a `generating`.
+6. `create_site_repo` → `create_vercel_project` → `clone_site_repo`.
+7. En `/workspace/site`, sigue el `AGENT.md` del template: edita SOLO
    `site.config.ts`, `messages/es.json`, `app/theme.css` (copia el preset de
-   `themes/` y aplica tu variación), `app/fonts.ts` y `public/images/`.
-7. `pnpm install && pnpm build` en el sandbox. Si falla: lee el error, corrige,
+   `themes/` y aplica tu variación), `app/fonts.ts` y `public/images/`. Si el
+   spec define páginas interiores, decláralas en `pages` de site.config.ts
+   con su copy bajo `pages.<slug>.*` en es.json.
+8. `pnpm install && pnpm build` en el sandbox. Si falla: lee el error, corrige,
    reintenta (máximo 2 correcciones; si sigue rojo → `update_site_status` a
    `failed` con nota y detente).
-8. `pnpm qa` → lee `.qa/qa-report.json` y pásalo a `save_qa_report`. Aplica el
+9. `pnpm qa` → lee `.qa/qa-report.json` y pásalo a `save_qa_report`. Aplica el
    skill `quality-checklist` sobre el resultado antes de continuar.
-9. `push_site_version` (rama `v{N}`) → `await_preview_deployment`. En READY tu
-   trabajo terminó: el sitio queda en `preview` esperando revisión humana.
+10. `push_site_version` (rama `v{N}`) → `await_preview_deployment`. En READY tu
+    trabajo terminó: el sitio queda en `preview` esperando revisión humana.
+
+**Invariante versión = rama.** Cada versión del spec vive en su propia rama
+`v{N}` con su propio preview; `push_site_version` rechaza cualquier N que no
+sea el `current_version` recién guardado. Nunca reutilices una rama para otra
+versión ni pushees a `main`: `main` solo cambia vía `publish_site` (merge de
+la rama aprobada, acción autorizada por el humano).
 
 ## Iteraciones y publicación
 

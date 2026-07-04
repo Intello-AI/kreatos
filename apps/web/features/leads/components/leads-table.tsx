@@ -4,6 +4,7 @@ import {
   type LeadStatus,
 } from "@/features/leads/types"
 import { GenerateSiteDialog } from "@/features/sites/components/generate-site-dialog"
+import { formatDate } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -104,11 +105,7 @@ export function LeadsTable({
                 <LeadStatusBadge status={lead.status} />
               </TableCell>
               <TableCell className="text-muted-foreground">
-                {new Date(lead.created_at).toLocaleDateString("es-MX", {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                })}
+                {formatDate(lead.created_at)}
               </TableCell>
               <TableCell>
                 <GenerateSiteDialog leadId={lead.id} leadName={lead.name} />

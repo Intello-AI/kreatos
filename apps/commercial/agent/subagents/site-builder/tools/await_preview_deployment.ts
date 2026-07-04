@@ -40,7 +40,13 @@ export default defineTool({
               fallback: deployment.url,
             })) ?? deployment.url)
           : deployment.url
-        await setVersionPreview({ siteId, versionN, previewUrl })
+        await setVersionPreview({
+          siteId,
+          versionN,
+          previewUrl,
+          commitSha,
+          deploymentId: deployment.uid ?? undefined,
+        })
         await setSiteStatus(siteId, "preview")
         await addActivity({
           leadId: site.lead_id,
