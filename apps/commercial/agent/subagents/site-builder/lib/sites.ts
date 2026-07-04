@@ -103,15 +103,21 @@ export async function updateSite(
 export async function setSiteStatus(
   siteId: string,
   status: SiteStatus,
-): Promise<void> {
+): Promise<{ changed: boolean; previous: SiteStatus }> {
   const site = await getSite(siteId)
-  const allowed = VALID_TRANSITIONS[site.status as SiteStatus] ?? []
+  const previous = site.status as SiteStatus
+  // Idempotente: pedir el status vigente (retomas, reintentos) es no-op.
+  if (previous === status) {
+    return { changed: false, previous }
+  }
+  const allowed = VALID_TRANSITIONS[previous] ?? []
   if (!allowed.includes(status)) {
     throw new Error(
-      `Transición inválida: ${site.status} → ${status}. Permitidas: ${allowed.join(", ") || "ninguna"}.`,
+      `Transición inválida: ${previous} → ${status}. Permitidas: ${allowed.join(", ") || "ninguna"}.`,
     )
   }
   await updateSite(siteId, { status })
+  return { changed: true, previous }
 }
 
 export async function setVersionPreview(input: {

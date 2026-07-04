@@ -20,13 +20,26 @@ export default defineTool({
       throw new Error("Para 'failed' incluye note explicando qué falló.")
     }
     const site = await getSite(siteId)
-    await setSiteStatus(siteId, status as SiteStatus)
+    const { changed, previous } = await setSiteStatus(
+      siteId,
+      status as SiteStatus,
+    )
+    // Idempotente: el status ya era ese (retomas/reintentos) — no-op sin
+    // ensuciar el timeline del lead.
+    if (!changed) {
+      return {
+        previous,
+        status,
+        unchanged: true,
+        hint: `El site ya estaba en "${status}"; continúa con el flujo.`,
+      }
+    }
     await addActivity({
       leadId: site.lead_id,
       type: "site_status_change",
-      note: `${site.status} → ${status}${note ? `: ${note}` : ""}`,
+      note: `${previous} → ${status}${note ? `: ${note}` : ""}`,
       actor: "site-builder",
     })
-    return { previous: site.status, status }
+    return { previous, status }
   },
 })
