@@ -41,6 +41,10 @@ Con una URL, extrae TODO lo aprovechable — no solo la voz:
 
 1. `scrape_brand_site` sobre la página principal: descarga las imágenes
    útiles al inbox, y recoge emails, teléfonos, redes y links internos.
+   Para URLs directas de imágenes sueltas usa `ingest_image_urls` (con
+   nombres significativos: hero, nosotros, portafolio-1…). **Nunca intentes
+   descargar/subir al bucket desde bash**: no tienes credenciales ahí; estas
+   dos tools corren en el runtime de la app y sí las tienen.
 2. Si devuelve `internalLinks` prometedores (contacto, nosotros, galería,
    menú/carta), escrapea 1-3 de esos también — ahí suelen vivir las mejores
    fotos y el email real.

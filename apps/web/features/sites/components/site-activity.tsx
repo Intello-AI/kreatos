@@ -645,6 +645,38 @@ export function SiteActivity({
     })
   }
 
+  // Drag & drop en toda el área del chat (solo con upload): los archivos
+  // soltados quedan staged igual que con el clip. dragDepth compensa los
+  // enter/leave anidados de los hijos.
+  const [dragging, setDragging] = useState(false)
+  const dragDepth = useRef(0)
+  const hasFiles = (e: React.DragEvent) =>
+    Array.from(e.dataTransfer?.types ?? []).includes("Files")
+  const dndProps = handlers?.upload
+    ? {
+        onDragEnter: (e: React.DragEvent) => {
+          if (!hasFiles(e)) return
+          e.preventDefault()
+          dragDepth.current += 1
+          setDragging(true)
+        },
+        onDragOver: (e: React.DragEvent) => {
+          if (hasFiles(e)) e.preventDefault()
+        },
+        onDragLeave: () => {
+          dragDepth.current = Math.max(0, dragDepth.current - 1)
+          if (dragDepth.current === 0) setDragging(false)
+        },
+        onDrop: (e: React.DragEvent) => {
+          if (!hasFiles(e)) return
+          e.preventDefault()
+          dragDepth.current = 0
+          setDragging(false)
+          onFiles(e.dataTransfer.files)
+        },
+      }
+    : {}
+
   const onSend = () => {
     const answering = pendingInput
     const files = staged
@@ -734,7 +766,18 @@ export function SiteActivity({
   }, [])
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="relative flex h-full min-h-0 flex-col" {...dndProps}>
+      {dragging && (
+        <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center border-2 border-dashed border-primary bg-background/85">
+          <div className="flex flex-col items-center gap-1.5 text-sm">
+            <PaperclipIcon className="size-5 text-primary" />
+            <span className="font-medium">Suelta los archivos aquí</span>
+            <span className="text-xs text-muted-foreground">
+              Se adjuntan al mensaje para el curador
+            </span>
+          </div>
+        </div>
+      )}
       {!hideHeader && (
         <div className="flex shrink-0 items-start justify-between gap-2 p-3">
           <div>

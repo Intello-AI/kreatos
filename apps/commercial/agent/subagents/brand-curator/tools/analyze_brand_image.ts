@@ -1,4 +1,4 @@
-import { anthropic } from "@ai-sdk/anthropic"
+import { openai } from "@ai-sdk/openai"
 import { generateText } from "ai"
 import { defineTool } from "eve/tools"
 import { z } from "zod"
@@ -52,7 +52,7 @@ export default defineTool({
       // raster. Se analiza como texto.
       const markup = (await res.text()).slice(0, 30_000)
       const result = await generateText({
-        model: anthropic("claude-opus-4-8"),
+        model: openai("gpt-5.1"),
         prompt: `${promptText}\n\nLa "imagen" es un SVG (logo vectorial — máxima calidad posible para logo). Analiza su markup: colores reales en fills/strokes/gradients, proporción por viewBox (cuadrado ≈ isotipo, ancho ≈ wordmark), y estructura:\n\n\`\`\`svg\n${markup}\n\`\`\``,
       })
       text = result.text
@@ -62,7 +62,7 @@ export default defineTool({
         throw new Error("Imagen demasiado grande para analizar (>8 MB).")
       }
       const result = await generateText({
-        model: anthropic("claude-opus-4-8"),
+        model: openai("gpt-5.1"),
         messages: [
           {
             role: "user",
