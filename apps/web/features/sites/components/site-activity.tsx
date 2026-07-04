@@ -152,10 +152,12 @@ function describeAction(action: Record<string, unknown>): {
  * («pregunta»: respuesta) para renderizarlo como cita estilo WhatsApp.
  */
 function parseUserReply(label: string): { quote?: string; text: string } {
-  const match = label.match(
+  // El tag [Contexto: ...] es transporte para el agente; no se muestra.
+  const clean = label.replace(/^\[Contexto:[^\]]*\]\s*/, "")
+  const match = clean.match(
     /^Respondiendo a la pregunta pendiente \(«([\s\S]+?)»\):\s*([\s\S]*)$/,
   )
-  if (!match) return { text: label }
+  if (!match) return { text: clean }
   return { quote: match[1], text: match[2] }
 }
 
@@ -727,11 +729,15 @@ function BlockItem({ item }: { item: ActivityItem }) {
                 <MessageHeader className="justify-end">
                   Tú · {formatTime(item.at)}
                 </MessageHeader>
+                {quote && (
+                  // Cita fuera de la burbuja (estilo iMessage): la pregunta
+                  // arriba, discreta; tu respuesta en la burbuja.
+                  <BubbleQuote className="max-w-[80%] self-end border-border bg-muted/60 text-muted-foreground">
+                    {quote}
+                  </BubbleQuote>
+                )}
                 <Bubble variant="default" align="end">
-                  <BubbleContent>
-                    {quote && <BubbleQuote>{quote}</BubbleQuote>}
-                    {text}
-                  </BubbleContent>
+                  <BubbleContent>{text}</BubbleContent>
                 </Bubble>
               </MessageContent>
             </Message>

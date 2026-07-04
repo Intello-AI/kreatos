@@ -151,11 +151,10 @@ async function sendFollowUp(
     const session = site.eve_session_id
       ? eve.session(site.eve_session_id)
       : eve.session()
-    // Solo una sesión NUEVA necesita contexto; la existente ya sabe qué site es.
-    const payload = site.eve_session_id
-      ? message
-      : `[Contexto: site ${siteId}] ${message}`
-    const response = await session.send(payload)
+    // SIEMPRE con contexto: los subagentes no ven la conversación del root y
+    // sin el site_id se pierden ("¿me confirmas el siteId?"). El panel pela
+    // este tag al renderizar, así que no ensucia la burbuja.
+    const response = await session.send(`[Contexto: site ${siteId}] ${message}`)
     await supabase
       .from("sites")
       .update({
@@ -292,7 +291,8 @@ export async function answerSiteInput(
       ? `Respondiendo a la pregunta pendiente («${questionPrompt.trim().slice(0, 180)}»): ${trimmed}`
       : trimmed
     const response = await session.send({
-      message: quoted,
+      // Contexto siempre: el subagente que retome necesita el site_id.
+      message: `[Contexto: site ${siteId}] ${quoted}`,
       inputResponses: [{ requestId, text: trimmed }],
     })
     await supabase
