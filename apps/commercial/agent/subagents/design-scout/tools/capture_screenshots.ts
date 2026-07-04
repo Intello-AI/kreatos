@@ -33,16 +33,17 @@ export default defineTool({
     for (const shot of shots) {
       const shotCommand = `cd /tmp && pnpm dlx playwright@1.61.1 screenshot --viewport-size="${shot.viewport}" --full-page --wait-for-timeout=4000 "${url}" ${shot.name}.png`
       let capture = await sandbox.run({ command: shotCommand })
-      // Self-healing: si el snapshot del sandbox se cacheó sin chromium (el
-      // bootstrap traga errores), se instala aquí mismo y se reintenta.
+      // Self-healing: si el snapshot del sandbox se cacheó sin chromium o
+      // sin las libs del sistema (browser descargado que muere con "error
+      // while loading shared libraries"), se repara aquí y se reintenta.
+      const failText = `${capture.stderr}${capture.stdout}`
       if (
         capture.exitCode !== 0 &&
-        `${capture.stderr}${capture.stdout}`.includes("playwright install")
+        (failText.includes("playwright install") ||
+          failText.includes("shared libraries"))
       ) {
-        await sandbox.run({
-          command:
-            "cd /tmp && (pnpm dlx playwright@1.61.1 install chromium --with-deps || pnpm dlx playwright@1.61.1 install chromium)",
-        })
+        const { CHROMIUM_BOOTSTRAP } = await import("../sandbox/sandbox")
+        await sandbox.run({ command: CHROMIUM_BOOTSTRAP })
         capture = await sandbox.run({ command: shotCommand })
       }
       if (capture.exitCode !== 0) {

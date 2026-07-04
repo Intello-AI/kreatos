@@ -1,6 +1,16 @@
 import { defineSandbox, defaultBackend } from "eve/sandbox"
 
 /**
+ * Libs de sistema para chromium en Amazon Linux 2023 (el SO real del Vercel
+ * Sandbox — sin apt, `--with-deps` nunca instaló nada y el navegador moría
+ * con "libnspr4.so: cannot open shared object file"). Verificado 2026-07-04.
+ */
+const CHROMIUM_DNF_DEPS =
+  "nss nspr atk at-spi2-atk cups-libs libdrm libxkbcommon libXcomposite libXdamage libXfixes libXrandr mesa-libgbm alsa-lib pango cairo"
+
+const CHROMIUM_BOOTSTRAP = `cd /tmp && pnpm dlx playwright@1.61.1 install chromium && ((command -v dnf >/dev/null 2>&1 && (sudo dnf install -yq ${CHROMIUM_DNF_DEPS} || dnf install -yq ${CHROMIUM_DNF_DEPS})) || (command -v apt-get >/dev/null 2>&1 && pnpm dlx playwright@1.61.1 install-deps chromium))`
+
+/**
  * Sandbox real para construir sitios: git clone, pnpm install, next build.
  * defaultBackend() resuelve Vercel Sandbox en prod (process.env.VERCEL) y
  * Docker en local — sin condicionales propios.
@@ -13,11 +23,9 @@ import { defineSandbox, defaultBackend } from "eve/sandbox"
  */
 export default defineSandbox({
   backend: defaultBackend(),
-  // v5: playwright 1.61.1 — 1.55.0 no soporta el ubuntu 26.04 del Vercel
-  // Sandbox ("does not support chromium on ubuntu26.04-x64"), por eso NINGÚN
-  // snapshot de prod tuvo chromium jamás y qa lo intentaba (y fallaba) en
-  // runtime.
-  revalidationKey: () => "site-builder-v5",
+  // v6: deps del sistema vía dnf (el sandbox es Amazon Linux 2023, sin apt)
+  // — chromium descargaba pero moría al arrancar (libnspr4.so faltante).
+  revalidationKey: () => "site-builder-v6",
   async bootstrap({ use }) {
     const sandbox = await use()
     // La imagen base puede no traer pnpm; corepack lo habilita sin red extra.
@@ -37,16 +45,13 @@ export default defineSandbox({
       ].join(" || "),
     })
     // Chromium para el paso screenshots de `pnpm qa` (Playwright). Se
-    // precalienta en el snapshot: instala el browser + deps del sistema al
-    // cache global (~/.cache/ms-playwright), que el playwright del repo
-    // clonado reutiliza. La versión importa: DEBE coincidir en minor con la
-    // dep del template (revisión de chromium) y soportar el SO del Vercel
-    // Sandbox (1.55.0 no soportaba ubuntu 26.04). No-fatal (un throw aquí
-    // tira el DEPLOY completo), pero sin silenciar: el aviso queda en el log
-    // del build.
+    // precalienta en el snapshot: browser al cache global
+    // (~/.cache/ms-playwright, que el playwright del repo clonado reutiliza
+    // — misma minor 1.61 = misma revisión) + libs del sistema vía dnf.
+    // No-fatal (un throw aquí tira el DEPLOY completo), pero sin silenciar:
+    // el aviso queda en el log del build.
     await sandbox.run({
-      command:
-        "cd /tmp && (pnpm dlx playwright@1.61.1 install chromium --with-deps || pnpm dlx playwright@1.61.1 install chromium) || echo 'AVISO: chromium NO se precalento — pnpm qa lo instalara en runtime (lento)'",
+      command: `(${CHROMIUM_BOOTSTRAP}) || echo 'AVISO: chromium NO se precalento — pnpm qa lo intentara en runtime (lento)'`,
     })
   },
 })
