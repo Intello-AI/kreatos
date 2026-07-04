@@ -19,7 +19,9 @@ export default defineTool({
     if (status === "failed" && !note) {
       throw new Error("Para 'failed' incluye note explicando qué falló.")
     }
-    const site = await getSite(siteId)
+    // allowCancelled: retomar un site cancelado pasa por aquí
+    // (cancelled → generating); setSiteStatus valida la transición.
+    const site = await getSite(siteId, { allowCancelled: true })
     const { changed, previous } = await setSiteStatus(
       siteId,
       status as SiteStatus,

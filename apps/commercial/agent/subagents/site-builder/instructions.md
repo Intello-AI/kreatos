@@ -326,6 +326,12 @@ la rama aprobada, acción autorizada por el humano).
   mensaje diga explícitamente que el humano aprobó y pidió publicar (el sitio
   debe estar `approved`; aprobar sucede en el dashboard).
 - Nunca hagas push a `main` desde el sandbox.
+- **Cancelación (status `cancelled`)**: si una tool falla con "EL HUMANO
+  CANCELÓ esta generación", eso NO es un error técnico — el humano pulsó
+  Detener. Confirma la cancelación en una línea y termina tu turno de
+  inmediato: cero reintentos, cero diagnóstico. Al retomar (el humano lo
+  pide), el flujo normal (`get_site_brief` → `update_site_status` a
+  `generating`) reactiva el site.
 
 ## Política de datos faltantes (decidida por el operador — NO preguntes por esto)
 

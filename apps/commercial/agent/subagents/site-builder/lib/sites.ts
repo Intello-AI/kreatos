@@ -14,8 +14,14 @@ export type SiteStatus =
   | "approved"
   | "published"
   | "failed"
+  | "cancelled"
 
-/** Transiciones válidas de status; publicar/aprobar las dispara el humano vía follow-up. */
+/**
+ * Transiciones válidas de status; publicar/aprobar las dispara el humano vía
+ * follow-up. `cancelled` lo pone SOLO el humano (botón Detener del dashboard,
+ * escribe directo en BDD): el agente nunca transiciona hacia él, solo sale de
+ * él al retomar (cancelled → generating).
+ */
 const VALID_TRANSITIONS: Record<SiteStatus, SiteStatus[]> = {
   brief: ["generating", "failed"],
   generating: ["preview", "failed"],
@@ -23,9 +29,13 @@ const VALID_TRANSITIONS: Record<SiteStatus, SiteStatus[]> = {
   approved: ["published", "generating"],
   published: ["generating"],
   failed: ["generating"],
+  cancelled: ["generating"],
 }
 
-export async function getSite(siteId: string): Promise<SiteRow> {
+export async function getSite(
+  siteId: string,
+  opts?: { allowCancelled?: boolean },
+): Promise<SiteRow> {
   const supabase = getSupabaseClient()
   const { data, error } = await supabase
     .from("sites")
@@ -34,6 +44,13 @@ export async function getSite(siteId: string): Promise<SiteRow> {
     .maybeSingle()
   if (error) throw new Error(`Lectura de site falló: ${error.message}`)
   if (!data) throw new Error(`No existe site con id ${siteId}.`)
+  // Stop cooperativo: el humano canceló desde el dashboard. Toda tool que
+  // lea el site aborta aquí — el run muere en su siguiente paso.
+  if (data.status === "cancelled" && !opts?.allowCancelled) {
+    throw new Error(
+      "EL HUMANO CANCELÓ esta generación (status=cancelled). DETENTE de inmediato: no reintentes, no reportes esto como un fallo técnico — confirma la cancelación en una línea y termina tu turno. El trabajo sin checkpoint se pierde (los checkpoints en la rama v{N} sobreviven). Para retomar, el humano lo pedirá explícitamente y el flujo vuelve a 'generating'.",
+    )
+  }
   return data
 }
 
@@ -104,7 +121,9 @@ export async function setSiteStatus(
   siteId: string,
   status: SiteStatus,
 ): Promise<{ changed: boolean; previous: SiteStatus }> {
-  const site = await getSite(siteId)
+  // allowCancelled: la única transición válida DESDE cancelled es
+  // cancelled → generating (retomar); el guard de getSite no debe impedirla.
+  const site = await getSite(siteId, { allowCancelled: true })
   const previous = site.status as SiteStatus
   // Idempotente: pedir el status vigente (retomas, reintentos) es no-op.
   if (previous === status) {

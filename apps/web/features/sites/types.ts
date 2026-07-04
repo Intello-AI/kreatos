@@ -7,6 +7,7 @@ export const SITE_STATUSES = [
   "approved",
   "published",
   "failed",
+  "cancelled",
 ] as const
 
 export type SiteStatus = (typeof SITE_STATUSES)[number]
@@ -23,5 +24,6 @@ export const SITE_STATUS_LABELS: Record<SiteStatus, string> = {
   approved: "Aprobado",
   published: "Publicado",
   failed: "Falló",
+  cancelled: "Detenido",
 }
 

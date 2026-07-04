@@ -9,6 +9,7 @@ const STATUS_BADGE_CLASS: Record<SiteStatus, string> = {
   approved: "border-success/30 bg-success/10 dark:bg-success/15",
   published: "border-success/30 bg-success/10 dark:bg-success/15",
   failed: "border-error/30 bg-error/10 dark:bg-error/15",
+  cancelled: "border-border bg-muted/60",
 }
 
 const STATUS_DOT_CLASS: Record<SiteStatus, string> = {
@@ -18,6 +19,7 @@ const STATUS_DOT_CLASS: Record<SiteStatus, string> = {
   approved: "bg-success",
   published: "bg-success",
   failed: "bg-error",
+  cancelled: "bg-muted-foreground/60",
 }
 
 export function SiteStatusBadge({ status }: { status: SiteStatus }) {

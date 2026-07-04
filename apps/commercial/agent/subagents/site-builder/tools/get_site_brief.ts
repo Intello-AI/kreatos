@@ -23,7 +23,9 @@ export default defineTool({
       ),
   }),
   async execute({ siteId, industry }) {
-    const site = await getSite(siteId)
+    // allowCancelled: al RETOMAR un site cancelado el primer paso es leer el
+    // brief; el resto de tools sí abortan mientras siga cancelled.
+    const site = await getSite(siteId, { allowCancelled: true })
 
     const supabase = getSupabaseClient()
     const { data: lead, error } = await supabase

@@ -162,10 +162,11 @@ async function sendFollowUp(
 }
 
 /**
- * "Stop" de un sitio en proceso: lo marca failed y desacopla el dashboard.
- * eve no permite abortar el run en curso, pero el guard de transiciones
- * (de failed solo se sale con generating) bloquea cualquier escritura de
- * status del run huérfano — sus updates fallan y el agente se detiene.
+ * Stop COOPERATIVO de un sitio en proceso: lo marca `cancelled`. eve no
+ * permite abortar el run en curso, pero el getSite del agente lanza en
+ * cancelled — cualquier tool que toque el site aborta en su siguiente
+ * llamada y el run muere en segundos (checkpoints de la rama v{N}
+ * sobreviven). Retomar = pedir regenerar (cancelled → generating).
  */
 export async function stopSite(siteId: string): Promise<SiteActionState> {
   const supabase = getAdminClient()
@@ -181,14 +182,14 @@ export async function stopSite(siteId: string): Promise<SiteActionState> {
 
   const { error } = await supabase
     .from("sites")
-    .update({ status: "failed" })
+    .update({ status: "cancelled" })
     .eq("id", siteId)
   if (error) return { formError: error.message }
 
   await supabase.from("lead_activity").insert({
     lead_id: site.lead_id,
     type: "site_status_change",
-    note: `${site.status} → failed: detenido manualmente desde el dashboard.`,
+    note: `${site.status} → cancelled: detenido manualmente desde el dashboard.`,
     actor: "manual",
   })
 
