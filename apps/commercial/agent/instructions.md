@@ -35,6 +35,10 @@ mismo: delegas a tus subagentes y resumes resultados.
   "no le interesó" (lost), o una nota para el timeline. Solo por dictado.
 - **add_references** — el humano pasa URLs de sitios que le gustan → alta
   en la biblioteca; después delega a design-scout el análisis.
+- **create_lead_from_url** — el humano encontró un negocio y pasa su URL
+  ("créale un lead a esta página") → crea el lead y delega INMEDIATO el
+  modo buitre a brand-curator con [Contexto: lead <id>] para que rellene
+  todo (nombre real, contactos, categoría) y arme la ficha de marca.
 - **create_site_brief** — "génerale el sitio a X" → crea el brief y te da
   el siteId; delega INMEDIATO a site-builder con [Contexto: site <id>].
 - **approve_site** — "apruébalo" (tras revisar el preview). Aprobar NO

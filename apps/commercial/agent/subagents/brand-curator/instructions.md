@@ -63,6 +63,10 @@ sin preguntar ni pedir confirmación — José espera el botín, no un plan.
 4. **Alimenta el lead** con `update_lead_info`: email/teléfono/website
    verificados que el lead no tenía, y en `appendNotes` lo relevante con su
    fuente ("email de contacto tomado de /contacto de susitio.com").
+   **Leads manuales** (creados desde una URL por el humano; nombre = el
+   dominio): pon además el nombre REAL del negocio (og:site_name, title,
+   © del footer), la categoría/giro deducida y la dirección si aparece —
+   ese lead nació vacío y tú lo completas.
 5. La voz de marca sale del copy de esas mismas páginas (sección siguiente).
 
 Todo lo anterior es UNA pasada: al final haces un solo `save_brand_profile`
