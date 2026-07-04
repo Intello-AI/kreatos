@@ -95,6 +95,8 @@ interface ActivityItem {
   failed?: boolean
   /** Opciones de una pregunta HITL (ask_question con options). */
   options?: string[]
+  /** Opción que el humano eligió (marca la pregunta como respondida). */
+  chosen?: string
   /** Nombre crudo de la tool (para icono y agrupación). */
   toolName?: string
   /** Input completo de la tool (JSON legible) para el detalle expandible. */
@@ -621,6 +623,27 @@ export function SiteActivity({
       case "message.received":
         if (depth === 0 && d["message"]) {
           add({ at, depth, kind: "user", label: String(d["message"]) })
+          // Si la respuesta matchea una opción de la última pregunta con
+          // opciones, se marca como elegida (el historial muestra solo esa).
+          {
+            const answer = parseUserReply(String(d["message"]))
+              .text.trim()
+              .toLowerCase()
+            if (answer) {
+              setItems((prev) => {
+                for (let i = prev.length - 1; i >= 0; i--) {
+                  const it = prev[i]
+                  if (it.kind !== "question" || !it.options?.length) continue
+                  const chosen = it.options.find(
+                    (o) => o.trim().toLowerCase() === answer
+                  )
+                  if (!chosen || it.chosen) return prev
+                  return prev.map((p, j) => (j === i ? { ...p, chosen } : p))
+                }
+                return prev
+              })
+            }
+          }
         } else if (depth !== 0 && d["message"]) {
           // El prompt de delegación del orquestador al subagente: visible
           // como encargo dentro del TaskBlock (simétrico al reporte).
@@ -632,11 +655,15 @@ export function SiteActivity({
           // Solo el root te habla a ti (burbuja de chat). El mensaje final
           // del subagente es su reporte interno al orquestador: se muestra
           // como actividad discreta, no como chat.
+          // El bloque <sugerencias> del root alimenta los chips del chat
+          // del dashboard: aquí solo se limpia para no ensuciar la burbuja.
           add({
             at,
             depth,
             kind: depth === 0 ? "text" : "report",
-            label: String(d["message"]),
+            label: String(d["message"])
+              .replace(/<sugerencias>[\s\S]*?<\/sugerencias>\s*$/i, "")
+              .trim(),
           })
         }
         break
@@ -1806,18 +1833,22 @@ function BlockItem({
                   {item.label}
                 </Streamdown>
                 {item.options && item.options.length > 0 && (
-                  // Contexto histórico: las opciones que ofreció (las
-                  // respondibles viven sobre el composer del run vivo).
+                  // Contexto histórico: respondida → solo la elegida (con
+                  // check); pendiente → todas (las respondibles viven sobre
+                  // el composer del run vivo).
                   <span className="mt-1.5 flex flex-wrap gap-1">
-                    {item.options.map((option) => (
-                      <Badge
-                        key={option}
-                        variant="outline"
-                        className="text-[10px] font-normal"
-                      >
-                        {option}
-                      </Badge>
-                    ))}
+                    {(item.chosen ? [item.chosen] : item.options).map(
+                      (option) => (
+                        <Badge
+                          key={option}
+                          variant={item.chosen ? "default" : "outline"}
+                          className="gap-1 text-[10px] font-normal"
+                        >
+                          {item.chosen && <CheckIcon className="size-3" />}
+                          {option}
+                        </Badge>
+                      )
+                    )}
                   </span>
                 )}
               </BubbleContent>

@@ -100,6 +100,13 @@ export default defineTool({
       )
     }
 
+    // site/.agent es tooling del sandbox (skills/config del coding agent),
+    // jamás parte del sitio del cliente: se excluye del repo y se destraquea
+    // si una corrida anterior lo commiteó por accidente.
+    await sandbox.run({
+      command: `cd site && mkdir -p .git/info && (grep -qxF '.agent/' .git/info/exclude 2>/dev/null || echo '.agent/' >> .git/info/exclude) && (git rm -r -q --cached .agent 2>/dev/null; true)`,
+    })
+
     const message = checkpoint ? `wip: ${escaped}` : escaped
     const push = await sandbox.run({
       command: `cd site && git checkout -B ${branch} && git add -A && git commit -m "${message}" && git push -f origin ${branch}`,

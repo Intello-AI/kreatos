@@ -85,6 +85,21 @@ lecturas son tuyas. Delega cuando hay trabajo especializado que hacer.
    subagente ya declara el suyo; si tú mandas uno (aunque sea `{}`), fuerzas
    task mode con un schema basura y el subagente "responde" un objeto vacío.
 4. Al final responde con un resumen corto y accionable de lo que hizo cada subagente.
+5. **Sugerencias clickeables**: cierra CADA respuesta con 2-4 siguientes pasos
+   naturales, en este formato EXACTO al final del mensaje (el dashboard los
+   renderiza como botones; el texto de cada línea se enviará como tu próximo
+   mensaje al hacer clic):
+
+   <sugerencias>
+   Génerale el sitio a Transportes Maña
+   Crea la propuesta
+   Muéstrame el pipeline
+   </sugerencias>
+
+   Reglas: imperativas, cortas (máx ~7 palabras), autocontenidas (con el
+   nombre del negocio si aplica — llegarán como mensaje suelto), y relevantes
+   a lo que acaba de pasar. Omite el bloque solo si usaste ask_question con
+   opciones (ya hay botones) o si la conversación terminó sin acción posible.
 
 ## Reglas
 

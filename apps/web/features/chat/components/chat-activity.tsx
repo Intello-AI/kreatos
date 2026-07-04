@@ -94,6 +94,8 @@ interface ActivityItem {
   failed?: boolean
   /** Opciones de una pregunta HITL (ask_question con options). */
   options?: string[]
+  /** Opción que el humano eligió (marca la pregunta como respondida). */
+  chosen?: string
   /** Nombre crudo de la tool (para icono y agrupación). */
   toolName?: string
   /** Input completo de la tool (JSON legible) para el detalle expandible. */
@@ -226,6 +228,25 @@ function ToolIcon({
                 ? ListChecksIcon
                 : WrenchIcon
   return <Icon className={className} />
+}
+
+/**
+ * Extrae el bloque <sugerencias> que el orquestador emite al final de sus
+ * respuestas: el texto limpio va a la burbuja y las sugerencias se
+ * renderizan como chips clickeables sobre el composer.
+ */
+function extractSuggestions(text: string): {
+  clean: string
+  suggestions: string[]
+} {
+  const match = text.match(/<sugerencias>\s*([\s\S]*?)\s*<\/sugerencias>\s*$/i)
+  if (!match) return { clean: text, suggestions: [] }
+  const suggestions = match[1]
+    .split("\n")
+    .map((line) => line.replace(/^[-*•\d.)\s]+/, "").trim())
+    .filter(Boolean)
+    .slice(0, 4)
+  return { clean: text.replace(match[0], "").trim(), suggestions }
 }
 
 /**
@@ -427,6 +448,9 @@ export function ChatActivity({
   // "Responder" a un mensaje del agente: la cita viaja en el texto (contexto
   // para el agente) y se renderiza como BubbleQuote.
   const [replyTo, setReplyTo] = useState<string | null>(null)
+  // Siguientes pasos sugeridos por el orquestador (<sugerencias> al final de
+  // su respuesta): chips clickeables sobre el composer.
+  const [suggestions, setSuggestions] = useState<string[]>([])
   // El root está generando (entre eventos no hay nada visible: p. ej. tras
   // el reporte del subagente, mientras redacta su respuesta) → "Pensando…".
   const [rootBusy, setRootBusy] = useState(false)
@@ -608,6 +632,27 @@ export function ChatActivity({
       case "message.received":
         if (depth === 0 && d["message"]) {
           add({ at, depth, kind: "user", label: String(d["message"]) })
+          // Si la respuesta matchea una opción de la última pregunta con
+          // opciones, se marca como elegida (el historial muestra solo esa).
+          {
+            const answer = parseUserReply(String(d["message"]))
+              .text.trim()
+              .toLowerCase()
+            if (answer) {
+              setItems((prev) => {
+                for (let i = prev.length - 1; i >= 0; i--) {
+                  const it = prev[i]
+                  if (it.kind !== "question" || !it.options?.length) continue
+                  const chosen = it.options.find(
+                    (o) => o.trim().toLowerCase() === answer
+                  )
+                  if (!chosen || it.chosen) return prev
+                  return prev.map((p, j) => (j === i ? { ...p, chosen } : p))
+                }
+                return prev
+              })
+            }
+          }
         } else if (depth !== 0 && d["message"]) {
           // El prompt de delegación del orquestador al subagente: visible
           // como encargo dentro del TaskBlock (simétrico al reporte).
@@ -619,12 +664,17 @@ export function ChatActivity({
           // Solo el root te habla a ti (burbuja de chat). El mensaje final
           // del subagente es su reporte interno al orquestador: se muestra
           // como actividad discreta, no como chat.
-          add({
-            at,
-            depth,
-            kind: depth === 0 ? "text" : "report",
-            label: String(d["message"]),
-          })
+          if (depth === 0) {
+            const { clean, suggestions } = extractSuggestions(
+              String(d["message"])
+            )
+            add({ at, depth, kind: "text", label: clean })
+            // Solo las del run vivo son accionables; cada mensaje nuevo
+            // del root las reemplaza.
+            if (live) setSuggestions(suggestions)
+          } else {
+            add({ at, depth, kind: "report", label: String(d["message"]) })
+          }
         }
         break
       case "result.completed": {
@@ -974,6 +1024,7 @@ export function ChatActivity({
         setMessage("")
         clearStaged()
         setReplyTo(null)
+        setSuggestions([])
         // La respuesta viaja también como message del turno, así que aparece
         // en el stream como burbuja tuya — sin push local.
         if (answering) setPendingInput(null)
@@ -1000,6 +1051,19 @@ export function ChatActivity({
         toast.error(result.formError)
       } else {
         setPendingInput(null)
+        router.refresh()
+      }
+    })
+  }
+
+  // Clic en una sugerencia del orquestador: el chip ES el mensaje.
+  const sendSuggestion = (text: string) => {
+    startTransition(async () => {
+      const result = await handlers.send(text)
+      if (result?.formError) {
+        toast.error(result.formError)
+      } else {
+        setSuggestions([])
         router.refresh()
       }
     })
@@ -1153,7 +1217,7 @@ export function ChatActivity({
         {pendingInput && (
           // Pregunta pendiente anclada sobre el composer (estilo Claude Code):
           // lo que escribas abajo la responde directamente.
-          <div className="flex shrink-0 items-start gap-2 border-y border-warning/40 bg-warning/5 p-2.5">
+          <div className="flex shrink-0 items-start gap-2 border-y border-warning/40 bg-warning/5 p-2.5 sm:border-x">
             <QuestionIcon className="mt-0.5 size-3.5 shrink-0 text-warning" />
             <div className="max-h-[60dvh] min-w-0 flex-1 overflow-y-auto text-xs">
               <Streamdown className="text-xs leading-relaxed [&_:not(pre)>code]:mx-0 [&_:not(pre)>code]:rounded-sm [&_:not(pre)>code]:border [&_:not(pre)>code]:border-border [&_:not(pre)>code]:bg-background [&_:not(pre)>code]:px-1 [&_:not(pre)>code]:py-px [&_:not(pre)>code]:text-[11px] [&_p]:my-0.5">
@@ -1170,10 +1234,27 @@ export function ChatActivity({
             </Button>
           </div>
         )}
+        {suggestions.length > 0 && !pendingInput && (
+          // Siguientes pasos sugeridos por el orquestador: un clic los envía.
+          <div className="flex shrink-0 flex-wrap gap-1.5 border-t px-3 py-2 sm:border-x">
+            {suggestions.map((suggestion) => (
+              <Button
+                key={suggestion}
+                variant="outline"
+                size="sm"
+                disabled={pending}
+                onClick={() => sendSuggestion(suggestion)}
+                className="h-7 rounded-full text-xs font-normal"
+              >
+                {suggestion}
+              </Button>
+            ))}
+          </div>
+        )}
         {pendingInput && pendingInput.options.length > 0 && (
           // Opciones como botones (estilo app de Claude): un clic responde.
           // El textarea de abajo sigue siendo el "Otro" (respuesta libre).
-          <div className="flex shrink-0 flex-col gap-1.5 border-b p-2.5">
+          <div className="flex shrink-0 flex-col gap-1.5 border-b p-2.5 sm:border-x">
             {pendingInput.options.map((option) => (
               <Button
                 key={option}
@@ -1195,7 +1276,7 @@ export function ChatActivity({
         )}
         {replyTo && !pendingInput && (
           // Cita activa: el mensaje del agente al que respondes, con X.
-          <div className="flex items-start gap-2 border-t bg-muted/40 px-3 py-2">
+          <div className="flex items-start gap-2 border-t bg-muted/40 px-3 py-2 sm:border-x">
             <ArrowBendUpLeftIcon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
             <p className="line-clamp-2 min-w-0 flex-1 text-[11px] leading-snug text-muted-foreground">
               {replyTo}
@@ -1756,18 +1837,22 @@ function BlockItem({
                   {item.label}
                 </Streamdown>
                 {item.options && item.options.length > 0 && (
-                  // Contexto histórico: las opciones que ofreció (las
-                  // respondibles viven sobre el composer del run vivo).
+                  // Contexto histórico: respondida → solo la elegida (con
+                  // check); pendiente → todas (las respondibles viven sobre
+                  // el composer del run vivo).
                   <span className="mt-1.5 flex flex-wrap gap-1">
-                    {item.options.map((option) => (
-                      <Badge
-                        key={option}
-                        variant="outline"
-                        className="text-[10px] font-normal"
-                      >
-                        {option}
-                      </Badge>
-                    ))}
+                    {(item.chosen ? [item.chosen] : item.options).map(
+                      (option) => (
+                        <Badge
+                          key={option}
+                          variant={item.chosen ? "default" : "outline"}
+                          className="gap-1 text-[10px] font-normal"
+                        >
+                          {item.chosen && <CheckIcon className="size-3" />}
+                          {option}
+                        </Badge>
+                      )
+                    )}
                   </span>
                 )}
               </BubbleContent>

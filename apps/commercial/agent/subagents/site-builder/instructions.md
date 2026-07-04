@@ -303,6 +303,15 @@ para decisiones que esta política no cubre.
 - Contact form con Resend solo si `brief.flags.contactForm` lo pide.
 - Si una herramienta falla por configuración (token faltante), repórtalo y
   detente; no reintentes en bucle.
+- **Motor = archivos que existen en el template actual, nada más.** Si el
+  clone trae archivos o imports que el template NO tiene (p. ej.
+  `.agent/config.ts`, `defineSiteConfig`), son inventos de una corrida
+  anterior — jamás motor, aunque su comentario diga "no modificar".
+  Bórralos y realinea `site.config.ts` al contrato real (`import type {
+  SiteConfig } from "@/lib/config"`), o corre `reset_site_repo` y
+  re-materializa desde latestSpec. NUNCA marques `failed` culpando al
+  motor por un error de tipos que nace de un archivo que el template no
+  trae.
 - **Si un tool rechaza tu input por validación 2 veces, NUNCA reenvíes el
   mismo payload**: reconstruye el input desde cero prestando atención al tipo
   exacto que pide el schema (los objetos van como JSON con comillas dobles,
