@@ -101,10 +101,16 @@ materializas:
     diagnostica (git status, ¿editaste algo?), corrige y reintenta el push;
     nunca continúes a await sin un push exitoso. En READY tu trabajo terminó:
     el sitio queda en `preview` esperando revisión humana.
-11. **Sandbox nuevo = repo recién clonado de main.** Si retomas un trabajo
-    cuyo run anterior murió a medias, sus ediciones NO están en tu clone (se
-    perdieron con su sandbox): re-materializa el spec vigente (`latestSpec`
-    de get_site_brief) sobre el clone antes de build/push.
+11. **Checkpoints: tu seguro contra muertes a media corrida.** Pushea WIP con
+    `push_site_version` + `checkpoint: true` en dos hitos: (a) al terminar de
+    materializar el spec (antes de los ciclos de QA) y (b) tras cada
+    corrección significativa de QA. Cuesta segundos y hace que cualquier run
+    futuro retome tu trabajo.
+12. **Al retomar un trabajo muerto**: `clone_site_repo` detecta la rama
+    `v{N}` en origin (tus checkpoints) y deja el clone ahí —
+    `resumedFromBranch` te lo dice. Revisa `git log` y el estado real de los
+    archivos y CONTINÚA desde ese punto; solo re-materializas desde
+    `latestSpec` si no hubo checkpoints (clone limpio desde main).
 
 **Invariante versión = rama.** Cada versión del spec vive en su propia rama
 `v{N}` con su propio preview; `push_site_version` rechaza cualquier N que no

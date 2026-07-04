@@ -42,6 +42,25 @@ export default defineTool({
       command: `cd site && git config user.name "kreatos site-builder" && git config user.email "${gitEmail}"`,
     })
 
-    return { path: "/workspace/site", repo: fullName }
+    // Continuar donde se quedó: si la rama de la versión vigente ya existe en
+    // origin (checkpoints de un run anterior), se retoma desde ahí en vez de
+    // re-materializar todo desde main.
+    let resumedFromBranch: string | null = null
+    if (site.current_version) {
+      const branch = `v${site.current_version}`
+      const fetch = await sandbox.run({
+        command: `cd site && git fetch --depth 1 origin ${branch} && git checkout -B ${branch} FETCH_HEAD`,
+      })
+      if (fetch.exitCode === 0) resumedFromBranch = branch
+    }
+
+    return {
+      path: "/workspace/site",
+      repo: fullName,
+      resumedFromBranch,
+      hint: resumedFromBranch
+        ? `El clone quedó en la rama ${resumedFromBranch} con el trabajo del run anterior (checkpoints): revisa git log y el estado de los archivos antes de re-materializar nada.`
+        : "Clone limpio desde main.",
+    }
   },
 })
