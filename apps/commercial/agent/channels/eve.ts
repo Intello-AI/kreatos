@@ -1,15 +1,16 @@
 import { eveChannel } from "eve/channels/eve";
-import { localDev, placeholderAuth, vercelOidc } from "eve/channels/auth";
+import { localDev, vercelOidc } from "eve/channels/auth";
+
+import { supabaseSession } from "../lib/supabase-auth";
 
 export default eveChannel({
   auth: [
-    // Lets the eve TUI and your Vercel deployments reach the deployed agent.
+    // Usuarios del dashboard (browser): sesión de Supabase vía cookie,
+    // restringida a cuentas @intelloai.com. Sustituye a placeholderAuth().
+    supabaseSession(),
+    // Server actions del dashboard y el eve TUI en Vercel (token OIDC).
     vercelOidc(),
-    // Open on localhost for `eve dev` and the REPL; ignored in production.
+    // Abierto en localhost para `eve dev` y el REPL; ignorado en producción.
     localDev(),
-    // This placeholder will not allow browser requests in production.
-    // Replace it with your app's auth provider, like Auth.js or Clerk,
-    // or use none() for a public demo.
-    placeholderAuth(),
   ],
 });

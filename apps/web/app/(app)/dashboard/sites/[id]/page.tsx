@@ -9,6 +9,7 @@ import {
 
 import { SiteActions } from "@/features/sites/components/site-actions"
 import { SiteActivityPanel } from "@/features/sites/components/site-activity-panel"
+import { SitePreview } from "@/features/sites/components/site-preview"
 import { SiteRefresh } from "@/features/sites/components/site-refresh"
 import { SiteStatusBadge } from "@/features/sites/components/site-status-badge"
 import { getSiteDetail } from "@/features/sites/queries"
@@ -106,10 +107,9 @@ export default async function SiteDetailPage({
           <div className="grid grid-cols-1 border md:grid-cols-2">
             <div className="bg-muted/30 md:border-r">
               {previewUrl ? (
-                <iframe
-                  src={previewUrl}
+                <SitePreview
+                  url={previewUrl}
                   title={`Preview de ${site.slug}`}
-                  className="block h-full min-h-72 w-full bg-background"
                 />
               ) : (
                 <div className="flex h-full min-h-72 w-full items-center justify-center">
