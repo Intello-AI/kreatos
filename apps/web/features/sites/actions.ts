@@ -2,10 +2,8 @@
 
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
-import { getVercelOidcToken } from "@vercel/oidc"
-import { Client } from "eve/client"
-
 import { getAdminClient } from "@/lib/supabase/admin"
+import { getEveClient } from "@/lib/eve"
 import {
   siteBriefSchema,
   type SiteActionState,
@@ -21,20 +19,6 @@ import {
  * protegido por Vercel Authentication y devuelve HTML de login), y auth = token
  * OIDC del proyecto — el canal lo acepta vía vercelOidc() sin configuración.
  */
-function getEveClient(): Client {
-  const host =
-    process.env.EVE_HOST ??
-    (process.env.VERCEL_PROJECT_PRODUCTION_URL
-      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-      : "http://127.0.0.1:3000")
-  return new Client({
-    host,
-    auth: process.env.VERCEL
-      ? { vercelOidc: { token: async () => await getVercelOidcToken() } }
-      : undefined,
-  })
-}
-
 function slugify(input: string): string {
   return input
     .toLowerCase()

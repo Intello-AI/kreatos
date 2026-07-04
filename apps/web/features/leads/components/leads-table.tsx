@@ -4,6 +4,7 @@ import {
   type LeadStatus,
 } from "@/features/leads/types"
 import { GenerateSiteDialog } from "@/features/sites/components/generate-site-dialog"
+import { LeadBrandSheet } from "@/features/leads/components/lead-brand-sheet"
 import { formatDate } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -108,7 +109,10 @@ export function LeadsTable({
                 {formatDate(lead.created_at)}
               </TableCell>
               <TableCell>
-                <GenerateSiteDialog leadId={lead.id} leadName={lead.name} />
+                <span className="flex items-center gap-1">
+                  <LeadBrandSheet leadId={lead.id} leadName={lead.name} />
+                  <GenerateSiteDialog leadId={lead.id} leadName={lead.name} />
+                </span>
               </TableCell>
             </TableRow>
           ))}

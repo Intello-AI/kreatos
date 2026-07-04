@@ -75,6 +75,8 @@ interface ActivityItem {
   toolName?: string
   /** Input completo de la tool (JSON legible) para el detalle expandible. */
   inputJson?: string
+  /** Output de la tool (action.result) para el detalle expandible. */
+  outputJson?: string
   /** Presente cuando la acción es una delegación a subagente. */
   subagentName?: string
 }
@@ -161,9 +163,7 @@ function describeAction(action: Record<string, unknown>): {
   subagentName?: string
 } {
   if (action["kind"] === "subagent-call") {
-    const name = String(
-      action["subagentName"] ?? action["name"] ?? "subagente",
-    )
+    const name = String(action["subagentName"] ?? action["name"] ?? "subagente")
     return { label: `Delegando a ${name}`, subagentName: name }
   }
   const toolName = String(action["toolName"] ?? action["name"] ?? "herramienta")
@@ -211,7 +211,7 @@ function parseUserReply(label: string): { quote?: string; text: string } {
   // El tag [Contexto: ...] es transporte para el agente; no se muestra.
   const clean = label.replace(/^\[Contexto:[^\]]*\]\s*/, "")
   const match = clean.match(
-    /^Respondiendo a la pregunta pendiente \(«([\s\S]+?)»\):\s*([\s\S]*)$/,
+    /^Respondiendo a la pregunta pendiente \(«([\s\S]+?)»\):\s*([\s\S]*)$/
   )
   if (!match) return { text: clean }
   return { quote: match[1], text: match[2] }
@@ -270,15 +270,26 @@ export function SiteActivity({
     counterRef.current += 1
     const withId = { ...item, id: `item-${counterRef.current}` }
     setItems((prev) =>
-      [...prev, withId].sort((a, b) => a.sortKey - b.sortKey).slice(-MAX_ITEMS),
+      [...prev, withId].sort((a, b) => a.sortKey - b.sortKey).slice(-MAX_ITEMS)
     )
   }
 
-  const resolveCall = (callId: string, failed: boolean) => {
+  const resolveCall = (
+    callId: string,
+    failed: boolean,
+    outputJson?: string
+  ) => {
     setItems((prev) =>
       prev.map((item) =>
-        item.callId === callId ? { ...item, done: true, failed } : item,
-      ),
+        item.callId === callId
+          ? {
+              ...item,
+              done: true,
+              failed,
+              outputJson: outputJson ?? item.outputJson,
+            }
+          : item
+      )
     )
   }
 
@@ -288,8 +299,8 @@ export function SiteActivity({
       prev.map((item) =>
         item.kind === "action" && item.depth === depth && !item.done
           ? { ...item, done: true, failed }
-          : item,
-      ),
+          : item
+      )
     )
   }
 
@@ -297,7 +308,7 @@ export function SiteActivity({
     event: StreamEvent,
     depth: 0 | 1,
     live: boolean,
-    runIdx: number,
+    runIdx: number
   ) => {
     const d = event.data ?? {}
     const at = event.meta?.at ?? ""
@@ -334,101 +345,114 @@ export function SiteActivity({
         }
         break
       }
-        case "action.result": {
-          // El payload real anida el resultado: data.result.{callId, kind, output}.
-          const result = (d["result"] ?? d) as Record<string, unknown>
-          const callId = result["callId"] ?? d["callId"]
-          if (callId) {
-            const failed =
-              d["status"] === "failed" || result["kind"] === "tool-error"
-            resolveCall(String(callId), failed)
-          }
-          break
-        }
-        case "subagent.called": {
-          const childId = d["childSessionId"] as string | undefined
-          if (childId && depth === 0 && !seenChildren.current.has(childId)) {
-            seenChildren.current.add(childId)
-            // Mismo runIdx: los eventos del hijo se intercalan por timestamp.
-            void consume(childId, 1, live, runIdx)
-          }
-          break
-        }
-        case "subagent.completed": {
-          const result = (d["result"] ?? d) as Record<string, unknown>
-          const callId = result["callId"] ?? d["callId"]
-          if (callId) resolveCall(String(callId), false)
-          break
-        }
-        case "message.received":
-          // Solo del root: el message.received del hijo es el prompt interno
-          // de delegación y duplicaría ruido.
-          if (depth === 0 && d["message"]) {
-            add({ at, depth, kind: "user", label: String(d["message"]) })
-          }
-          break
-        case "message.completed":
-          if (d["message"]) {
-            // Solo el root te habla a ti (burbuja de chat). El mensaje final
-            // del subagente es su reporte interno al orquestador: se muestra
-            // como actividad discreta, no como chat.
-            add({
-              at,
-              depth,
-              kind: depth === 0 ? "text" : "report",
-              label: String(d["message"]),
-            })
-          }
-          break
-        case "input.requested": {
-          // El agente pide input humano (HITL). Solo se procesa a nivel root:
-          // la pregunta de un subagente burbujea al stream del root, y
-          // renderizarla también desde el stream del hijo la duplicaba.
-          if (depth !== 0) break
-          const requests = (d["requests"] ?? []) as Array<Record<string, unknown>>
-          for (const request of requests) {
-            const action = (request["action"] ?? {}) as Record<string, unknown>
-            const input = (action["input"] ?? {}) as Record<string, unknown>
-            const prompt = input["prompt"] ?? request["prompt"]
-            if (prompt) {
-              add({ at, depth, kind: "question", label: String(prompt) })
-            }
-            // Solo el request del run vivo es respondible desde el composer.
-            if (live && request["requestId"]) {
-              setPendingInput({
-                requestId: String(request["requestId"]),
-                prompt: String(prompt ?? ""),
-              })
+      case "action.result": {
+        // El payload real anida el resultado: data.result.{callId, kind, output}.
+        const result = (d["result"] ?? d) as Record<string, unknown>
+        const callId = result["callId"] ?? d["callId"]
+        if (callId) {
+          const failed =
+            d["status"] === "failed" || result["kind"] === "tool-error"
+          let outputJson: string | undefined
+          const output = result["output"] ?? result["error"]
+          if (output !== undefined && output !== null) {
+            try {
+              const raw =
+                typeof output === "string"
+                  ? output
+                  : JSON.stringify(output, null, 2)
+              outputJson = raw === "{}" ? undefined : raw.slice(0, 2000)
+            } catch {
+              outputJson = undefined
             }
           }
-          break
+          resolveCall(String(callId), failed, outputJson)
         }
-        case "turn.completed":
-        case "session.waiting":
-          resolvePending(depth, false)
-          if (event.type === "session.waiting") {
-            add({
-              at,
-              depth,
-              kind: "status",
-              label: "Agente en espera — puedes escribirle abajo",
-            })
-          }
-          break
-        case "step.failed":
-        case "turn.failed":
-        case "session.failed":
-          resolvePending(depth, true)
+        break
+      }
+      case "subagent.called": {
+        const childId = d["childSessionId"] as string | undefined
+        if (childId && depth === 0 && !seenChildren.current.has(childId)) {
+          seenChildren.current.add(childId)
+          // Mismo runIdx: los eventos del hijo se intercalan por timestamp.
+          void consume(childId, 1, live, runIdx)
+        }
+        break
+      }
+      case "subagent.completed": {
+        const result = (d["result"] ?? d) as Record<string, unknown>
+        const callId = result["callId"] ?? d["callId"]
+        if (callId) resolveCall(String(callId), false)
+        break
+      }
+      case "message.received":
+        // Solo del root: el message.received del hijo es el prompt interno
+        // de delegación y duplicaría ruido.
+        if (depth === 0 && d["message"]) {
+          add({ at, depth, kind: "user", label: String(d["message"]) })
+        }
+        break
+      case "message.completed":
+        if (d["message"]) {
+          // Solo el root te habla a ti (burbuja de chat). El mensaje final
+          // del subagente es su reporte interno al orquestador: se muestra
+          // como actividad discreta, no como chat.
           add({
             at,
             depth,
-            kind: "error",
-            label: String(
-              d["message"] ?? d["code"] ?? "Error en la sesión",
-            ).slice(0, 300),
+            kind: depth === 0 ? "text" : "report",
+            label: String(d["message"]),
           })
-          break
+        }
+        break
+      case "input.requested": {
+        // El agente pide input humano (HITL). Solo se procesa a nivel root:
+        // la pregunta de un subagente burbujea al stream del root, y
+        // renderizarla también desde el stream del hijo la duplicaba.
+        if (depth !== 0) break
+        const requests = (d["requests"] ?? []) as Array<Record<string, unknown>>
+        for (const request of requests) {
+          const action = (request["action"] ?? {}) as Record<string, unknown>
+          const input = (action["input"] ?? {}) as Record<string, unknown>
+          const prompt = input["prompt"] ?? request["prompt"]
+          if (prompt) {
+            add({ at, depth, kind: "question", label: String(prompt) })
+          }
+          // Solo el request del run vivo es respondible desde el composer.
+          if (live && request["requestId"]) {
+            setPendingInput({
+              requestId: String(request["requestId"]),
+              prompt: String(prompt ?? ""),
+            })
+          }
+        }
+        break
       }
+      case "turn.completed":
+      case "session.waiting":
+        resolvePending(depth, false)
+        if (event.type === "session.waiting") {
+          add({
+            at,
+            depth,
+            kind: "status",
+            label: "Agente en espera — puedes escribirle abajo",
+          })
+        }
+        break
+      case "step.failed":
+      case "turn.failed":
+      case "session.failed":
+        resolvePending(depth, true)
+        add({
+          at,
+          depth,
+          kind: "error",
+          label: String(
+            d["message"] ?? d["code"] ?? "Error en la sesión"
+          ).slice(0, 300),
+        })
+        break
+    }
   }
 
   /**
@@ -440,7 +464,7 @@ export function SiteActivity({
     sessionId: string,
     depth: 0 | 1,
     live: boolean,
-    runIdx: number,
+    runIdx: number
   ) => {
     const controller = lifetimeAbort.current
     if (!controller) return
@@ -548,7 +572,12 @@ export function SiteActivity({
       // Con pregunta pendiente, la respuesta va al input request (reanuda el
       // turno pausado con contexto); si no, mensaje normal a la sesión.
       const result = answering
-        ? await answerSiteInput(siteId, answering.requestId, text, answering.prompt)
+        ? await answerSiteInput(
+            siteId,
+            answering.requestId,
+            text,
+            answering.prompt
+          )
         : await sendSiteMessage(siteId, text)
       if (result?.formError) {
         toast.error(result.formError)
@@ -685,7 +714,7 @@ export function SiteActivity({
                     </MessageScrollerItem>
                   ) : (
                     <BlockItem key={block.key} item={block.item} />
-                  ),
+                  )
                 )
               )}
             </MessageScrollerContent>
@@ -701,7 +730,7 @@ export function SiteActivity({
           <div className="flex shrink-0 items-start gap-2 border-y border-warning/40 bg-warning/5 p-2.5">
             <QuestionIcon className="mt-0.5 size-3.5 shrink-0 text-warning" />
             <div className="max-h-[60dvh] min-w-0 flex-1 overflow-y-auto text-xs">
-              <Streamdown className="text-xs leading-relaxed [&_p]:my-0.5 [&_:not(pre)>code]:mx-0 [&_:not(pre)>code]:rounded-sm [&_:not(pre)>code]:border [&_:not(pre)>code]:border-border [&_:not(pre)>code]:bg-background [&_:not(pre)>code]:px-1 [&_:not(pre)>code]:py-px [&_:not(pre)>code]:text-[11px]">
+              <Streamdown className="text-xs leading-relaxed [&_:not(pre)>code]:mx-0 [&_:not(pre)>code]:rounded-sm [&_:not(pre)>code]:border [&_:not(pre)>code]:border-border [&_:not(pre)>code]:bg-background [&_:not(pre)>code]:px-1 [&_:not(pre)>code]:py-px [&_:not(pre)>code]:text-[11px] [&_p]:my-0.5">
                 {pendingInput.prompt}
               </Streamdown>
             </div>
@@ -738,7 +767,9 @@ export function SiteActivity({
                 const el = e.currentTarget
                 const { selectionStart, selectionEnd, value } = el
                 setMessage(
-                  value.slice(0, selectionStart) + "\n" + value.slice(selectionEnd),
+                  value.slice(0, selectionStart) +
+                    "\n" +
+                    value.slice(selectionEnd)
                 )
                 requestAnimationFrame(() => {
                   el.selectionStart = el.selectionEnd = selectionStart + 1
@@ -838,7 +869,7 @@ function ActionsBlock({ items }: { items: ActivityItem[] }) {
  * shimmer mientras corre, rojo si falló. Click expande el input completo.
  */
 function ActionRow({ item }: { item: ActivityItem }) {
-  const expandable = Boolean(item.inputJson)
+  const expandable = Boolean(item.inputJson || item.outputJson)
   const running = !item.done
   return (
     <Collapsible>
@@ -884,16 +915,47 @@ function ActionRow({ item }: { item: ActivityItem }) {
         </span>
         <span className="flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground/70 tabular-nums">
           {formatTime(item.at)}
-          {expandable && (
-            <CaretRightIcon className="size-3 opacity-0 transition-all group-hover/row:opacity-100 group-data-[state=open]/row:opacity-100 group-data-[state=open]/row:rotate-90" />
-          )}
+          {/* Siempre ocupa espacio (aunque no sea expandible) para que las
+              horas de todas las filas queden alineadas. */}
+          <CaretRightIcon
+            className={cn(
+              "size-3 transition-all",
+              expandable
+                ? "opacity-0 group-hover/row:opacity-100 group-data-[state=open]/row:rotate-90 group-data-[state=open]/row:opacity-100"
+                : "invisible"
+            )}
+          />
         </span>
       </CollapsibleTrigger>
       {expandable && (
         <CollapsibleContent>
-          <pre className="mt-1 ml-5 overflow-x-auto border bg-background p-2 font-mono text-[10px] leading-relaxed text-muted-foreground">
-            {item.inputJson}
-          </pre>
+          <div className="mt-1 ml-5 space-y-1.5">
+            {item.inputJson && (
+              <div>
+                <p className="mb-0.5 text-[10px] font-medium tracking-wide text-muted-foreground/70 uppercase">
+                  Input
+                </p>
+                <pre className="overflow-x-auto border bg-background p-2 font-mono text-[10px] leading-relaxed text-muted-foreground">
+                  {item.inputJson}
+                </pre>
+              </div>
+            )}
+            {item.outputJson && (
+              <div>
+                <p className="mb-0.5 text-[10px] font-medium tracking-wide text-muted-foreground/70 uppercase">
+                  Output
+                </p>
+                <pre
+                  className={cn(
+                    "overflow-x-auto border bg-background p-2 font-mono text-[10px] leading-relaxed",
+                    item.failed ? "text-destructive" : "text-muted-foreground"
+                  )}
+                >
+                  {item.outputJson}
+                </pre>
+              </div>
+            )}
+          </div>
         </CollapsibleContent>
       )}
     </Collapsible>
@@ -902,21 +964,29 @@ function ActionRow({ item }: { item: ActivityItem }) {
 
 /** Reporte interno del subagente al orquestador (dentro de un TaskBlock). */
 function ReportItem({ item }: { item: ActivityItem }) {
+  // Misma retícula que ActionRow: columna izquierda de 3.5 (línea en vez de
+  // icono), contenido flexible y hora alineada a la derecha.
+  // Colapsado: 3 líneas. Expandido: el reporte completo en markdown.
   return (
-    <div className="min-w-0">
-      <p className="flex items-baseline justify-between gap-2 text-[11px] font-medium text-muted-foreground">
-        Reporte al orquestador
-        <span className="shrink-0 text-[10px] text-muted-foreground/70 tabular-nums">
-          {formatTime(item.at)}
+    <Collapsible className="group/report">
+      <CollapsibleTrigger className="flex w-full items-stretch gap-2 text-left">
+        <span className="flex w-3.5 shrink-0 justify-center">
+          <span aria-hidden className="w-0.5 bg-border" />
         </span>
-      </p>
-      <p
-        className="line-clamp-3 text-xs text-muted-foreground"
-        title={item.label}
-      >
-        {item.label}
-      </p>
-    </div>
+        <span className="min-w-0 flex-1">
+          <span className="block text-xs font-medium text-foreground mb-1">
+            Reporte a Agente
+          </span>
+          <p className="line-clamp-3 text-xs text-muted-foreground group-data-[state=open]/report:line-clamp-none">
+            {item.label}
+          </p>
+        </span>
+        <span className="flex shrink-0 items-center gap-1 self-start pt-0.5 text-[10px] text-muted-foreground/70 tabular-nums">
+          {formatTime(item.at)}
+          <CaretRightIcon className="size-3 opacity-0 transition-all group-hover/report:opacity-100 group-data-[state=open]/report:rotate-90 group-data-[state=open]/report:opacity-100" />
+        </span>
+      </CollapsibleTrigger>
+    </Collapsible>
   )
 }
 
@@ -936,13 +1006,12 @@ function TaskBlock({
   const runningChildren = items.filter((i) => i.kind === "action" && !i.done)
   const active = header ? !header.done : runningChildren.length > 0
   const failed =
-    Boolean(header?.failed) ||
-    items.some((i) => i.failed || i.kind === "error")
+    Boolean(header?.failed) || items.some((i) => i.failed || i.kind === "error")
   const current = runningChildren[0]
 
   return (
-    <Collapsible className="border border-border/60">
-      <CollapsibleTrigger className="group flex w-full items-center gap-2 p-2 text-left text-xs">
+    <Collapsible className="border">
+      <CollapsibleTrigger className="group flex w-full items-center gap-2 bg-sidebar p-2 text-left text-xs">
         <RobotIcon
           className={cn(
             "size-3.5 shrink-0",
@@ -975,7 +1044,7 @@ function TaskBlock({
         </span>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="space-y-2 border-t border-border/60 p-2 pl-3">
+        <div className="space-y-4 border-t border-border p-2 pl-3">
           {items.map((item) =>
             item.kind === "action" ? (
               <ActionRow key={item.id} item={item} />
@@ -1046,7 +1115,7 @@ function BlockItem({ item }: { item: ActivityItem }) {
               <BubbleContent>
                 {/* Streamdown trae tipografía propia (headings grandes); estos
                     overrides la escalan al text-xs del bubble. */}
-                <Streamdown className="text-xs leading-relaxed [&_h1]:text-sm [&_h2]:text-sm [&_h3]:text-xs [&_h4]:text-xs [&_h1]:my-1.5 [&_h2]:my-1.5 [&_h3]:my-1 [&_h4]:my-1 [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_pre]:my-1.5 [&_pre]:text-[11px] [&_table]:text-xs [&_blockquote]:my-1.5 [&_:not(pre)>code]:mx-0 [&_:not(pre)>code]:rounded-none [&_:not(pre)>code]:border [&_:not(pre)>code]:border-border [&_:not(pre)>code]:bg-background [&_:not(pre)>code]:px-1 [&_:not(pre)>code]:py-px [&_:not(pre)>code]:text-[11px] [&_:not(pre)>code]:whitespace-nowrap">
+                <Streamdown className="text-xs leading-relaxed [&_:not(pre)>code]:mx-0 [&_:not(pre)>code]:rounded-none [&_:not(pre)>code]:border [&_:not(pre)>code]:border-border [&_:not(pre)>code]:bg-background [&_:not(pre)>code]:px-1 [&_:not(pre)>code]:py-px [&_:not(pre)>code]:text-[11px] [&_:not(pre)>code]:whitespace-nowrap [&_blockquote]:my-1.5 [&_h1]:my-1.5 [&_h1]:text-sm [&_h2]:my-1.5 [&_h2]:text-sm [&_h3]:my-1 [&_h3]:text-xs [&_h4]:my-1 [&_h4]:text-xs [&_li]:my-0.5 [&_ol]:my-1 [&_p]:my-1 [&_pre]:my-1.5 [&_pre]:text-[11px] [&_table]:text-xs [&_ul]:my-1">
                   {item.label}
                 </Streamdown>
               </BubbleContent>
@@ -1055,7 +1124,7 @@ function BlockItem({ item }: { item: ActivityItem }) {
         </Message>
       ) : item.kind === "report" ? (
         // Normalmente vive dentro de un TaskBlock; standalone como fallback.
-        <div className="ml-5 border-l-2 border-border/60 py-0.5 pl-3">
+        <div className="ml-5">
           <ReportItem item={item} />
         </div>
       ) : item.kind === "error" ? (
@@ -1081,7 +1150,7 @@ function BlockItem({ item }: { item: ActivityItem }) {
             </MessageHeader>
             <Bubble variant="outline">
               <BubbleContent>
-                <Streamdown className="text-xs leading-relaxed [&_p]:my-1 [&_li]:my-0.5 [&_ul]:my-1 [&_ol]:my-1 [&_:not(pre)>code]:mx-0 [&_:not(pre)>code]:rounded-none [&_:not(pre)>code]:border [&_:not(pre)>code]:border-border [&_:not(pre)>code]:bg-background [&_:not(pre)>code]:px-1 [&_:not(pre)>code]:py-px [&_:not(pre)>code]:text-[11px] [&_:not(pre)>code]:whitespace-nowrap">
+                <Streamdown className="text-xs leading-relaxed [&_:not(pre)>code]:mx-0 [&_:not(pre)>code]:rounded-none [&_:not(pre)>code]:border [&_:not(pre)>code]:border-border [&_:not(pre)>code]:bg-background [&_:not(pre)>code]:px-1 [&_:not(pre)>code]:py-px [&_:not(pre)>code]:text-[11px] [&_:not(pre)>code]:whitespace-nowrap [&_li]:my-0.5 [&_ol]:my-1 [&_p]:my-1 [&_ul]:my-1">
                   {item.label}
                 </Streamdown>
               </BubbleContent>

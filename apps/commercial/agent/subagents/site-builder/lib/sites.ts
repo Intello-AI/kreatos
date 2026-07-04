@@ -155,19 +155,40 @@ export async function getDesignReferences(input: {
   limit?: number
 }): Promise<DesignReferenceRow[]> {
   const supabase = getSupabaseClient()
+  const limit = input.limit ?? 3
   let query = supabase
     .from("design_references")
     .select("*")
     .eq("active", true)
+    // Solo referencias ya analizadas por design-scout: una pending es solo
+    // una URL sin decisiones de diseño.
+    .eq("status", "analyzed")
     .contains("industries", [input.industry])
     .order("quality_score", { ascending: false })
-    .limit(input.limit ?? 3)
+    .limit(limit)
   if (input.styleTags?.length) {
     query = query.overlaps("style_tags", input.styleTags)
   }
-  const { data, error } = await query
+  let { data, error } = await query
   if (error)
     throw new Error(`Lectura de design_references falló: ${error.message}`)
+
+  // La biblioteca es transversal: composición, espaciado y contraste aplican
+  // a cualquier giro. Sin match por industria → las mejores por calidad.
+  if (!data || data.length === 0) {
+    const fallback = await supabase
+      .from("design_references")
+      .select("*")
+      .eq("active", true)
+      .eq("status", "analyzed")
+      .order("quality_score", { ascending: false })
+      .limit(limit)
+    if (fallback.error)
+      throw new Error(
+        `Lectura de design_references falló: ${fallback.error.message}`,
+      )
+    data = fallback.data
+  }
   return data ?? []
 }
 

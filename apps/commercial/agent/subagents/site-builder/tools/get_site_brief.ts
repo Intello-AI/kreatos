@@ -34,6 +34,18 @@ export default defineTool({
     if (error) throw new Error(`Lectura del lead falló: ${error.message}`)
     if (!lead) throw new Error(`El site ${siteId} apunta a un lead inexistente.`)
 
+    // Ficha de marca del lead (logo, colores, nombre corto, servicios reales).
+    const { data: brand } = await supabase
+      .from("lead_brand")
+      .select("*")
+      .eq("lead_id", site.lead_id)
+      .maybeSingle()
+    const supabaseUrl = process.env.SUPABASE_URL ?? ""
+    const logoUrl =
+      brand?.logo_path && supabaseUrl
+        ? `${supabaseUrl}/storage/v1/object/public/brand-assets/${brand.logo_path}`
+        : null
+
     const [latestVersion, presets, references, siblings] = await Promise.all([
       getLatestVersion(siteId),
       getDesignPresets(),
@@ -56,6 +68,9 @@ export default defineTool({
         currentVersion: site.current_version,
       },
       lead,
+      // null = José no ha llenado la ficha; aplica la política de datos
+      // faltantes. Con brand: shortName/colores/logo son OBLIGATORIOS de usar.
+      brand: brand ? { ...brand, logoUrl } : null,
       latestSpec: latestVersion?.spec ?? null,
       latestVersionN: latestVersion?.version_n ?? null,
       presets,

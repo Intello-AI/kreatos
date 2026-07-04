@@ -45,6 +45,8 @@ export type Database = {
       design_references: {
         Row: {
           active: boolean
+          analysis: Json | null
+          analyzed_at: string | null
           created_at: string
           do_steal: string | null
           dont_steal: string | null
@@ -56,29 +58,35 @@ export type Database = {
           screenshot_path: string | null
           slug: string
           source: string | null
+          status: string
           style_tags: string[]
           typography: Json | null
           url: string
         }
         Insert: {
           active?: boolean
+          analysis?: Json | null
+          analyzed_at?: string | null
           created_at?: string
           do_steal?: string | null
           dont_steal?: string | null
           id?: string
-          industries: string[]
+          industries?: string[]
           layout_notes?: string | null
           palette?: Json | null
           quality_score?: number | null
           screenshot_path?: string | null
           slug: string
           source?: string | null
-          style_tags: string[]
+          status?: string
+          style_tags?: string[]
           typography?: Json | null
           url: string
         }
         Update: {
           active?: boolean
+          analysis?: Json | null
+          analyzed_at?: string | null
           created_at?: string
           do_steal?: string | null
           dont_steal?: string | null
@@ -90,6 +98,7 @@ export type Database = {
           screenshot_path?: string | null
           slug?: string
           source?: string | null
+          status?: string
           style_tags?: string[]
           typography?: Json | null
           url?: string
@@ -126,6 +135,53 @@ export type Database = {
             foreignKeyName: "lead_activity_lead_id_fkey"
             columns: ["lead_id"]
             isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_brand: {
+        Row: {
+          colors: Json
+          created_at: string
+          differentiators: string | null
+          lead_id: string
+          logo_path: string | null
+          notes: string | null
+          services: Json
+          short_name: string | null
+          tagline: string | null
+          updated_at: string
+        }
+        Insert: {
+          colors?: Json
+          created_at?: string
+          differentiators?: string | null
+          lead_id: string
+          logo_path?: string | null
+          notes?: string | null
+          services?: Json
+          short_name?: string | null
+          tagline?: string | null
+          updated_at?: string
+        }
+        Update: {
+          colors?: Json
+          created_at?: string
+          differentiators?: string | null
+          lead_id?: string
+          logo_path?: string | null
+          notes?: string | null
+          services?: Json
+          short_name?: string | null
+          tagline?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_brand_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
             referencedRelation: "leads"
             referencedColumns: ["id"]
           },

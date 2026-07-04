@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import {
   GlobeIcon,
   SignOutIcon,
+  SparkleIcon,
   SquaresFourIcon,
   UsersThreeIcon,
 } from "@phosphor-icons/react"
@@ -39,6 +40,11 @@ const navItems = [
     title: "Sitios",
     href: "/dashboard/sites",
     icon: GlobeIcon,
+  },
+  {
+    title: "Referencias",
+    href: "/dashboard/references",
+    icon: SparkleIcon,
   },
 ]
 

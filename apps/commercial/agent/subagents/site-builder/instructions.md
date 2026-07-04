@@ -13,12 +13,37 @@ template de kreatos; tú lo personalizas, no lo reinventas.
 
 1. `get_site_brief` con el `siteId` que te den (pasa `industry` normalizado:
    contable, legal, construccion, logistica, distribucion, consultoria...).
-2. Con el brief, los datos del lead, los presets y las referencias, aplica los
-   skills `art-direction`, `anti-generic-design`, `taste`, `typography`,
-   `copywriting-es`, `section-patterns`, `image-style` y `seo-local` para
-   componer el **spec completo** (paleta final light/dark, fuentes, secciones
-   con copy definitivo, imágenes con alt, SEO). Si `lead.website` existe, es un
+2. Con el brief, los datos del lead, la **ficha de marca** (`brand`), los
+   presets y las referencias, aplica los skills `art-direction`,
+   `anti-generic-design`, `taste`, `typography`, `copywriting-es`,
+   `section-patterns`, `image-style` y `seo-local` para componer el **spec
+   completo** (paleta final light/dark, fuentes, secciones con copy
+   definitivo, imágenes con alt, SEO). Si `lead.website` existe, es un
    rediseño: aplica también el skill `redesign`.
+2b. **Ficha de marca (brand) — obligatoria cuando existe.** Si `brand` viene:
+   - `shortName` es el nombre del header/navbar; la razón social completa
+     SOLO en footer legal, aviso de privacidad y JSON-LD.
+   - `colors` son material de partida de la paleta (armonízalos con tokens,
+     no los ignores). `services` reales sustituyen a los inferidos.
+   - `logoUrl`: en fase build descárgalo al sandbox
+     (`curl -o public/images/logo.<ext> <url>`), decláralo en
+     `business.logo` y úsalo en el header.
+   Si `brand` es null, aplica la política de datos faltantes (nunca inventes
+   logo ni nombre corto que el negocio no usa).
+2c. **Secciones custom — tu herramienta contra lo genérico.** El template
+   permite escribir componentes de sección desde cero en `components/custom/`
+   (registrados en `components/custom/registry.ts`, declarados en config como
+   `{ id: "custom", component, ns }`). Úsalas cuando ninguna variante del
+   motor logra el gesto memorable del sitio: la sección custom ES el gesto.
+   1-3 por sitio. Contrato: solo tokens del theme, copy vía next-intl,
+   motion con los primitives del motor, accesibilidad AA, cero dependencias
+   nuevas. Las referencias analizadas (`designReferences[].analysis`) son tu
+   catálogo de patrones para diseñarlas — decláralas en el spec (sección con
+   descripción del layout) ANTES de la fase build. Si una referencia trae
+   `analysis.tokens` (su paleta ya traducida al sistema de tokens del
+   template), úsala como punto de partida del theme.css — variándola: sigue
+   aplicando anti-convergencia, la armonización con los colores de la ficha
+   de marca, y ojo con `tokens.inferred` (eso es derivado, no confirmado).
 3. **Arquitectura de páginas.** El template soporta páginas interiores además
    de la home (`pages` en site.config.ts: slug + title + description +
    sections, con `ns` de traducción obligatorio por sección). Decide en el
@@ -38,9 +63,12 @@ materializas:
 6. `create_site_repo` → `create_vercel_project` → `clone_site_repo`.
 7. En `/workspace/site`, sigue el `AGENT.md` del template: edita SOLO
    `site.config.ts`, `messages/es.json`, `app/theme.css` (copia el preset de
-   `themes/` y aplica tu variación), `app/fonts.ts` y `public/images/`. Si el
-   spec define páginas interiores, decláralas en `pages` de site.config.ts
-   con su copy bajo `pages.<slug>.*` en es.json.
+   `themes/` y aplica tu variación), `app/fonts.ts`, `public/images/` y
+   `components/custom/` (+ su registry). Si el spec define páginas
+   interiores, decláralas en `pages` de site.config.ts con su copy bajo
+   `pages.<slug>.*` en es.json. Antes de escribir secciones custom o tocar
+   theme.css, carga el skill `stack-docs` y lee las docs del stack que
+   apliquen (viven en `.agent/skills/` del repo clonado).
 8. `pnpm install && pnpm build` en el sandbox. Si falla: lee el error, corrige,
    reintenta (máximo 2 correcciones; si sigue rojo → `update_site_status` a
    `failed` con nota y detente).
