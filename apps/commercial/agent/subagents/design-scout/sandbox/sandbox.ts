@@ -7,19 +7,20 @@ import { defineSandbox, defaultBackend } from "eve/sandbox"
  */
 export default defineSandbox({
   backend: defaultBackend(),
-  // v2: invalida el snapshot que quedó cacheado SIN chromium (el bootstrap
-  // tragaba el error de instalación y capture_screenshots moría con
-  // "Playwright was just installed or updated").
-  revalidationKey: () => "design-scout-v2",
+  // v3: playwright 1.61.1 — 1.55.0 no soporta el ubuntu 26.04 del Vercel
+  // Sandbox, así que el bootstrap fallaba SIEMPRE en prod (silenciado) y
+  // ninguna referencia tuvo screenshots.
+  revalidationKey: () => "design-scout-v3",
   async bootstrap({ use }) {
     const sandbox = await use()
     await sandbox.run({
       command:
         "command -v pnpm >/dev/null 2>&1 || (corepack enable && corepack prepare pnpm@latest --activate) || npm install -g pnpm",
     })
+    // No-fatal (un throw tira el deploy), pero sin silenciar el error.
     await sandbox.run({
       command:
-        "(cd /tmp && pnpm dlx playwright@1.55.0 install chromium --with-deps) >/dev/null 2>&1 || echo 'chromium no precalentado (capture lo intentara)'",
+        "cd /tmp && (pnpm dlx playwright@1.61.1 install chromium --with-deps || pnpm dlx playwright@1.61.1 install chromium) || echo 'AVISO: chromium NO se precalento (capture lo intentara en runtime)'",
     })
     // ffmpeg: reducir las capturas full-page antes de mandarlas a visión.
     await sandbox.run({

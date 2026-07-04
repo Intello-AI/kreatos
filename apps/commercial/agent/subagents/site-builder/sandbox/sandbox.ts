@@ -13,10 +13,11 @@ import { defineSandbox, defaultBackend } from "eve/sandbox"
  */
 export default defineSandbox({
   backend: defaultBackend(),
-  // v4: invalida snapshots que se cachearon SIN chromium (el bootstrap
-  // silenciaba el error y `pnpm qa` lo instalaba en runtime → 5+ min →
-  // "terminated" a media corrida).
-  revalidationKey: () => "site-builder-v4",
+  // v5: playwright 1.61.1 — 1.55.0 no soporta el ubuntu 26.04 del Vercel
+  // Sandbox ("does not support chromium on ubuntu26.04-x64"), por eso NINGÚN
+  // snapshot de prod tuvo chromium jamás y qa lo intentaba (y fallaba) en
+  // runtime.
+  revalidationKey: () => "site-builder-v5",
   async bootstrap({ use }) {
     const sandbox = await use()
     // La imagen base puede no traer pnpm; corepack lo habilita sin red extra.
@@ -38,17 +39,14 @@ export default defineSandbox({
     // Chromium para el paso screenshots de `pnpm qa` (Playwright). Se
     // precalienta en el snapshot: instala el browser + deps del sistema al
     // cache global (~/.cache/ms-playwright), que el playwright del repo
-    // clonado reutiliza. SIN silenciar: un snapshot cacheado sin chromium
-    // obliga a instalarlo en runtime dentro de `pnpm qa` (5+ min →
-    // terminated). Fallback sin --with-deps si apt falla.
+    // clonado reutiliza. La versión importa: DEBE coincidir en minor con la
+    // dep del template (revisión de chromium) y soportar el SO del Vercel
+    // Sandbox (1.55.0 no soportaba ubuntu 26.04). No-fatal (un throw aquí
+    // tira el DEPLOY completo), pero sin silenciar: el aviso queda en el log
+    // del build.
     await sandbox.run({
       command:
-        "cd /tmp && (pnpm dlx playwright@1.55.0 install chromium --with-deps || pnpm dlx playwright@1.55.0 install chromium)",
-    })
-    // Verificación: si no quedó, que el snapshot lo diga a gritos en el log.
-    await sandbox.run({
-      command:
-        "ls ~/.cache/ms-playwright 2>/dev/null | grep -q chromium && echo 'chromium precalentado OK' || echo 'AVISO: chromium NO se precalento — pnpm qa lo instalara en runtime (lento)'",
+        "cd /tmp && (pnpm dlx playwright@1.61.1 install chromium --with-deps || pnpm dlx playwright@1.61.1 install chromium) || echo 'AVISO: chromium NO se precalento — pnpm qa lo instalara en runtime (lento)'",
     })
   },
 })
