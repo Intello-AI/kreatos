@@ -7,11 +7,15 @@ import { defineSandbox, defaultBackend } from "eve/sandbox"
  * Verificado empíricamente 2026-07-04: con estas libs + chromium 1.61.1 el
  * screenshot sale.
  */
-export const CHROMIUM_DNF_DEPS =
+const CHROMIUM_DNF_DEPS =
   "nss nspr atk at-spi2-atk cups-libs libdrm libxkbcommon libXcomposite libXdamage libXfixes libXrandr mesa-libgbm alsa-lib pango cairo"
 
-/** Instala chromium + deps del sistema (dnf en AL2023, apt en docker dev). */
-export const CHROMIUM_BOOTSTRAP = `cd /tmp && pnpm dlx playwright@1.61.1 install chromium && ((command -v dnf >/dev/null 2>&1 && (sudo dnf install -yq ${CHROMIUM_DNF_DEPS} || dnf install -yq ${CHROMIUM_DNF_DEPS})) || (command -v apt-get >/dev/null 2>&1 && pnpm dlx playwright@1.61.1 install-deps chromium))`
+/**
+ * Instala chromium + deps del sistema (dnf en AL2023, apt en docker dev).
+ * OJO: tools/capture_screenshots.ts lleva una COPIA literal (un import
+ * cruzado rompe el bundler de eve) — si cambias esto, cambia aquello.
+ */
+const CHROMIUM_BOOTSTRAP = `cd /tmp && pnpm dlx playwright@1.61.1 install chromium && ((command -v dnf >/dev/null 2>&1 && (sudo dnf install -yq ${CHROMIUM_DNF_DEPS} || dnf install -yq ${CHROMIUM_DNF_DEPS})) || (command -v apt-get >/dev/null 2>&1 && pnpm dlx playwright@1.61.1 install-deps chromium))`
 
 /**
  * Sandbox del design-scout: solo existe para capturar screenshots de las

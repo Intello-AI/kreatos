@@ -5,6 +5,14 @@ import { z } from "zod"
 
 import { getSupabaseClient } from "../../../lib/supabase"
 
+// Copia literal del CHROMIUM_BOOTSTRAP de ../sandbox/sandbox.ts (un import
+// cruzado tool↔sandbox rompe el bundler de eve) — si cambias uno, cambia el
+// otro. Instala chromium + libs de sistema (dnf en Amazon Linux 2023 del
+// Vercel Sandbox, apt en docker local).
+const CHROMIUM_DNF_DEPS =
+  "nss nspr atk at-spi2-atk cups-libs libdrm libxkbcommon libXcomposite libXdamage libXfixes libXrandr mesa-libgbm alsa-lib pango cairo"
+const CHROMIUM_BOOTSTRAP = `cd /tmp && pnpm dlx playwright@1.61.1 install chromium && ((command -v dnf >/dev/null 2>&1 && (sudo dnf install -yq ${CHROMIUM_DNF_DEPS} || dnf install -yq ${CHROMIUM_DNF_DEPS})) || (command -v apt-get >/dev/null 2>&1 && pnpm dlx playwright@1.61.1 install-deps chromium))`
+
 const VISUAL_PROMPT = `Eres un director de arte senior. Estas son capturas full-page REALES de un sitio de referencia (desktop 1440px y mobile 390px). Complementa un teardown de CSS con lo que SOLO se ve renderizado:
 
 1. **Above the fold** (desktop): qué domina el primer viewport, jerarquía real (qué se lee 1º/2º/3º), proporción texto/imagen.
@@ -36,13 +44,15 @@ export default defineTool({
       // Self-healing: si el snapshot del sandbox se cacheó sin chromium o
       // sin las libs del sistema (browser descargado que muere con "error
       // while loading shared libraries"), se repara aquí y se reintenta.
+      // El comando duplica el CHROMIUM_BOOTSTRAP de sandbox/sandbox.ts (un
+      // import cruzado rompe el bundler de eve: "Failed to bundle authored
+      // module") — si cambias uno, cambia el otro.
       const failText = `${capture.stderr}${capture.stdout}`
       if (
         capture.exitCode !== 0 &&
         (failText.includes("playwright install") ||
           failText.includes("shared libraries"))
       ) {
-        const { CHROMIUM_BOOTSTRAP } = await import("../sandbox/sandbox")
         await sandbox.run({ command: CHROMIUM_BOOTSTRAP })
         capture = await sandbox.run({ command: shotCommand })
       }
