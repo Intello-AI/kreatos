@@ -1,3 +1,4 @@
+import type { Viewport } from "next"
 import { Geist_Mono } from "next/font/google"
 import localFont from "next/font/local"
 
@@ -20,6 +21,14 @@ const fontMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
 })
+
+// maximumScale 1: iOS Safari deja de hacer zoom automático al enfocar
+// inputs (los navegadores modernos siguen permitiendo el pinch-zoom manual).
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+}
 
 export default function RootLayout({
   children,

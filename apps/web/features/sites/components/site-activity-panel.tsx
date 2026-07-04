@@ -19,14 +19,12 @@ export function SiteActivityAside({
   runIds: string[]
   siteId: string
 }) {
-  const { toggle, isMobile } = useActivityPanel()
+  const { toggle } = useActivityPanel()
   return (
     <ActivityPanelAside title="Monitor de actividad">
-      <SiteActivity
-        runIds={runIds}
-        siteId={siteId}
-        onClose={isMobile ? undefined : toggle}
-      />
+      {/* onClose también en mobile: es la única X del sheet (la default
+          está apagada porque chocaba con el badge del header). */}
+      <SiteActivity runIds={runIds} siteId={siteId} onClose={toggle} />
     </ActivityPanelAside>
   )
 }

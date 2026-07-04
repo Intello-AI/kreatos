@@ -90,10 +90,14 @@ export function ActivityPanelAside({
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={(v) => v !== open && toggle()}>
-        {/* Pantalla completa en mobile: el chat necesita todo el alto. */}
+        {/* Pantalla completa en mobile: el chat necesita todo el alto. La
+            variante data-[side=bottom] pisa un h-dvh plano — se override con
+            la misma variante. La X default choca con el header del chat
+            (que ya trae su botón de cierre): se apaga. */}
         <SheetContent
           side="bottom"
-          className="h-dvh gap-0 rounded-none border-0 p-0"
+          showCloseButton={false}
+          className="gap-0 rounded-none border-0 p-0 data-[side=bottom]:h-dvh"
         >
           <SheetHeader className="sr-only">
             <SheetTitle>{title}</SheetTitle>

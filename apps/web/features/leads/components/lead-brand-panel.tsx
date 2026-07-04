@@ -36,7 +36,7 @@ export function LeadBrandAside({
   leadId: string
   initialRunIds: string[]
 }) {
-  const { toggle, isMobile } = useActivityPanel()
+  const { toggle } = useActivityPanel()
   const router = useRouter()
   const [runIds, setRunIds] = useState(initialRunIds)
 
@@ -103,7 +103,7 @@ export function LeadBrandAside({
         siteId={leadId}
         runIds={runIds}
         handlers={handlers}
-        onClose={isMobile ? undefined : toggle}
+        onClose={toggle}
         title="Marca"
         description="Pásale al curador logo, fotos o la web."
       />
