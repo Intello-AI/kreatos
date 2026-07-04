@@ -43,13 +43,18 @@ template de kreatos; tú lo personalizas, no lo reinventas.
 2c. **Secciones custom — tu herramienta contra lo genérico.** El template
    permite escribir componentes de sección desde cero en `components/custom/`
    (registrados en `components/custom/registry.ts`, declarados en config como
-   `{ id: "custom", component, ns }`). Úsalas cuando ninguna variante del
-   motor logra el gesto memorable del sitio: la sección custom ES el gesto.
-   1-3 por sitio. Contrato: solo tokens del theme, copy vía next-intl,
-   motion con los primitives del motor, accesibilidad AA, cero dependencias
-   nuevas. Las referencias analizadas (`designReferences[].analysis`) son tu
-   catálogo de patrones para diseñarlas — decláralas en el spec (sección con
-   descripción del layout) ANTES de la fase build. Si una referencia trae
+   `{ id: "custom", component, ns }`). **Sin tope numérico**: hero y toda
+   sección de contenido pueden ser custom cuando la dirección de arte lo
+   pida — dos sitios distintos NO deben compartir los mismos layouts; las
+   variantes del motor son piso de velocidad, no techo de diseño. Quedan
+   SIEMPRE en el motor las commodity (navbar, footer, contact, faq,
+   trust-bar, aviso): de ellas dependen SEO/a11y/form. Cada custom se
+   justifica en el spec ("la variante X no logra Y de la referencia").
+   Contrato: solo tokens del theme, copy vía next-intl, motion con los
+   primitives del motor, accesibilidad AA, cero dependencias nuevas. Las
+   referencias analizadas (`designReferences[].analysis`) son tu catálogo de
+   patrones — decláralas en el spec (sección con descripción del layout)
+   ANTES de la fase build. Si una referencia trae
    `analysis.tokens` (su paleta ya traducida al sistema de tokens del
    template), úsala como punto de partida del theme.css — variándola: sigue
    aplicando anti-convergencia, la armonización con los colores de la ficha
