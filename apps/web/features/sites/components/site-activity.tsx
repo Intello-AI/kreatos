@@ -252,6 +252,55 @@ function formatTime(at: string): string {
   return formatTimeInUserTz(at)
 }
 
+// Al estilo Claude Code: el "pensando" rota entre gerundios con carácter.
+const THINKING_WORDS = [
+  "Pensando",
+  "Maquinando",
+  "Cavilando",
+  "Rumiando",
+  "Cocinando",
+  "Horneando",
+  "Tramando",
+  "Puliendo",
+  "Garabateando",
+  "Destilando",
+  "Afinando",
+  "Barajando opciones",
+  "Conectando puntos",
+  "Desenredando",
+  "Aterrizando ideas",
+  "Dándole vueltas",
+  "Hilando fino",
+  "Meditando",
+  "Calibrando",
+  "Esbozando",
+  "Tejiendo",
+  "Contemplando",
+  "Descifrando",
+  "Orquestando",
+]
+
+/** "Pensando…" con palabra rotativa mientras el root genera. */
+function ThinkingIndicator() {
+  const [word, setWord] = useState(
+    () => THINKING_WORDS[Math.floor(Math.random() * THINKING_WORDS.length)]
+  )
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setWord((prev) => {
+        let next = prev
+        while (next === prev) {
+          next =
+            THINKING_WORDS[Math.floor(Math.random() * THINKING_WORDS.length)]
+        }
+        return next
+      })
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [])
+  return <Shimmer className="text-xs font-medium">{`${word}…`}</Shimmer>
+}
+
 /** Badge discreto con el modelo que emitió el mensaje (icono por proveedor). */
 function ModelBadge({ model }: { model?: string }) {
   if (!model) return null
@@ -944,7 +993,7 @@ export function SiteActivity({
                       height={16}
                       className="size-4 shrink-0"
                     />
-                    <Shimmer className="text-xs font-medium">Pensando…</Shimmer>
+                    <ThinkingIndicator />
                   </div>
                 </MessageScrollerItem>
               )}
