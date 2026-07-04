@@ -1109,6 +1109,9 @@ export function SiteActivity({
                 size="icon-xs"
                 onClick={onClose}
                 aria-label="Cerrar monitor de actividad"
+                // Solo mobile: en desktop el panel se cierra con su trigger
+                // del header de la página.
+                className="md:hidden"
               >
                 <XIcon />
               </Button>

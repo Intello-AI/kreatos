@@ -2,6 +2,7 @@ import { defineTool } from "eve/tools"
 import { z } from "zod"
 
 import { saveQaReport } from "../lib/sites"
+import { repairedRecord } from "../lib/spec-repair"
 
 export default defineTool({
   description:
@@ -9,9 +10,9 @@ export default defineTool({
   inputSchema: z.object({
     siteId: z.string().uuid(),
     versionN: z.number().int().min(1),
-    qaReport: z
-      .record(z.string(), z.unknown())
-      .describe("Contenido de .qa/qa-report.json leído del sandbox."),
+    qaReport: repairedRecord("qaReport").describe(
+      "Contenido de .qa/qa-report.json leído del sandbox (objeto JSON, no string).",
+    ),
   }),
   async execute({ siteId, versionN, qaReport }) {
     await saveQaReport({ siteId, versionN, qaReport })

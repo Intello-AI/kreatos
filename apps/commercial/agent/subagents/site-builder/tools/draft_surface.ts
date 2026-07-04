@@ -36,7 +36,10 @@ function stripFences(text: string): string {
   return match ? match[1] : trimmed
 }
 
-function validate(surface: string, content: string): string | null {
+async function validate(
+  surface: string,
+  content: string,
+): Promise<string | null> {
   if (!content.trim()) return "salida vacía"
   if (surface === "es-json") {
     try {
@@ -45,11 +48,36 @@ function validate(surface: string, content: string): string | null {
       return `JSON inválido: ${e instanceof Error ? e.message.slice(0, 200) : e}`
     }
   }
-  if (
-    (surface === "site-config" || surface === "fonts") &&
-    !/export\s/.test(content)
-  ) {
-    return "el TypeScript no tiene ningún export"
+  if (surface === "site-config" || surface === "fonts") {
+    if (!/export\s/.test(content)) {
+      return "el TypeScript no tiene ningún export"
+    }
+    // Chequeo sintáctico real: atrapa TS roto aquí en vez de esperar al
+    // `pnpm build` del sandbox (feedback mucho más tardío). Si typescript
+    // no está disponible en el runtime, se omite sin fallar.
+    try {
+      const ts = await import("typescript")
+      const { diagnostics } = ts.transpileModule(content, {
+        reportDiagnostics: true,
+        compilerOptions: {
+          target: ts.ScriptTarget.ESNext,
+          module: ts.ModuleKind.ESNext,
+          jsx: ts.JsxEmit.Preserve,
+        },
+      })
+      const syntaxError = diagnostics?.find(
+        (d) => d.category === ts.DiagnosticCategory.Error,
+      )
+      if (syntaxError) {
+        const message = ts.flattenDiagnosticMessageText(
+          syntaxError.messageText,
+          " ",
+        )
+        return `TypeScript con error de sintaxis: ${message.slice(0, 200)}`
+      }
+    } catch {
+      // typescript no disponible en este runtime: lo validará pnpm build
+    }
   }
   if (
     surface === "theme-css" &&
@@ -112,7 +140,7 @@ Devuelve ÚNICAMENTE el contenido completo y final del archivo. Sin markdown fen
         })
       ).text,
     )
-    let problem = validate(surface, result)
+    let problem = await validate(surface, result)
     if (problem) {
       // Fallback: una pasada con mini, informándole el defecto.
       modelUsed = "gpt-5-mini"
@@ -124,7 +152,7 @@ Devuelve ÚNICAMENTE el contenido completo y final del archivo. Sin markdown fen
           })
         ).text,
       )
-      problem = validate(surface, result)
+      problem = await validate(surface, result)
       if (problem) {
         throw new Error(
           `La transcripción no validó ni con fallback (${problem}). Escribe este archivo tú mismo con las herramientas del sandbox.`,

@@ -21,6 +21,13 @@ const LayoutDashboard = async ({ children }: { children: React.ReactNode }) => {
           {/* En mobile el sidebar es un Sheet cerrado: sin este trigger no
               hay forma de abrirlo. En desktop el trigger vive en el sidebar. */}
           <SidebarTrigger size="icon" className="md:hidden" />
+          <Link
+            href="/dashboard"
+            aria-label="Ir al dashboard"
+            className="flex items-center md:hidden"
+          >
+            <Logo className="h-5 w-auto" />
+          </Link>
         </header>
         {children}
       </SidebarInset>

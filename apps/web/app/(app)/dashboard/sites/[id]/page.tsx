@@ -48,8 +48,10 @@ function MetaRow({
   label: string
   children: React.ReactNode
 }) {
+  // Mobile: fila de lista con separador (padding vertical, el divide-y lo
+  // pone el contenedor). Desktop: celda de grid compacta sin padding.
   return (
-    <div className="space-y-0.5">
+    <div className="space-y-0.5 py-2.5 md:py-0">
       <p className="text-xs text-muted-foreground">{label}</p>
       <div className="text-sm">{children}</div>
     </div>
@@ -107,7 +109,7 @@ export default async function SiteDetailPage({
           <div className="mx-auto w-full max-w-4xl space-y-6 p-4 py-6">
             {/* Header estilo deployment: título + status + acciones primarias */}
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0 space-y-1">
+              <div className="w-full min-w-0 space-y-1 md:w-auto md:flex-1">
                 <div className="flex items-center gap-3">
                   <Link
                     href="/dashboard/sites"
@@ -123,6 +125,13 @@ export default async function SiteDetailPage({
                     </h1>
                   </Link>
                   <SiteStatusBadge status={site.status} />
+                  {/* En mobile el trigger del chat vive en la línea del
+                      título; en desktop en el grupo de acciones. */}
+                  {runIds.length > 0 && (
+                    <span className="ml-auto shrink-0 md:hidden">
+                      <SiteActivityTrigger />
+                    </span>
+                  )}
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {site.slug}
@@ -142,7 +151,11 @@ export default async function SiteDetailPage({
                     </Link>
                   </Button>
                 )}
-                {runIds.length > 0 && <SiteActivityTrigger />}
+                {runIds.length > 0 && (
+                  <span className="hidden md:inline-flex">
+                    <SiteActivityTrigger />
+                  </span>
+                )}
               </div>
             </div>
 
@@ -172,7 +185,7 @@ export default async function SiteDetailPage({
                 )}
               </div>
 
-              <div className="grid flex-1 grid-cols-2 content-start gap-4">
+              <div className="grid flex-1 grid-cols-1 content-start divide-y md:grid-cols-2 md:gap-4 md:divide-y-0">
                 <MetaRow label="Creado">{formatDate(site.created_at)}</MetaRow>
                 <MetaRow label="Estado">
                   <SiteStatusBadge status={site.status} />
@@ -195,7 +208,7 @@ export default async function SiteDetailPage({
                   {(site.brief as { referenceSlug?: string })?.referenceSlug ||
                     "Automática"}
                 </MetaRow>
-                <div className="col-span-2">
+                <div className="md:col-span-2">
                   <MetaRow label="Dominios">
                     <div className="space-y-1">
                       {site.deploy_url && (
@@ -231,7 +244,7 @@ export default async function SiteDetailPage({
                     </div>
                   </MetaRow>
                 </div>
-                <div className="col-span-2">
+                <div className="md:col-span-2">
                   <MetaRow label="Repositorio">
                     {!site.repo_url && generating ? (
                       <Skeleton className="h-4 w-56" />

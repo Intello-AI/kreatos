@@ -44,8 +44,10 @@ function MetaRow({
   label: string
   children: React.ReactNode
 }) {
+  // Mobile: fila de lista con separador (padding vertical, el divide-y lo
+  // pone el contenedor). Desktop: celda de grid compacta sin padding.
   return (
-    <div className="space-y-0.5">
+    <div className="space-y-0.5 py-2.5 md:py-0">
       <p className="text-xs text-muted-foreground">{label}</p>
       <div className="text-sm">{children}</div>
     </div>
@@ -92,7 +94,7 @@ export default async function LeadDetailPage({
           <div className="mx-auto w-full max-w-4xl space-y-6 p-4 py-6">
             {/* Header estilo detalle: flecha+título clickable, status, acciones */}
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0 space-y-1">
+              <div className="w-full min-w-0 space-y-1 md:w-auto md:flex-1">
                 <div className="flex items-center gap-3">
                   <Link
                     href="/dashboard/leads"
@@ -108,6 +110,11 @@ export default async function LeadDetailPage({
                     </h1>
                   </Link>
                   <LeadStatusSelect leadId={lead.id} status={lead.status} />
+                  {/* En mobile el trigger del chat vive en la línea del
+                      título; en desktop en el grupo de acciones. */}
+                  <span className="ml-auto shrink-0 md:hidden">
+                    <LeadBrandTrigger label="Abrir o cerrar el chat de marca" />
+                  </span>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {[lead.category, lead.city].filter(Boolean).join(" · ")}
@@ -136,12 +143,14 @@ export default async function LeadDetailPage({
                 ) : (
                   <GenerateSiteDialog leadId={lead.id} leadName={lead.name} />
                 )}
-                <LeadBrandTrigger label="Abrir o cerrar el chat de marca" />
+                <span className="hidden md:inline-flex">
+                  <LeadBrandTrigger label="Abrir o cerrar el chat de marca" />
+                </span>
               </div>
             </div>
 
             {/* Datos del negocio */}
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+            <div className="grid grid-cols-1 divide-y md:grid-cols-3 md:gap-4 md:divide-y-0">
               <MetaRow label="Teléfono">{lead.phone ?? "—"}</MetaRow>
               <MetaRow label="Email">{lead.email ?? "—"}</MetaRow>
               <MetaRow label="Rating">
@@ -179,12 +188,12 @@ export default async function LeadDetailPage({
                 )}
               </MetaRow>
               {lead.description && (
-                <div className="col-span-2 md:col-span-3">
+                <div className="md:col-span-3">
                   <MetaRow label="Descripción">{lead.description}</MetaRow>
                 </div>
               )}
               {lead.notes && (
-                <div className="col-span-2 md:col-span-3">
+                <div className="md:col-span-3">
                   <MetaRow label="Notas">
                     <p className="whitespace-pre-wrap text-muted-foreground">
                       {lead.notes}
@@ -221,7 +230,7 @@ export default async function LeadDetailPage({
                 </Empty>
               ) : (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+                  <div className="grid grid-cols-1 divide-y md:grid-cols-3 md:gap-4 md:divide-y-0">
                     <MetaRow label="Nombre corto">
                       {brand.short_name ?? "—"}
                     </MetaRow>
@@ -289,7 +298,7 @@ export default async function LeadDetailPage({
                       )}
                     </MetaRow>
                     {brand.services.length > 0 && (
-                      <div className="col-span-2 md:col-span-3">
+                      <div className="md:col-span-3">
                         <MetaRow label="Servicios">
                           <span className="flex flex-wrap gap-1.5">
                             {brand.services.map((service) => (
@@ -306,7 +315,7 @@ export default async function LeadDetailPage({
                       </div>
                     )}
                     {brand.differentiators && (
-                      <div className="col-span-2 md:col-span-3">
+                      <div className="md:col-span-3">
                         <MetaRow label="Diferenciadores">
                           {brand.differentiators}
                         </MetaRow>

@@ -303,6 +303,11 @@ para decisiones que esta política no cubre.
 - Contact form con Resend solo si `brief.flags.contactForm` lo pide.
 - Si una herramienta falla por configuración (token faltante), repórtalo y
   detente; no reintentes en bucle.
+- **Si un tool rechaza tu input por validación 2 veces, NUNCA reenvíes el
+  mismo payload**: reconstruye el input desde cero prestando atención al tipo
+  exacto que pide el schema (los objetos van como JSON con comillas dobles,
+  jamás como string serializado). Reintentar idéntico un input rechazado es
+  siempre un error tuyo, no del tool.
 - **Diagnóstico de builds/deploys fallidos**: usa `get_deployment_logs` (va
   autenticado con el token de Vercel). NUNCA intentes leer dashboards de
   Vercel o GitHub con `web_fetch`: requieren sesión y siempre devuelven
