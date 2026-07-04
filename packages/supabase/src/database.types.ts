@@ -145,6 +145,10 @@ export type Database = {
           colors: Json
           created_at: string
           differentiators: string | null
+          eve_run_ids: string[]
+          eve_session_id: string | null
+          icon_path: string | null
+          images: Json
           lead_id: string
           logo_path: string | null
           notes: string | null
@@ -157,6 +161,10 @@ export type Database = {
           colors?: Json
           created_at?: string
           differentiators?: string | null
+          eve_run_ids?: string[]
+          eve_session_id?: string | null
+          icon_path?: string | null
+          images?: Json
           lead_id: string
           logo_path?: string | null
           notes?: string | null
@@ -169,6 +177,10 @@ export type Database = {
           colors?: Json
           created_at?: string
           differentiators?: string | null
+          eve_run_ids?: string[]
+          eve_session_id?: string | null
+          icon_path?: string | null
+          images?: Json
           lead_id?: string
           logo_path?: string | null
           notes?: string | null

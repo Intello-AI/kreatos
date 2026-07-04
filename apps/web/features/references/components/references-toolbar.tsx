@@ -67,7 +67,7 @@ export function ReferencesComposer({ pendingCount }: { pendingCount: number }) {
   }
 
   return (
-    <InputGroup>
+    <InputGroup aria-disabled={adding || analyzing}>
       <InputGroupTextarea
         value={urls}
         onChange={(e) => setUrls(e.target.value)}

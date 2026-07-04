@@ -11,6 +11,7 @@ import {
   GlobeIcon,
   ListChecksIcon,
   MagnifyingGlassIcon,
+  PaperclipIcon,
   PaperPlaneRightIcon,
   QuestionIcon,
   RobotIcon,
@@ -27,6 +28,16 @@ import { answerSiteInput, sendSiteMessage } from "@/features/sites/actions"
 import { Shimmer } from "@/components/ai-elements/shimmer"
 import { formatTime as formatTimeInUserTz } from "@/lib/dates"
 import { cn } from "@/lib/utils"
+import {
+  Attachment,
+  AttachmentAction,
+  AttachmentActions,
+  AttachmentContent,
+  AttachmentDescription,
+  AttachmentGroup,
+  AttachmentMedia,
+  AttachmentTitle,
+} from "@/components/ui/attachment"
 import { Bubble, BubbleContent, BubbleQuote } from "@/components/ui/bubble"
 import {
   Collapsible,
@@ -207,14 +218,30 @@ function ToolIcon({
  * Detecta el formato de respuesta-a-pregunta que genera answerSiteInput
  * («pregunta»: respuesta) para renderizarlo como cita estilo WhatsApp.
  */
-function parseUserReply(label: string): { quote?: string; text: string } {
+function parseUserReply(label: string): {
+  quote?: string
+  text: string
+  images: string[]
+} {
   // El tag [Contexto: ...] es transporte para el agente; no se muestra.
   const clean = label.replace(/^\[Contexto:[^\]]*\]\s*/, "")
-  const match = clean.match(
+
+  // Las URLs de adjuntos viajan en el texto (el agente las necesita), pero
+  // se renderizan como thumbnails, no como links crudos.
+  const imgRe = /^https?:\/\/\S+\.(?:png|jpe?g|webp|gif|svg)(?:\?\S*)?$/i
+  const headerRe = /^Te adjunté \d+ archivo\(s\):$/
+  const lines = clean.split("\n")
+  const images = lines.filter((l) => imgRe.test(l.trim())).map((l) => l.trim())
+  const text = lines
+    .filter((l) => !imgRe.test(l.trim()) && !headerRe.test(l.trim()))
+    .join("\n")
+    .trim()
+
+  const match = text.match(
     /^Respondiendo a la pregunta pendiente \(«([\s\S]+?)»\):\s*([\s\S]*)$/
   )
-  if (!match) return { text: clean }
-  return { quote: match[1], text: match[2] }
+  if (!match) return { text, images }
+  return { quote: match[1], text: match[2], images }
 }
 
 function formatTime(at: string): string {
@@ -222,16 +249,36 @@ function formatTime(at: string): string {
   return formatTimeInUserTz(at)
 }
 
+export interface ActivityHandlers {
+  send: (text: string) => Promise<{ formError?: string } | void>
+  answer: (
+    requestId: string,
+    text: string,
+    prompt?: string
+  ) => Promise<{ formError?: string } | void>
+  /** Sube archivos y devuelve URLs públicas (activa el clip del composer). */
+  upload?: (files: File[]) => Promise<{ formError?: string; urls?: string[] }>
+}
+
 export function SiteActivity({
   runIds,
   siteId,
   onClose,
+  handlers,
+  hideHeader = false,
 }: {
   /** Cadena completa de runs de la sesión, en orden; el último es el vivo. */
   runIds: string[]
   siteId: string
   /** Si viene, muestra botón de colapsar en el header (modo aside desktop). */
   onClose?: () => void
+  /**
+   * Overrides de envío/respuesta (default: acciones del sitio). Permite
+   * montar el mismo chat sobre otra sesión eve (p. ej. marca de un lead).
+   */
+  handlers?: ActivityHandlers
+  /** Oculta el header propio (cuando el host ya pone título, p. ej. sheet). */
+  hideHeader?: boolean
 }) {
   const router = useRouter()
   const [items, setItems] = useState<ActivityItem[]>([])
@@ -565,24 +612,73 @@ export function SiteActivity({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [historyLoaded, runIdsKey])
 
+  // Adjuntos (solo si el host provee upload): al elegirlos quedan staged
+  // como Attachments sobre el composer; se suben y viajan CON el mensaje.
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [staged, setStaged] = useState<
+    Array<{ id: string; file: File; previewUrl: string | null }>
+  >([])
+  const onFiles = (files: FileList | null) => {
+    if (!files?.length || !handlers?.upload) return
+    setStaged((prev) => [
+      ...prev,
+      ...Array.from(files).map((file) => ({
+        id: `${file.name}-${file.size}-${file.lastModified}`,
+        file,
+        previewUrl: file.type.startsWith("image/")
+          ? URL.createObjectURL(file)
+          : null,
+      })),
+    ])
+  }
+  const removeStaged = (id: string) => {
+    setStaged((prev) => {
+      const target = prev.find((s) => s.id === id)
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl)
+      return prev.filter((s) => s.id !== id)
+    })
+  }
+  const clearStaged = () => {
+    setStaged((prev) => {
+      for (const s of prev) if (s.previewUrl) URL.revokeObjectURL(s.previewUrl)
+      return []
+    })
+  }
+
   const onSend = () => {
-    const text = message
     const answering = pendingInput
+    const files = staged
     startTransition(async () => {
+      // Si hay adjuntos: primero se suben, y sus URLs viajan en el texto.
+      let text = message
+      if (files.length > 0 && handlers?.upload) {
+        const up = await handlers.upload(files.map((s) => s.file))
+        if (up.formError) {
+          toast.error(up.formError)
+          return
+        }
+        const listing = `Te adjunté ${files.length} archivo(s):\n${(up.urls ?? []).join("\n")}`
+        text = text.trim() ? `${text.trim()}\n${listing}` : listing
+      }
       // Con pregunta pendiente, la respuesta va al input request (reanuda el
       // turno pausado con contexto); si no, mensaje normal a la sesión.
       const result = answering
-        ? await answerSiteInput(
-            siteId,
-            answering.requestId,
-            text,
-            answering.prompt
-          )
-        : await sendSiteMessage(siteId, text)
+        ? await (handlers?.answer
+            ? handlers.answer(answering.requestId, text, answering.prompt)
+            : answerSiteInput(
+                siteId,
+                answering.requestId,
+                text,
+                answering.prompt
+              ))
+        : await (handlers?.send
+            ? handlers.send(text)
+            : sendSiteMessage(siteId, text))
       if (result?.formError) {
         toast.error(result.formError)
       } else {
         setMessage("")
+        clearStaged()
         // La respuesta viaja también como message del turno, así que aparece
         // en el stream como burbuja tuya — sin push local.
         if (answering) setPendingInput(null)
@@ -592,6 +688,7 @@ export function SiteActivity({
       composerRef.current?.focus()
     })
   }
+  const canSend = !pending && (message.trim().length >= 3 || staged.length > 0)
 
   // Estructura estilo Claude Code:
   // - acciones consecutivas del root → grupo colapsable ("actions")
@@ -638,44 +735,49 @@ export function SiteActivity({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 items-start justify-between gap-2 p-3">
-        <div>
-          <h2 className="text-sm font-medium">Monitor de actividad</h2>
-          <p className="text-xs text-muted-foreground">
-            Revisa que está haciendo el agente, puedes enviarle mensajes debajo.
-          </p>
-        </div>
-        <div className="flex items-center gap-1">
-          <Badge
-            variant="outline"
-            className={cn(
-              "gap-1.5",
-              connected ? "border-none bg-success/30" : "bg-muted-foreground/40"
-            )}
-          >
-            <span
-              aria-hidden
+      {!hideHeader && (
+        <div className="flex shrink-0 items-start justify-between gap-2 p-3">
+          <div>
+            <h2 className="text-sm font-medium">Monitor de actividad</h2>
+            <p className="text-xs text-muted-foreground">
+              Revisa que está haciendo el agente, puedes enviarle mensajes
+              debajo.
+            </p>
+          </div>
+          <div className="flex items-center gap-1">
+            <Badge
+              variant="outline"
               className={cn(
-                "size-1.5 rounded-full",
+                "gap-1.5",
                 connected
-                  ? "animate-pulse bg-success"
+                  ? "border-none bg-success/30"
                   : "bg-muted-foreground/40"
               )}
-            />
-            {connected ? "En vivo" : "Dormido"}
-          </Badge>
-          {onClose && (
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={onClose}
-              aria-label="Cerrar monitor de actividad"
             >
-              <XIcon />
-            </Button>
-          )}
+              <span
+                aria-hidden
+                className={cn(
+                  "size-1.5 rounded-full",
+                  connected
+                    ? "animate-pulse bg-success"
+                    : "bg-muted-foreground/40"
+                )}
+              />
+              {connected ? "En vivo" : "Dormido"}
+            </Badge>
+            {onClose && (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={onClose}
+                aria-label="Cerrar monitor de actividad"
+              >
+                <XIcon />
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       <MessageScrollerProvider defaultScrollPosition="end" autoScroll>
         <MessageScroller className="min-h-0 flex-1 border-t">
@@ -700,7 +802,9 @@ export function SiteActivity({
               )}
               {blocks.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Conectando al stream…
+                  {runIds.length === 0
+                    ? "Sin conversación todavía — escríbele abajo para empezar."
+                    : "Conectando al stream…"}
                 </p>
               ) : (
                 blocks.map((block) =>
@@ -744,7 +848,7 @@ export function SiteActivity({
             </Button>
           </div>
         )}
-        <InputGroup className="shrink-0">
+        <InputGroup className="shrink-0 border-x-0">
           <InputGroupTextarea
             ref={composerRef}
             placeholder={
@@ -755,6 +859,15 @@ export function SiteActivity({
             aria-label="Mensaje para el agente"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
+            onPaste={(e) => {
+              // Pegar imágenes directo (Cmd+V) cuando hay upload: quedan
+              // staged como cualquier adjunto del clip.
+              const files = e.clipboardData?.files
+              if (files?.length && handlers?.upload) {
+                e.preventDefault()
+                onFiles(files)
+              }
+            }}
             rows={2}
             disabled={pending}
             autoFocus
@@ -777,17 +890,74 @@ export function SiteActivity({
               } else if (!e.shiftKey) {
                 // Enter: enviar. Shift+Enter conserva el salto nativo.
                 e.preventDefault()
-                if (!pending && message.trim().length >= 3) onSend()
+                if (canSend) onSend()
               }
             }}
           />
+          {staged.length > 0 && (
+            <InputGroupAddon align="block-start">
+              <AttachmentGroup className="w-full">
+                {staged.map((item) => (
+                  <Attachment key={item.id} size="sm" state="idle">
+                    <AttachmentMedia variant={item.previewUrl ? "image" : "icon"}>
+                      {item.previewUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={item.previewUrl} alt={item.file.name} />
+                      ) : (
+                        <FileTextIcon />
+                      )}
+                    </AttachmentMedia>
+                    <AttachmentContent>
+                      <AttachmentTitle>{item.file.name}</AttachmentTitle>
+                      <AttachmentDescription>
+                        {(item.file.size / 1024).toFixed(0)} KB
+                      </AttachmentDescription>
+                    </AttachmentContent>
+                    <AttachmentActions>
+                      <AttachmentAction
+                        aria-label={`Quitar ${item.file.name}`}
+                        onClick={() => removeStaged(item.id)}
+                        disabled={pending}
+                      >
+                        <XIcon />
+                      </AttachmentAction>
+                    </AttachmentActions>
+                  </Attachment>
+                ))}
+              </AttachmentGroup>
+            </InputGroupAddon>
+          )}
           <InputGroupAddon align="block-end">
+            {handlers?.upload && (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,.svg,.pdf"
+                  className="hidden"
+                  onChange={(e) => {
+                    onFiles(e.target.files)
+                    e.target.value = ""
+                  }}
+                />
+                <InputGroupButton
+                  size="icon-sm"
+                  variant="ghost"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={pending}
+                  aria-label="Adjuntar archivos"
+                >
+                  <PaperclipIcon />
+                </InputGroupButton>
+              </>
+            )}
             <InputGroupButton
               size="icon-sm"
               variant={"default"}
               className="ml-auto"
               onClick={onSend}
-              disabled={pending || message.trim().length < 3}
+              disabled={!canSend}
               aria-label="Enviar mensaje al agente"
             >
               {pending ? <Spinner /> : <PaperPlaneRightIcon />}
@@ -1077,7 +1247,7 @@ function BlockItem({ item }: { item: ActivityItem }) {
     <MessageScrollerItem messageId={item.id}>
       {item.kind === "user" ? (
         (() => {
-          const { quote, text } = parseUserReply(item.label)
+          const { quote, text, images } = parseUserReply(item.label)
           return (
             <Message align="end">
               <MessageContent>
@@ -1091,9 +1261,33 @@ function BlockItem({ item }: { item: ActivityItem }) {
                     {quote}
                   </BubbleQuote>
                 )}
-                <Bubble variant="default" align="end">
-                  <BubbleContent>{text}</BubbleContent>
-                </Bubble>
+                {images.length > 0 && (
+                  // Adjuntos como thumbnails (estilo app de Claude), no URLs.
+                  <div className="flex flex-wrap justify-end gap-1.5">
+                    {images.map((url) => (
+                      <a
+                        key={url}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block size-16 overflow-hidden border bg-background"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={url}
+                          alt="Adjunto"
+                          className="size-full object-cover"
+                          loading="lazy"
+                        />
+                      </a>
+                    ))}
+                  </div>
+                )}
+                {text && (
+                  <Bubble variant="default" align="end">
+                    <BubbleContent>{text}</BubbleContent>
+                  </Bubble>
+                )}
               </MessageContent>
             </Message>
           )

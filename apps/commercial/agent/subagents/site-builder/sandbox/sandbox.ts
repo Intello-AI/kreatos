@@ -13,13 +13,24 @@ import { defineSandbox, defaultBackend } from "eve/sandbox"
  */
 export default defineSandbox({
   backend: defaultBackend(),
-  revalidationKey: () => "site-builder-v1",
+  revalidationKey: () => "site-builder-v2",
   async bootstrap({ use }) {
     const sandbox = await use()
     // La imagen base puede no traer pnpm; corepack lo habilita sin red extra.
     await sandbox.run({
       command:
         "command -v pnpm >/dev/null 2>&1 || (corepack enable && corepack prepare pnpm@latest --activate) || npm install -g pnpm",
+    })
+    // ffmpeg para optimizar imágenes (webp, resize). Best-effort en orden:
+    // gestor de paquetes de la imagen (apt/dnf) y, si no hay, build estático.
+    await sandbox.run({
+      command: [
+        "command -v ffmpeg >/dev/null 2>&1",
+        "(apt-get update -qq && apt-get install -yqq ffmpeg) >/dev/null 2>&1",
+        "(dnf install -yq ffmpeg 2>/dev/null || sudo dnf install -yq ffmpeg 2>/dev/null)",
+        "(curl -fsSL https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -o /tmp/ffmpeg.tar.xz && tar -xJf /tmp/ffmpeg.tar.xz -C /tmp && (install -m 755 /tmp/ffmpeg-*-amd64-static/ffmpeg /usr/local/bin/ffmpeg 2>/dev/null || sudo install -m 755 /tmp/ffmpeg-*-amd64-static/ffmpeg /usr/local/bin/ffmpeg))",
+        "echo 'ffmpeg no disponible (continuar sin optimizacion)'",
+      ].join(" || "),
     })
   },
 })

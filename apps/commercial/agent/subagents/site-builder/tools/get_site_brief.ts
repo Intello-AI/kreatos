@@ -45,6 +45,10 @@ export default defineTool({
       brand?.logo_path && supabaseUrl
         ? `${supabaseUrl}/storage/v1/object/public/brand-assets/${brand.logo_path}`
         : null
+    const iconUrl =
+      brand?.icon_path && supabaseUrl
+        ? `${supabaseUrl}/storage/v1/object/public/brand-assets/${brand.icon_path}`
+        : null
 
     const [latestVersion, presets, references, siblings] = await Promise.all([
       getLatestVersion(siteId),
@@ -70,7 +74,7 @@ export default defineTool({
       lead,
       // null = José no ha llenado la ficha; aplica la política de datos
       // faltantes. Con brand: shortName/colores/logo son OBLIGATORIOS de usar.
-      brand: brand ? { ...brand, logoUrl } : null,
+      brand: brand ? { ...brand, logoUrl, iconUrl } : null,
       latestSpec: latestVersion?.spec ?? null,
       latestVersionN: latestVersion?.version_n ?? null,
       presets,

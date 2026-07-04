@@ -125,7 +125,7 @@ export default async function ReferencesPage() {
 
       {/* Composer estilo chat, pegado abajo */}
       <div className="sticky bottom-0 bg-background">
-        <div className="z-10 mx-auto w-full max-w-6xl p-3">
+        <div className="z-10 mx-auto w-full max-w-6xl">
           <ReferencesComposer pendingCount={pendingCount} />
         </div>
       </div>

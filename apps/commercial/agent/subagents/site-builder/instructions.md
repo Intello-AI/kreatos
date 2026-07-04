@@ -28,6 +28,10 @@ template de kreatos; tú lo personalizas, no lo reinventas.
    - `logoUrl`: en fase build descárgalo al sandbox
      (`curl -o public/images/logo.<ext> <url>`), decláralo en
      `business.logo` y úsalo en el header.
+   - `iconUrl` (isotipo cuadrado elegido por el curador): descárgalo a
+     `public/images/icon.<ext>` y decláralo en `business.icon` — el motor
+     genera favicon y apple-icon desde ahí (convenciones de Next). Sin
+     isotipo, el motor cae al monograma con los colores del theme.
    Si `brand` es null, aplica la política de datos faltantes (nunca inventes
    logo ni nombre corto que el negocio no usa).
 2c. **Secciones custom — tu herramienta contra lo genérico.** El template
@@ -129,6 +133,13 @@ para decisiones que esta política no cubre.
   Vercel o GitHub con `web_fetch`: requieren sesión y siempre devuelven
   403/404. Si el sitio viejo de un lead (rediseño) devuelve 403/404 al
   fetchearlo, continúa sin él — los datos del lead bastan.
+- **Optimiza toda imagen raster antes de commitearla** (el sandbox trae
+  ffmpeg): convierte a webp con calidad ~80 y limita el lado mayor a 1920px
+  (heros) o 1200px (secciones). Ejemplo:
+  `ffmpeg -y -i in.jpg -vf "scale='min(1920,iw)':-2" -quality 80 public/images/hero.webp`.
+  Los SVG (logos/isotipos) se copian tal cual, nunca se rasterizan. Si
+  ffmpeg no está disponible, continúa sin optimizar y anótalo en el
+  changelog.
 - En el bash del sandbox no hay stdin: nunca uses comandos que lean de stdin
   (`head`/`cat`/`grep` sin archivo, pipes rotos) — se cuelgan y congelan la
   sesión. Pasa siempre el archivo como argumento y termina pipes con un
