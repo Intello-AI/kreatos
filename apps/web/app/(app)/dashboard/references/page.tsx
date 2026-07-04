@@ -87,7 +87,9 @@ export default async function ReferencesPage() {
                     title={`Preview de ${ref.slug}`}
                     screenshotUrl={
                       ref.screenshot_path
-                        ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/design-references/${ref.screenshot_path}`
+                        ? // card.png = viewport-only: el full-page (miles de px
+                          // de alto × 26 cards) crasheaba Safari iOS por memoria.
+                          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/design-references/${ref.screenshot_path.replace(/desktop\.png$/, "card.png")}`
                         : null
                     }
                   />

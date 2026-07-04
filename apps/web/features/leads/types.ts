@@ -16,7 +16,13 @@ export type LeadStatus = (typeof LEAD_STATUSES)[number]
  */
 export type Lead = Omit<Tables<"leads">, "status"> & {
   status: LeadStatus
-  sites: { id: string } | null
+  sites: { id: string; status: string } | null
+  /** Ficha de marca 1:1 (null si el brand-curator no la ha armado). */
+  lead_brand: {
+    short_name: string | null
+    logo_path: string | null
+    colors: string[] | null
+  } | null
 }
 
 /** Hito o nota en el timeline de un lead (tabla lead_activity). */

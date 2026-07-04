@@ -33,8 +33,9 @@ export async function getLeads({
   let query = supabase
     .from("leads")
     .select(
-      // sites(id): 1:1 por lead — decide "Generar sitio" vs "Ver sitio".
-      "id, place_id, name, category, business_type, google_types, description, address, phone, email, rating, reviews_count, maps_uri, city, status, status_updated_at, notes, site_instructions, fetched_at, created_at, website, sites(id)",
+      // sites: 1:1 por lead — decide "Generar sitio" vs "Ver sitio" y pinta
+      // su status. lead_brand: la ficha de marca (columna Marca).
+      "id, place_id, name, category, business_type, google_types, description, address, phone, email, rating, reviews_count, maps_uri, city, status, status_updated_at, notes, site_instructions, fetched_at, created_at, website, sites(id, status), lead_brand(short_name, logo_path, colors)",
       { count: "exact" }
     )
 
@@ -66,6 +67,9 @@ export async function getLeads({
   const leads = (data ?? []).map((row) => ({
     ...row,
     sites: Array.isArray(row.sites) ? (row.sites[0] ?? null) : row.sites,
+    lead_brand: Array.isArray(row.lead_brand)
+      ? (row.lead_brand[0] ?? null)
+      : row.lead_brand,
   })) as unknown as Lead[]
   return { leads, count: count ?? 0, error: null }
 }

@@ -39,11 +39,15 @@ export default defineTool({
       // solo y el agente captura varias referencias en paralelo — /tmp/
       // desktop.png compartido mezclaba screenshots entre referencias (la
       // card de una mostraba la captura de otra).
-      { name: "desktop", file: `${slug}-desktop`, viewport: "1440,900" },
-      { name: "mobile", file: `${slug}-mobile`, viewport: "390,844" },
+      { name: "desktop", file: `${slug}-desktop`, viewport: "1440,900", fullPage: true },
+      { name: "mobile", file: `${slug}-mobile`, viewport: "390,844", fullPage: true },
+      // card: SOLO el viewport (sin full-page) para la miniatura del
+      // dashboard — los full-page de miles de px reventaban Safari iOS
+      // (decode de 26 imágenes gigantes = crash por memoria).
+      { name: "card", file: `${slug}-card`, viewport: "1280,800", fullPage: false },
     ]
     for (const shot of shots) {
-      const shotCommand = `cd /tmp && pnpm dlx playwright@1.61.1 screenshot --viewport-size="${shot.viewport}" --full-page --wait-for-timeout=4000 "${url}" ${shot.file}.png`
+      const shotCommand = `cd /tmp && pnpm dlx playwright@1.61.1 screenshot --viewport-size="${shot.viewport}"${shot.fullPage ? " --full-page" : ""} --wait-for-timeout=4000 "${url}" ${shot.file}.png`
       let capture = await sandbox.run({ command: shotCommand })
       // Self-healing: si el snapshot del sandbox se cacheó sin chromium o
       // sin las libs del sistema (browser descargado que muere con "error
@@ -65,10 +69,13 @@ export default defineTool({
           `La captura ${shot.name} falló (exit ${capture.exitCode}): ${[capture.stderr, capture.stdout].filter(Boolean).join("\n").slice(-500)}`,
         )
       }
-      // Versión reducida para visión (el full-page puede pesar >8MB).
-      await sandbox.run({
-        command: `cd /tmp && (ffmpeg -y -i ${shot.file}.png -vf "scale='min(1100,iw)':-2" -q:v 6 ${shot.file}.review.jpg 2>/dev/null || cp ${shot.file}.png ${shot.file}.review.jpg)`,
-      })
+      // Versión reducida para visión (el full-page puede pesar >8MB). La
+      // card no va a visión: es solo la miniatura del dashboard.
+      if (shot.fullPage) {
+        await sandbox.run({
+          command: `cd /tmp && (ffmpeg -y -i ${shot.file}.png -vf "scale='min(1100,iw)':-2" -q:v 6 ${shot.file}.review.jpg 2>/dev/null || cp ${shot.file}.png ${shot.file}.review.jpg)`,
+        })
+      }
     }
 
     const supabase = getSupabaseClient()
@@ -89,6 +96,7 @@ export default defineTool({
       publicUrls[shot.name] =
         `${supabaseUrl}/storage/v1/object/public/design-references/${path}`
 
+      if (!shot.fullPage) continue
       const review = await sandbox.readBinaryFile({
         path: `/tmp/${shot.file}.review.jpg`,
       })

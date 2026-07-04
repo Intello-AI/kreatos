@@ -5,19 +5,31 @@ export interface SiteWithLead extends Site {
   leads: { name: string | null; city: string; place_id: string } | null
 }
 
-/** Lista de sitios con su lead, más recientes primero. Server-only. */
+export interface SiteListRow extends SiteWithLead {
+  /** Última versión embebida (limit 1 desc) — para el link de preview. */
+  site_versions: { preview_url: string | null; version_n: number }[]
+}
+
+/** Lista de sitios con su lead y última versión, más recientes primero. */
 export async function getSites(): Promise<{
-  sites: SiteWithLead[]
+  sites: SiteListRow[]
   error: string | null
 }> {
   const supabase = getAdminClient()
   const { data, error } = await supabase
     .from("sites")
-    .select("*, leads(name, city, place_id)")
+    .select(
+      "*, leads(name, city, place_id), site_versions(preview_url, version_n)"
+    )
     .order("created_at", { ascending: false })
+    .order("version_n", {
+      referencedTable: "site_versions",
+      ascending: false,
+    })
+    .limit(1, { referencedTable: "site_versions" })
 
   if (error) return { sites: [], error: error.message }
-  return { sites: (data ?? []) as SiteWithLead[], error: null }
+  return { sites: (data ?? []) as SiteListRow[], error: null }
 }
 
 /** Un sitio con lead y todas sus versiones. Server-only. */

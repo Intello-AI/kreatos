@@ -189,7 +189,7 @@ const TOOL_LABELS: Record<
   },
 }
 
-function describeAction(action: Record<string, unknown>): {
+export function describeAction(action: Record<string, unknown>): {
   label: string
   detail?: string
   toolName?: string

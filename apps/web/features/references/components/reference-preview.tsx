@@ -30,9 +30,13 @@ export function ReferencePreview({
   const [loaded, setLoaded] = useState(false)
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
+  // Si la captura propia no existe (referencias analizadas antes de que el
+  // scout subiera card.png), se cae al servicio externo en vez de al globo.
+  const [ownFailed, setOwnFailed] = useState(false)
 
+  const own = screenshotUrl && !ownFailed ? screenshotUrl : null
   const src =
-    screenshotUrl ??
+    own ??
     `https://s0.wp.com/mshots/v1/${encodeURIComponent(url)}?w=1280&h=800${
       attempt > 0 ? `&r=${attempt}` : ""
     }`
@@ -40,11 +44,15 @@ export function ReferencePreview({
   const onSettle = (el: HTMLImageElement | null) => {
     if (!el?.complete) return
     if (el.naturalWidth === 0) {
-      setFailed(true)
+      if (own) {
+        setOwnFailed(true)
+      } else {
+        setFailed(true)
+      }
       return
     }
     // Captura real (pedimos 1280); el gif "generando" de mShots es chico.
-    if (screenshotUrl || el.naturalWidth >= 1000) {
+    if (own || el.naturalWidth >= 1000) {
       setLoaded(true)
     } else if (attempt < MAX_ATTEMPTS) {
       setTimeout(() => setAttempt((a) => a + 1), RETRY_MS)
@@ -67,13 +75,13 @@ export function ReferencePreview({
         // El ref cubre imágenes que cargaron antes de la hidratación.
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          key={attempt}
+          key={`${own ? "own" : "ext"}-${attempt}`}
           src={src}
           alt={title}
           loading="lazy"
           ref={onSettle}
           onLoad={(e) => onSettle(e.currentTarget)}
-          onError={() => setFailed(true)}
+          onError={() => (own ? setOwnFailed(true) : setFailed(true))}
           className="h-full w-full object-cover object-top"
         />
       ) : (
