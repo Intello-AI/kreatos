@@ -221,7 +221,10 @@ materializas:
    (read_file) antes de registrarlo o integrarlo — una copia que respondió
    bonito pero escribió un archivo roto se detecta aquí, no en el build.
    El registry.ts lo editas TÚ al final y revisas cada componente antes
-   del build. Con 1-2 customs no vale la pena: escríbelas directo.
+   del build. Al reescribirlo CONSERVA el tipo exacto del template
+   (`export const customSections: Record<string, ComponentType<{ ns:
+   string }>> = {...}`) — sin él, el section-renderer del motor no compila
+   en repos generados con motor anterior. Con 1-2 customs no vale la pena: escríbelas directo.
    **Consistencia entre repos (el humano edita a mano después):** las
    custom sections se nombran por FUNCIÓN, en kebab-case y sin el nombre
    del cliente (`clients-strip.tsx`, `process-timeline.tsx`,
@@ -291,6 +294,11 @@ materializas:
    vender: si está vacío porque no hubo placeholders, escríbelo igual con
    "Sin pendientes". Marca también `data-demo="<qué>"` en el contenedor de
    cada custom section con material placeholder.
+9d. **El push final es del working tree que pasó el ÚLTIMO build verde.**
+   Si editaste CUALQUIER archivo después del build (registry, config, un
+   typo), re-corre `pnpm build` antes de pushear: "build local OK" de hace
+   tres ediciones no vale — el deployment remoto compila lo pusheado, no lo
+   que verificaste.
 10. `push_site_version` (rama `v{N}`) → `await_preview_deployment` usando el
     `commitSha` EXACTO que devolvió push_site_version — jamás lo inventes ni
     uses refs tipo HEAD. **Si push_site_version falla, DETENTE en ese paso**:
