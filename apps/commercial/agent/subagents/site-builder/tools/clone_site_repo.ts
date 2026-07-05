@@ -2,7 +2,7 @@ import { defineTool } from "eve/tools"
 import { z } from "zod"
 
 import { getAuthenticatedCloneUrl, getGithubEnv } from "../lib/github"
-import { waitForRepoUrl } from "../lib/sites"
+import { getLatestVersion, waitForRepoUrl } from "../lib/sites"
 
 export default defineTool({
   description:
@@ -50,13 +50,36 @@ export default defineTool({
       if (fetch.exitCode === 0) resumedFromBranch = branch
     }
 
+    // El spec vigente viaja COMO ARCHIVO junto al código: siempre re-leíble
+    // aunque el contexto del run se compacte o el output de get_site_brief
+    // quede atrás. Vive en .agent/ (excluido del repo por el push tool).
+    let specWritten = false
+    const latest = await getLatestVersion(siteId)
+    if (latest?.spec) {
+      await sandbox.writeTextFile({
+        path: "site/.agent/spec.json",
+        content: JSON.stringify(
+          { versionN: latest.version_n, changelog: latest.changelog, spec: latest.spec },
+          null,
+          2,
+        ),
+      })
+      specWritten = true
+    }
+
     return {
       path: "/workspace/site",
       repo: fullName,
       resumedFromBranch,
-      hint: resumedFromBranch
-        ? `El clone quedó en la rama ${resumedFromBranch} con el trabajo del run anterior (checkpoints): revisa git log y el estado de los archivos antes de re-materializar nada.`
-        : "Clone limpio desde main.",
+      ...(specWritten ? { specFile: "site/.agent/spec.json" } : {}),
+      hint: [
+        resumedFromBranch
+          ? `El clone quedó en la rama ${resumedFromBranch} con el trabajo del run anterior (checkpoints): revisa git log y el estado de los archivos antes de re-materializar nada.`
+          : "Clone limpio desde main.",
+        specWritten
+          ? "El SPEC VIGENTE (del art-director) está en site/.agent/spec.json — es tu ÚNICA fuente al materializar: reléelo con read_file cada vez que dudes del copy, la paleta o las secciones. El demo del template NUNCA es fuente."
+          : "Este site aún no tiene spec guardado (¿falta art-director?).",
+      ].join(" "),
     }
   },
 })
