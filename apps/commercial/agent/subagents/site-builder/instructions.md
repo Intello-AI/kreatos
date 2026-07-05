@@ -368,8 +368,14 @@ materializas:
    `push_site_version` FINAL lo lee — un `approved:false` o cualquier
    `critical` RECHAZA el push (ya no "se anota y continúa").
    - **critical** (roto: overflow, texto cortado, dark mode mal, imágenes
-     deformadas): corrige TODOS, re-corre `pnpm qa` y re-revisa. Un critical
-     NUNCA se entrega — ni con `overrideReview`.
+     deformadas): corrige TODOS, re-corre `pnpm qa` y re-revisa. Prioriza los
+     criticals de algo ROTO. OJO: el reviewer de visión NO es determinista y a
+     veces marca "critical" a un tema estético subjetivo (contraste de un
+     placeholder en dark) distinto en cada pasada — si tras 2 pasadas reales el
+     único critical es de ese tipo (no algo roto de verdad), entrégalo con
+     `overrideReview:true`: el preview es una maqueta que José y site-manager
+     vuelven a gatear antes de publicar. Un critical de algo ROTO sí se corrige,
+     no se overridea.
    - **`approved:false`** (típicamente monotonía de layout o 2+ major):
      RECOMPÓN de verdad — rompe la repetición de arquetipos (alterna
      familias: denso/aireado, cifras/lista, imagen/texto), sube la jerarquía,
@@ -377,6 +383,10 @@ materializas:
      ciclos de rediseño real; si tras esos 2 el review sigue sin aprobar por
      CRITERIO (no por algo roto), pushea con `overrideReview:true` — queda
      anotado que se entregó sin aprobación. No lo uses en el primer intento.
+   - **No hagas `checkpoint:true` justo antes del push final**: el push final
+     entrega el HEAD de la rama (con o sin cambios sin commitear), así que un
+     checkpoint previo no rompe nada — pero tampoco hace falta. Corrige, corre
+     QA+review, y haz directo el push final (`checkpoint:false`).
    - **minor**: anótalos en el changelog, no gastes ciclos.
    Si el paso screenshots del QA falló (sin navegador), anótalo en el
    changelog y continúa — pero nunca lo saltes si los screenshots existen.

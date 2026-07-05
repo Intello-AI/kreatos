@@ -1,6 +1,7 @@
 import { defineTool } from "eve/tools"
 import { z } from "zod"
 
+import { addActivity } from "../../../lib/leads"
 import { getSite } from "../lib/sites"
 
 /**
@@ -63,20 +64,34 @@ export default defineTool({
     const sandbox = await ctx.getSandbox()
 
     const escaped = commitMessage.replace(/"/g, '\\"')
-    // Guard explícito: sin cambios no hay versión que pushear — el error de
-    // "nothing to commit" enterrado en stdout confundía al agente.
+    // Issues del review que se entregan pese al veredicto (overrideReview): se
+    // anotan tras el push para José/site-manager.
+    let openIssues: string[] = []
+    // ¿Hay cambios sin commitear en el working tree?
     const dirty = await sandbox.run({
       command: `cd site && git status --porcelain | head -1`,
     })
-    if (!dirty.stdout.trim()) {
+    const hasChanges = Boolean(dirty.stdout.trim())
+    if (!hasChanges) {
       if (checkpoint) {
         // Checkpoint sin cambios nuevos: no-op amistoso.
         const sha = await sandbox.run({ command: `cd site && git rev-parse HEAD` })
         return { branch, commitSha: sha.stdout.trim(), skipped: true }
       }
-      throw new Error(
-        "No hay cambios que commitear: el working tree está limpio. ¿Aplicaste la personalización sobre el clone? (Si el run anterior murió sin pushear, su trabajo se perdió con su sandbox: re-materializa el spec vigente antes de pushear.)",
-      )
+      // Push FINAL con working tree limpio: NO es error si la rama ya trae el
+      // trabajo materializado en checkpoints previos (el caso normal cuando el
+      // agente hizo checkpoint justo antes de entregar). Solo es error si la
+      // rama no tiene NADA sobre main (de verdad no se materializó nada).
+      const ahead = await sandbox.run({
+        command: `cd site && git fetch -q origin main 2>/dev/null; git rev-list origin/main..HEAD --count 2>/dev/null || echo 0`,
+      })
+      if ((parseInt(ahead.stdout.trim(), 10) || 0) === 0) {
+        throw new Error(
+          "No hay nada que entregar: el working tree está limpio y la rama no tiene commits sobre main. ¿Aplicaste la personalización sobre el clone? (Si el run anterior murió sin pushear, su trabajo se perdió con su sandbox: re-materializa el spec vigente antes de pushear.)",
+        )
+      }
+      // Hay trabajo commiteado en la rama: se corre el resto de gates y se
+      // entrega ese estado (sin re-commitear nada).
     }
     // Guard anti-motor (solo push FINAL): los cambios deben vivir en las
     // superficies del contrato. Motor tocado = el agente adaptó el template
@@ -260,20 +275,36 @@ export default defineTool({
       }
       const issues = Array.isArray(review.issues) ? review.issues : []
       const criticals = issues.filter((i) => i?.severity === "critical")
-      if (criticals.length > 0) {
-        throw new Error(
-          `Push rechazado: el review visual encontró ${criticals.length} issue(s) CRITICAL — nunca se entregan (ni con overrideReview):\n- ${criticals
-            .map((i) => `${i.screen ?? "?"}: ${i.issue ?? ""}`)
-            .join("\n- ")}\nCorrígelos, re-corre \`pnpm qa\` + \`review_screenshots\`, y vuelve a pushear.`,
-        )
-      }
-      if (review.approved === false && !overrideReview) {
-        const majors = issues.filter((i) => i?.severity === "major")
-        throw new Error(
-          `Push rechazado: el review visual NO aprobó el sitio (${review.verdict ?? "sin veredicto"}). ${majors.length} problema(s) major:\n- ${majors
-            .map((i) => `${i.screen ?? "?"}: ${i.issue ?? ""}`)
-            .join("\n- ")}\nRecompón (rompe la monotonía, sube la jerarquía, mete una custom) y re-corre el flujo. Si YA hiciste 2+ rediseños reales y el review sigue sin aprobar por criterio (no por algo roto), pushea con overrideReview:true — queda anotado que se entregó sin aprobación.`,
-        )
+      const majors = issues.filter((i) => i?.severity === "major")
+      // El GATE es por DEFAULT: sin overrideReview, un critical o un
+      // approved:false rechaza el push y fuerza a corregir. overrideReview:true
+      // es el escape del humano tras intentos reales — el PREVIEW es una maqueta
+      // interna que José juzga y que site-manager vuelve a gatear antes de
+      // publicar, así que aquí SÍ puede entregar con issues abiertos (quedan
+      // anotados abajo). El reviewer de visión no es determinista: sin este
+      // escape, un critical subjetivo distinto por pasada dejaba el sitio
+      // inentregable para siempre (pasó con Almex: 3 pasadas, critical nuevo
+      // cada vez).
+      if (!overrideReview) {
+        if (criticals.length > 0) {
+          throw new Error(
+            `Push rechazado: el review visual encontró ${criticals.length} issue(s) CRITICAL:\n- ${criticals
+              .map((i) => `${i.screen ?? "?"}: ${i.issue ?? ""}`)
+              .join("\n- ")}\nCorrígelos, re-corre \`pnpm qa\` + \`review_screenshots\`, y vuelve a pushear. Si YA hiciste 2+ pasadas reales y el reviewer sigue marcando criticals subjetivos (contraste/estética, no algo roto de verdad), entrega con overrideReview:true — el preview es maqueta y tú/site-manager lo gatean después.`,
+          )
+        }
+        if (review.approved === false) {
+          throw new Error(
+            `Push rechazado: el review visual NO aprobó el sitio (${review.verdict ?? "sin veredicto"}). ${majors.length} problema(s) major:\n- ${majors
+              .map((i) => `${i.screen ?? "?"}: ${i.issue ?? ""}`)
+              .join("\n- ")}\nRecompón (rompe la monotonía, sube la jerarquía, mete una custom) y re-corre el flujo. Si YA hiciste 2+ rediseños reales y el review sigue sin aprobar por criterio (no por algo roto), pushea con overrideReview:true — queda anotado que se entregó sin aprobación.`,
+          )
+        }
+      } else if (criticals.length > 0 || review.approved === false) {
+        // Entrega forzada: deja constancia visible para José/site-manager.
+        openIssues = [...criticals, ...majors]
+          .map((i) => `[${i.severity}] ${i.screen ?? "?"}: ${i.issue ?? ""}`)
+          .slice(0, 12)
       }
     }
 
@@ -301,8 +332,14 @@ export default defineTool({
     })
 
     const message = checkpoint ? `wip: ${escaped}` : escaped
+    // Si no hay cambios sin commitear (push final tras un checkpoint), NO se
+    // commitea — se entrega el HEAD que ya trae el trabajo. `git commit` sin
+    // cambios falla y tumbaría el `&&` (el bug que dejó Almex sin entregar).
+    const commitStep = hasChanges
+      ? `git add -A && git commit -m "${message}" && `
+      : ``
     const push = await sandbox.run({
-      command: `cd site && git checkout -B ${branch} && git add -A && git commit -m "${message}" && git push -f origin ${branch}`,
+      command: `cd site && git checkout -B ${branch} && ${commitStep}git push -f origin ${branch}`,
     })
     if (push.exitCode !== 0) {
       throw new Error(
@@ -311,6 +348,21 @@ export default defineTool({
     }
 
     const sha = await sandbox.run({ command: `cd site && git rev-parse HEAD` })
+    // Entrega forzada con issues abiertos (overrideReview): queda en el historial
+    // del lead para que José/site-manager lo vean antes de publicar.
+    if (openIssues.length > 0) {
+      try {
+        await addActivity({
+          leadId: site.lead_id,
+          type: "site_version_created",
+          note: `v${versionN}: PREVIEW entregado con overrideReview pese a ${openIssues.length} issue(s) de review abiertos:\n- ${openIssues.join("\n- ")}`,
+          actor: "site-builder",
+        })
+      } catch {
+        // best-effort: no tumbar la entrega por el registro
+      }
+      return { branch, commitSha: sha.stdout.trim(), deliveredWithOpenIssues: openIssues }
+    }
     return { branch, commitSha: sha.stdout.trim() }
   },
 })
