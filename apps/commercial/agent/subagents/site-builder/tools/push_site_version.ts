@@ -122,6 +122,20 @@ export default defineTool({
           .maybeSingle(),
       ])
       const configLower = config.toLowerCase()
+      // Señales del DEMO más allá del nombre: un sed "López y Asociados" →
+      // "<negocio>" deja el nombre correcto pero el NAP/rating/social del
+      // despacho ficticio — datos FALSOS que el cliente detecta al instante.
+      const demoResidue = [
+        "lopezyasociados",
+        "lopez_ejemplo",
+        "8412973650124873215",
+        "blvd. independencia 1240",
+      ].filter((signal) => configLower.includes(signal))
+      if (demoResidue.length > 0) {
+        throw new Error(
+          `Push rechazado: site.config.ts es el DEMO del template maquillado (residuos: ${demoResidue.join(", ")}). Cambiarle el nombre al demo con sed/replace NO es personalizar: el teléfono, email, dirección, rating y social siguen siendo del despacho ficticio. Re-materializa TODO desde latestSpec (get_site_brief lo trae) — datos del LEAD, no del demo.`,
+        )
+      }
       const names = [lead?.name, brand?.short_name].filter(
         (n): n is string => Boolean(n),
       )

@@ -322,6 +322,11 @@ materializas:
        ("López y Asociados")?
     c. Con checkpoints (`resumedFromBranch` = v{N} y config personalizado):
        CONTINÚA desde ahí — no re-materialices lo que ya está.
+    d'. **PROHIBIDO el sed masivo sobre el demo**: si el config trae a
+    "López y Asociados" (o su email/teléfono/dirección), NO lo parches con
+    replaces de nombre — quedaría el NAP, rating y social del despacho
+    FICTICIO con el nombre de tu cliente encima (push_site_version lo
+    rechaza). El único camino es re-materializar desde latestSpec.
     d. SIN checkpoints (clone desde main = template pelón): re-materializa
        TODO desde `latestSpec` ANTES de cualquier corrección puntual — la
        vía rápida: `fetch_brand_assets` (assets+iconos) + `draft_surface`
