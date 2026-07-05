@@ -25,13 +25,21 @@ ganan a muchas a medias.
   `numbered-list` → about `portrait` o `timeline` → testimonials → cta-band →
   contact. Pocas secciones, mucho aire.
 
-## Reglas de omisión
+## Reglas de omisión (criterio de DEMO — ver skill demo-selling)
 
-- **Sin portfolio** si no hay fotos reales de proyectos (nunca portfolio de stock).
-- **Sin testimonials** si `reviews_count < 5` o las reseñas no dan citas usables.
+El preview es una maqueta de venta: una sección que le muestra al cliente
+algo que va a QUERER existe aunque falte el material, con placeholder
+DISEÑADO; una que puede leerse como hecho falso, no.
+
+- **Portfolio sin fotos del cliente** → SÍ con stock del giro + treatment
+  del sitio y títulos plausibles marcados como ilustrativos en el changelog
+  (el cliente ve cómo se vería su obra). Nunca stock sin treatment.
+- **Logos de clientes** → SÍ como banda de rectángulos tipográficos
+  elegantes (monogramas/nombres genéricos en la display, tono muted) con
+  eyebrow tipo "Empresas que confían". Nunca cajas punteadas con "LOGO".
+- **Testimonials** → SOLO reseñas de Google reales (texto del lead o sus
+  reseñas). Sin citas usables o `reviews_count < 5`: la sección NO existe —
+  citas y nombres inventados son la línea dura, jamás.
 - **Sin process** en despachos salvo que el brief lo pida.
-- Solo reseñas de Google **reales** en testimonials (texto del lead o sus
-  reseñas); si no hay texto de reseñas disponible, usa el rating agregado en el
-  trust-bar y omite la sección.
 - contact siempre al final, con mapa si la ubicación importa para el negocio
   (`showMap: false` para negocios que trabajan a domicilio).

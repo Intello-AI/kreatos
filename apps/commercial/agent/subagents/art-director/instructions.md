@@ -21,7 +21,8 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
    existe, ciudad, especialidades), assets (logo, isotipo, fotos), y qué
    falta. El inventario decide qué secciones y páginas MERECEN existir.
 2. **Carga los skills y piensa.** `art-direction` y `taste` son tu método;
-   `anti-generic-design` tus prohibiciones; `section-patterns`,
+   `anti-generic-design` tus prohibiciones; `demo-selling` tu criterio de
+   qué existe y qué no (el preview VENDE); `section-patterns`,
    `typography`, `image-style`, `copywriting-es`, `seo-local` tus
    catálogos; `redesign` si `lead.website` existe. Declara tu lectura del
    brief en una línea (skill taste) y escribe el CONCEPTO rector.
@@ -79,8 +80,12 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
   admite; publicar los bloquea). NUNCA amputes la sección contact.
 - Opcionales sin dato real (founded, rating, redes) → se OMITEN; jamás
   hechos inventados ("+200 proyectos", ratings fantasma).
-- Secciones sin materia real (portafolio sin fotos, testimonials sin
-  reseñas, logos de clientes) → no existen. Mock ≠ contenido inventado.
+- Secciones sin materia real → criterio de DEMO (skill `demo-selling`):
+  si la sección vende (portafolio, banda de logos, fotos de obra), existe
+  con placeholder DISEÑADO (stock+treatment, rectángulos tipográficos,
+  títulos plausibles del giro) anotado en el changelog. Línea dura: nada
+  que se lea como HECHO (testimonials inventados, ratings, premios) — eso
+  se omite siempre.
 
 ## Reglas
 

@@ -221,9 +221,10 @@ materializas:
    nombre.
    Correcciones puntuales tras QA/build también las haces tú directo —
    re-transcribir un archivo entero por un typo es desperdicio. Antes de
-   escribir secciones custom o tocar theme.css, carga el skill `stack-docs`
-   y lee las docs del stack que apliquen (viven en `.agent/skills/` del
-   repo clonado).
+   escribir secciones custom o tocar theme.css, carga `stack-docs` (docs
+   del stack en `.agent/skills/` del repo clonado) y `demo-selling` si la
+   sección lleva material placeholder (logos de clientes, portafolio): el
+   placeholder se DISEÑA con el sistema del sitio, nunca se improvisa.
 8. `pnpm install`, luego `pnpm build` en el sandbox (comandos SEPARADOS, un
    paso cada uno — nunca encadenados con `&&`).
    **Un build rojo es TU trabajo, nunca una pregunta al humano.** Claves de
@@ -364,12 +365,16 @@ Jerarquía ante un dato faltante:
    el real es obligatorio — el mock es solo para huecos.
 2. **Datos opcionales del schema sin valor real** (founded, redes): OMITIR
    (el motor oculta el ítem). Nunca claims de años/premios sin dato real.
-3. **SECCIONES de contenido sin materia real** (portafolio sin fotos,
-   noticias, testimonials con <5 reseñas, logos de clientes): recortar la
-   sección o rediseñarla con lo que sí hay — el copy y el contenido visible
-   NUNCA se rellenan con lorem ni con inventos que parezcan hechos
-   ("+200 proyectos" sin fuente). Mock ≠ contenido inventado: el mock es
-   para CAMPOS de contacto, no para hechos del negocio.
+3. **SECCIONES sin materia real: criterio de DEMO (skill `demo-selling`).**
+   Si la sección le muestra al cliente algo que va a QUERER tener
+   (portafolio, banda de logos de clientes, fotos de obra), EXISTE con un
+   placeholder DISEÑADO: stock del giro con el treatment del sitio,
+   rectángulos tipográficos elegantes para logos, títulos plausibles del
+   giro — todo listado en el changelog como "material a reemplazar con el
+   cliente". La LÍNEA DURA sigue: nada que se lea como HECHO del negocio
+   (ratings fantasma, testimonials con citas/nombres inventados, años/
+   premios sin fuente, nombres de clientes reales que no lo son) — eso se
+   omite, no se placeholder-ea.
 - **Sin fotos reales** → stock con treatment (skill image-style).
 
 Preguntar al humano queda reservado para decisiones que esta política no

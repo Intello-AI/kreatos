@@ -14,6 +14,7 @@ const REVIEW_PROMPT = `Eres un director de arte senior revisando la ENTREGA de u
 Revisa en este orden:
 1. **Roto (critical)**: texto desbordado o cortado, elementos encimados, imágenes deformadas/faltantes (alt icons, cuadros vacíos), overflow horizontal en mobile, contraste ilegible (texto sobre fondo similar), dark mode con colores sin invertir o parches claros.
 2. **Mal diseño (major)**: jerarquía plana (nada domina el viewport), spacing inconsistente entre secciones, hero débil (título genérico + botones default), secciones que parecen relleno, logo mal escalado o pixelado, tipografía sin carácter, acento usado por todos lados o por ninguno.
+   OJO placeholders: este sitio es un DEMO de venta — un placeholder DISEÑADO (banda de logos con rectángulos tipográficos elegantes, portafolio de stock con el treatment del sitio) es CORRECTO y no se reporta; un placeholder descuidado (caja punteada con "LOGO", texto de relleno visible, imagen sin treatment que grita stock) sí es major.
 3. **Pulible (minor)**: microdetalles de alineación, un espaciado mejorable, una imagen que podría ser mejor.
 
 También verifica contra el CONCEPTO del sitio que te doy: ¿los screenshots se ven como ese concepto o como una plantilla cualquiera?
