@@ -69,6 +69,21 @@ layout fijo no hace.
   `numbered-list` → about `portrait` o `timeline` → testimonials → cta-band →
   contact. Pocas secciones, mucho aire.
 
+## Diversidad de arquetipo — lo que evita el sitio-plantilla
+
+El defecto que más abarata un sitio: todas las secciones con el MISMO molde
+(eyebrow + título + grid con bordes). Al componer el spec, a CADA sección
+custom asígnale un ARQUETIPO estructural distinto y descríbelo en su `why` /
+descripción para que site-builder no las haga todas iguales. No repitas el
+mismo arquetipo más de 2 veces en un sitio. Paleta de arquetipos: split 60/40
+asimétrico, tabla/ledger de líneas finas, timeline/pasos numerados, banda
+full-bleed de color sólido, feature alterno zig-zag (imagen izq/der), mosaico/
+bento de celdas de tamaños distintos, stat wall (cifras enormes), lista/
+acordeón editorial. Alterna también densidad (aireado vs compacto) y fondo
+(background/card/secondary) entre secciones vecinas: el RITMO es lo que hace
+que dos negocios distintos no salgan iguales. Un `why` de sección debe poder
+leerse como "esta va como <arquetipo> porque <razón>", no solo "grid de X".
+
 ## Reglas de omisión (criterio de DEMO — ver skill demo-selling)
 
 El preview es una maqueta de venta: una sección que le muestra al cliente

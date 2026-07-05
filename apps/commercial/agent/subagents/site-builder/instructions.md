@@ -225,11 +225,27 @@ materializas:
    herramientas del sandbox: ese código es diseño, no transcripción.
    **Custom sections en volumen: escríbelas TÚ en LOTES** — varias
    secciones por comando de sandbox (un `cat > a.tsx <<'EOF' ... EOF`
-   seguido de otro en el MISMO comando, 3-4 archivos por comando), cada
-   una con su layout PROPIO derivado del spec (dos secciones con el mismo
-   esqueleto de eyebrow+title+grid son relleno, no diseño — el review
-   visual las marca). PROHIBIDO generar stubs idénticos en masa para
-   "cumplir" el registro: una sección sin su layout del spec NO se escribe.
+   seguido de otro en el MISMO comando, 3-4 archivos por comando).
+   **DIVERSIDAD DE ARQUETIPO — la regla que evita el sitio-plantilla.** El
+   defecto #1 que hace ver genérico un sitio: TODAS las secciones son el mismo
+   molde `eyebrow mayúsculas + título display + grid/lista con bordes` (el molde
+   de `credentials-band`). PROHIBIDO. Cada custom debe tomar un ARQUETIPO
+   ESTRUCTURAL distinto — no repitas el mismo más de 2 veces en todo el sitio.
+   Menú (elige y varía, no los copies literal):
+   - **split 60/40**: texto grande a un lado, un solo bloque visual/dato al otro (asimétrico).
+   - **tabla/ledger**: filas con líneas finas, columnas alineadas (líneas de producto, specs) — sin tarjetas.
+   - **timeline/pasos**: numerado vertical u horizontal con conector, no grid.
+   - **banda full-bleed**: fondo de color sólido (secondary/primary) a todo el ancho, texto centrado o KPIs grandes.
+   - **feature alterno (zig-zag)**: filas que alternan imagen-izq/der, cada una respira.
+   - **mosaico/bento**: celdas de tamaños DISTINTOS (una grande + varias chicas), no un grid uniforme.
+   - **stat wall**: cifras enormes tipográficas como protagonista, mínimo texto.
+   - **acordeón/lista editorial**: preguntas o ítems que se abren, tipografía dominante.
+   Regla de peso: varía densidad (aireado vs compacto), fondo (background/card/
+   secondary) y composición entre secciones vecinas — dos seguidas nunca con el
+   mismo ritmo. `credentials-band` es UN ejemplo, no la plantilla a clonar.
+   PROHIBIDO generar stubs idénticos en masa: una sección sin su layout propio
+   del spec NO se escribe. El review visual marca "monotonía de layout" como
+   major y te rebota.
    **Escribir las custom TÚ en lotes es el default fiable — hazlo así casi
    siempre.** Varias por comando (`cat > a.tsx <<'EOF' … EOF` encadenados),
    verificando con `read_file` y corrigiendo tú.

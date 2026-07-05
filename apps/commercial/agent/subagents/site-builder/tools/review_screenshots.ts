@@ -9,15 +9,17 @@ import { z } from "zod"
  * otro proveedor) que juzga lo renderizado de verdad — no el código.
  */
 
-const REVIEW_PROMPT = `Eres un director de arte senior revisando la ENTREGA de un sitio corporativo que se vende por cientos de dólares. Te paso screenshots reales (desktop/mobile, light/dark). Sé exigente: "correcto pero mediocre" NO se aprueba.
+const REVIEW_PROMPT = `Eres un director de arte senior revisando la ENTREGA de un sitio corporativo que se vende por cientos de dólares. Te paso screenshots reales (desktop/mobile, light/dark). Sé exigente: "correcto pero mediocre" NO se aprueba. El pecado capital que MÁS debes cazar: que se vea a PLANTILLA — el mismo sitio con otro color.
 
 Revisa en este orden:
-1. **Roto (critical)**: texto desbordado o cortado, elementos encimados, imágenes deformadas/faltantes (alt icons, cuadros vacíos), overflow horizontal en mobile, contraste ilegible (texto sobre fondo similar), dark mode con colores sin invertir o parches claros.
-2. **Mal diseño (major)**: jerarquía plana (nada domina el viewport), spacing inconsistente entre secciones, hero débil (título genérico + botones default), secciones que parecen relleno, logo mal escalado o pixelado, tipografía sin carácter, acento usado por todos lados o por ninguno.
+1. **Roto (critical)**: texto desbordado o cortado, elementos encimados, imágenes deformadas/faltantes (alt icons, cuadros vacíos, media pantalla vacía junto al hero), overflow horizontal en mobile, **contraste ilegible** (texto muted casi invisible sobre su fondo, texto sobre fondo de lightness similar — míralo de verdad: si tienes que esforzarte para leer un título o label, es critical), dark mode con colores sin invertir o parches claros.
+2. **Mal diseño (major)**:
+   - **MONOTONÍA / PLANTILLA (el más importante)**: si 3+ secciones comparten el MISMO esqueleto (eyebrow en mayúsculas + título display + grid/lista con bordes), el sitio se ve templated aunque el copy cambie. Cuéntalas: si la página es una repetición del mismo bloque con distinto texto, es major SIEMPRE — nómbralo "monotonía de layout" y di cuántas secciones se repiten. Un sitio de $500 tiene ritmo: secciones con densidades, composiciones y pesos DISTINTOS, no la misma tarjeta 8 veces.
+   - jerarquía plana (nada domina el viewport), spacing inconsistente, hero débil (título genérico + botones default), secciones que parecen relleno, logo mal escalado, tipografía sin carácter, acento usado por todos lados o por ninguno.
    OJO placeholders: este sitio es un DEMO de venta — un placeholder DISEÑADO (banda de logos con rectángulos tipográficos elegantes, portafolio de stock con el treatment del sitio) es CORRECTO y no se reporta; un placeholder descuidado (caja punteada con "LOGO", texto de relleno visible, imagen sin treatment que grita stock) sí es major.
 3. **Pulible (minor)**: microdetalles de alineación, un espaciado mejorable, una imagen que podría ser mejor.
 
-También verifica contra el CONCEPTO del sitio que te doy: ¿los screenshots se ven como ese concepto o como una plantilla cualquiera?
+Verifica contra el CONCEPTO del sitio que te doy: ¿los screenshots se ven como ESE concepto específico, o como cualquier plantilla corporativa? Si dos negocios distintos con este sistema saldrían casi iguales, es que falta dirección de arte — dilo sin rodeos.
 
 Responde SOLO JSON válido (sin markdown):
 {
