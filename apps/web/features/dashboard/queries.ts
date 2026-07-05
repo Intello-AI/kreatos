@@ -25,6 +25,7 @@ export interface DashboardStats {
     id: string
     slug: string
     status: SiteStatus
+    status_updated_at: string | null
     created_at: string
     leadName: string | null
   }>
@@ -48,7 +49,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     supabase.from("sites").select("status, created_at"),
     supabase
       .from("sites")
-      .select("id, slug, status, created_at, leads(name)")
+      .select("id, slug, status, status_updated_at, created_at, leads(name)")
       .order("created_at", { ascending: false })
       .limit(5),
   ])
@@ -131,6 +132,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       id: row.id,
       slug: row.slug,
       status: row.status as SiteStatus,
+      status_updated_at: row.status_updated_at,
       created_at: row.created_at,
       leadName: Array.isArray(row.leads)
         ? ((row.leads[0] as { name: string | null } | undefined)?.name ?? null)

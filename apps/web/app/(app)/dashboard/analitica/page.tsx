@@ -201,7 +201,7 @@ async function DashboardContent() {
                         </span>
                       </span>
                       <span className="flex shrink-0 items-center gap-2">
-                        <SiteStatusBadge status={site.status} />
+                        <SiteStatusBadge status={site.status} statusUpdatedAt={site.status_updated_at} />
                         <ArrowUpRightIcon className="size-3.5 text-muted-foreground" />
                       </span>
                     </Link>

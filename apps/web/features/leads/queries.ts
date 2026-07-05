@@ -35,7 +35,7 @@ export async function getLeads({
     .select(
       // sites: 1:1 por lead — decide "Generar sitio" vs "Ver sitio" y pinta
       // su status. lead_brand: la ficha de marca (columna Marca).
-      "id, place_id, name, category, business_type, google_types, description, address, phone, email, rating, reviews_count, maps_uri, city, status, status_updated_at, notes, site_instructions, fetched_at, created_at, website, sites(id, status), lead_brand(short_name, logo_path, colors)",
+      "id, place_id, name, category, business_type, google_types, description, address, phone, email, rating, reviews_count, maps_uri, city, status, status_updated_at, notes, site_instructions, fetched_at, created_at, website, sites(id, status, status_updated_at), lead_brand(short_name, logo_path, colors)",
       { count: "exact" }
     )
 

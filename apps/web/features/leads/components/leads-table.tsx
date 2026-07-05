@@ -133,6 +133,7 @@ export function LeadsTable({
                     <>
                       <SiteStatusBadge
                         status={lead.sites.status as SiteStatus}
+                        statusUpdatedAt={lead.sites.status_updated_at}
                       />
                       <Button asChild variant="outline" size="sm">
                         <Link href={`/dashboard/sites/${lead.sites.id}`}>

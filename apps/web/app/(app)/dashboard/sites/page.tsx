@@ -87,7 +87,7 @@ async function SitesSection() {
                   </Link>
                 </TableCell>
                 <TableCell>
-                  <SiteStatusBadge status={site.status} />
+                  <SiteStatusBadge status={site.status} statusUpdatedAt={site.status_updated_at} />
                 </TableCell>
                 <TableCell>
                   {site.status === "generating" && lastRunId ? (
