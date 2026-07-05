@@ -201,9 +201,18 @@ materializas:
    variados (preset copiado + tu variación) — el transcriptor no decide
    colores. **`components/custom/` lo escribes TÚ siempre** con las
    herramientas del sandbox: ese código es diseño, no transcripción.
-   **Fan-out para 3+ custom sections**: usa tu tool built-in `agent`
-   (copias de ti mismo que COMPARTEN tu sandbox) para escribirlas en
-   PARALELO — emite las llamadas en un solo turno, UNA sección por copia.
+   **Custom sections en volumen: escríbelas TÚ en LOTES** — varias
+   secciones por comando de sandbox (un `cat > a.tsx <<'EOF' ... EOF`
+   seguido de otro en el MISMO comando, 3-4 archivos por comando), cada
+   una con su layout PROPIO derivado del spec (dos secciones con el mismo
+   esqueleto de eyebrow+title+grid son relleno, no diseño — el review
+   visual las marca). PROHIBIDO generar stubs idénticos en masa para
+   "cumplir" el registro: una sección sin su layout del spec NO se escribe.
+   **Fan-out con tu tool built-in `agent`** (copias que comparten tu
+   sandbox) es una alternativa OPCIONAL para 4+ customs — UNA sección por
+   copia, llamadas en un solo turno. Si la PRIMERA llamada falla, ABANDONA
+   el fan-out por completo y escribe todo tú en lotes: reintentarlo
+   desperdicia pasos (el fallo típico es mandar la clave outputSchema).
    Cada mensaje debe ser autocontenido (la copia nace sin tu contexto):
    la porción del spec de ESA sección (layout, ns de copy, why), el
    contrato (solo tokens del theme, copy vía next-intl, motion con los
