@@ -307,6 +307,30 @@ export type Database = {
         }
         Relationships: []
       }
+      model_pricing: {
+        Row: {
+          cache_read_per_1m: number
+          input_per_1m: number
+          model: string
+          note: string | null
+          output_per_1m: number
+        }
+        Insert: {
+          cache_read_per_1m?: number
+          input_per_1m: number
+          model: string
+          note?: string | null
+          output_per_1m: number
+        }
+        Update: {
+          cache_read_per_1m?: number
+          input_per_1m?: number
+          model?: string
+          note?: string | null
+          output_per_1m?: number
+        }
+        Relationships: []
+      }
       pending_inputs: {
         Row: {
           created_at: string
@@ -357,6 +381,42 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      session_context: {
+        Row: {
+          lead_id: string | null
+          session_id: string
+          site_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          lead_id?: string | null
+          session_id: string
+          site_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          lead_id?: string | null
+          session_id?: string
+          site_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_context_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_context_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       site_versions: {
         Row: {
@@ -509,9 +569,66 @@ export type Database = {
         }
         Relationships: []
       }
+      token_usage: {
+        Row: {
+          agent: string
+          cache_read_tokens: number
+          created_at: string
+          id: string
+          input_tokens: number
+          model: string
+          output_tokens: number
+          session_id: string
+          turn_id: string | null
+        }
+        Insert: {
+          agent: string
+          cache_read_tokens?: number
+          created_at?: string
+          id?: string
+          input_tokens?: number
+          model: string
+          output_tokens?: number
+          session_id: string
+          turn_id?: string | null
+        }
+        Update: {
+          agent?: string
+          cache_read_tokens?: number
+          created_at?: string
+          id?: string
+          input_tokens?: number
+          model?: string
+          output_tokens?: number
+          session_id?: string
+          turn_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      lead_cost_by_stage: {
+        Row: {
+          agent: string | null
+          cache_read_tokens: number | null
+          cost_usd: number | null
+          input_tokens: number | null
+          lead_id: string | null
+          model: string | null
+          output_tokens: number | null
+        }
+        Relationships: []
+      }
+      lead_cost_total: {
+        Row: {
+          cache_read_tokens: number | null
+          cost_usd: number | null
+          input_tokens: number | null
+          lead_id: string | null
+          output_tokens: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       hook_restrict_signup_domain: { Args: { event: Json }; Returns: Json }
