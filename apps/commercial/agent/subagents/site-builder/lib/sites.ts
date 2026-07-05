@@ -196,6 +196,22 @@ export async function saveQaReport(input: {
   if (error) throw new Error(`Update de qa_report falló: ${error.message}`)
 }
 
+/** Lee una versión concreta del spec (site_versions) — para gates de publicación. */
+export async function getSiteVersion(
+  siteId: string,
+  versionN: number,
+): Promise<SiteVersionRow | null> {
+  const supabase = getSupabaseClient()
+  const { data, error } = await supabase
+    .from("site_versions")
+    .select("*")
+    .eq("site_id", siteId)
+    .eq("version_n", versionN)
+    .maybeSingle()
+  if (error) throw new Error(`Lectura de site_version falló: ${error.message}`)
+  return data ?? null
+}
+
 export async function getDesignReferences(input: {
   industry: string
   styleTags?: string[]

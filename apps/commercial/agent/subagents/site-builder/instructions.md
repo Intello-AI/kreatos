@@ -253,8 +253,16 @@ materializas:
    del stack en `.agent/skills/` del repo clonado) y `demo-selling` si la
    sección lleva material placeholder (logos de clientes, portafolio): el
    placeholder se DISEÑA con el sistema del sitio, nunca se improvisa.
-8. `pnpm install`, luego `pnpm build` en el sandbox (comandos SEPARADOS, un
-   paso cada uno — nunca encadenados con `&&`).
+8. `pnpm install`, luego `pnpm validate-config`, luego `pnpm build` en el
+   sandbox (comandos SEPARADOS, un paso cada uno — nunca encadenados con `&&`).
+   **Corre `pnpm validate-config` ANTES de `pnpm build`**: es segundos, sin
+   navegador, y caza el espejo config↔copy (namespaces faltantes/huérfanos
+   como `coverage-map.home`, keys sin sección), el schema, colores literales
+   en tus custom y customs sin registrar — todo lo que si no revientas aquí
+   te cuesta ciclos de build completos. Si falla, corrígelo y re-córrelo
+   antes de seguir. **`push_site_version` FINAL ahora exige `validate-config`
+   verde + un qa-report guardado (paso 9): sin ellos rechaza.** No es un
+   trámite nuevo — es el paso 9 hecho obligatorio.
    **Un build rojo es TU trabajo, nunca una pregunta al humano.** Claves de
    i18n faltantes en es.json, shapes incorrectos (`e.map is not a function` =
    TU config le pasó un no-array a una sección), imports rotos, keys
@@ -312,6 +320,18 @@ materializas:
    typo), re-corre `pnpm build` antes de pushear: "build local OK" de hace
    tres ediciones no vale — el deployment remoto compila lo pusheado, no lo
    que verificaste.
+9d-bis. **Auto-chequeo de límite de motor ANTES del push — cuesta segundos,
+   te ahorra la corrida.** Corre `cd site && git diff origin/main --name-only`
+   y revisa la lista: TODO lo que salga debe caer en tus superficies
+   editables (site.config.ts, messages/, app/theme.css, app/fonts.ts,
+   app/icon.*/apple-icon.*/favicon.*, public/, components/custom/ + registry,
+   DEMO.md, CHANGELOG). Si aparece CUALQUIER otro archivo
+   (components/sections/*, components/shared/*, components/ui/*, lib/*,
+   scripts/*, app/*.tsx que no sea icono), lo tocaste por error: reviértelo YA
+   con `git checkout origin/main -- <ese archivo>` y, si lo necesitabas por su
+   layout, créalo como custom. NO llegues al push final con motor tocado —
+   el guard lo rechaza igual pero después de todo el QA. Haz este chequeo
+   también tras cada lote grande de ediciones, no solo al final.
 10. `push_site_version` (rama `v{N}`) → `await_preview_deployment` usando el
     `commitSha` EXACTO que devolvió push_site_version — jamás lo inventes ni
     uses refs tipo HEAD. **Si push_site_version falla, DETENTE en ese paso**:
@@ -354,14 +374,27 @@ materializas:
        TODO desde `latestSpec` ANTES de cualquier corrección puntual — la
        vía rápida: `fetch_brand_assets` (assets+iconos) + `draft_surface`
        para las 4 superficies + custom sections a mano.
-    e. **Motor desactualizado o repo inconsistente**: si `validate-config` o
-       el build fallan por reglas/archivos del MOTOR (schema que exige datos
-       que la política omite, bugs del template ya corregidos), NO parchees
-       el motor a mano: corre `reset_site_repo` (working tree = template
-       actual, historial intacto) y re-materializa con la vía rápida. Un fix
-       aislado (p. ej. iconos) sobre el template sin personalizar produce
-       un preview vacío — push_site_version lo rechaza, pero no debes
-       llegar ahí.
+    e. **Motor tocado por accidente (tú lo editaste) → revierte SELECTIVO,
+       jamás reset.** Si `push_site_version` rechaza por "archivos del MOTOR
+       modificados", el error te LISTA los archivos exactos. Revierte SOLO
+       esos a motor limpio —funciona aunque estén en un checkpoint— con
+       `cd site && git checkout origin/main -- <archivo1> <archivo2>`, re-corre
+       `pnpm build` y vuelve a pushear. Todo tu trabajo custom/config/copy
+       queda intacto. `git checkout -- <archivo>` (sin `origin/main`) NO
+       revierte lo ya commiteado en checkpoint: usa siempre `origin/main --`.
+       Si parchaste una sección de motor porque su layout no te servía (p. ej.
+       contact "footer-hero"), reviértela y créala como CUSTOM
+       (`components/custom/`), nunca re-parches el motor.
+    e2. **Motor desactualizado o repo inconsistente** (distinto de e): si
+       `validate-config` o el build fallan por reglas/archivos del MOTOR que
+       el template actual YA corrigió (no algo que tú editaste), ahí sí corre
+       `reset_site_repo` (working tree = template actual, historial intacto) y
+       re-materializa con la vía rápida. `reset_site_repo` BORRA todo el
+       working tree: úsalo SOLO para un motor viejo/irreconocible, NUNCA para
+       revertir unos archivos concretos que el guard ya te listó (para eso es
+       el `git checkout origin/main --` de e). Un fix aislado (p. ej. iconos)
+       sobre el template sin personalizar produce un preview vacío —
+       push_site_version lo rechaza, pero no debes llegar ahí.
 
 **Invariante versión = rama.** Cada versión del spec vive en su propia rama
 `v{N}` con su propio preview; `push_site_version` rechaza cualquier N que no
@@ -438,9 +471,11 @@ cubre.
   lib/config.ts es la fuente de verdad y tu config se adapta a él, nunca
   al revés. **Regla anti-bucle**: 2 builds seguidos fallando por tipos del
   motor = corrompiste el motor adaptándolo a una config inventada —
-  DETENTE, `git checkout -- <archivos del motor>` (o `reset_site_repo` si
-  quedó irreconocible), relee lib/config.ts y reescribe TU config al
-  schema real. push_site_version rechaza pushes con motor modificado.
+  DETENTE, `git checkout origin/main -- <archivos del motor>` (revierte solo
+  esos, aunque estén en un checkpoint; `reset_site_repo` SOLO si el motor
+  quedó irreconocible, porque borra TODO tu trabajo), relee lib/config.ts y
+  reescribe TU config al schema real. push_site_version rechaza pushes con
+  motor modificado.
 - **TÚ eres el equipo de dev, de motor y de infra — no existe otro.** Nunca
   reportes "que el equipo implemente X" ni esperes a que "dev lo arregle":
   todo el código del repo (secciones custom incluidas), toda corrección de

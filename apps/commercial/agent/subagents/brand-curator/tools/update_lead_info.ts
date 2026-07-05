@@ -47,7 +47,7 @@ export default defineTool({
       address?: string
       notes?: string
     } = {}
-    if (email) patch.email = email
+    if (email && !lead.email) patch.email = email
     if (phone && !lead.phone) patch.phone = phone
     if (website && !lead.website) patch.website = website
     if (name && (isManual || !lead.name)) patch.name = name

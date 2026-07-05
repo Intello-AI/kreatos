@@ -13,7 +13,12 @@ export default defineAgent({
   model: openai(rootModel),
   reasoning: "medium",
   limits: {
-    // Guardrail de costo: el root escribe poco (rutas + resúmenes).
-    maxOutputTokensPerSession: 300_000,
+    // Guardrail de costo, NO de seguridad. OJO: es por SESIÓN DURABLE, que
+    // en este agente puede vivir días y muchos turnos (una conversación de
+    // dashboard no se cierra sola) — no por turno. 300k tumbaba conversaciones
+    // sanas a media tarde. El root escribe poco (rutas + resúmenes), así que
+    // el techo real lo ponen los límites por sesión de cada subagente; aquí
+    // dejamos margen amplio para que una sesión larga no muera por el cap.
+    maxOutputTokensPerSession: 2_000_000,
   },
 })

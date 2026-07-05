@@ -16,7 +16,7 @@ function slugify(input: string): string {
 /** Arranque del flujo de sitio desde el chat: crea el site row (brief). */
 export default defineTool({
   description:
-    "Crea el brief del sitio para un lead (fila en `sites`, status brief) cuando el humano pide 'génerale el sitio a X' por chat. Devuelve el siteId — INMEDIATAMENTE después delega a site-builder con [Contexto: site <siteId>]. Si el lead ya tiene sitio, lo devuelve sin duplicar.",
+    "Crea el brief del sitio para un lead (fila en `sites`, status brief) cuando el humano pide 'génerale el sitio a X' por chat. Devuelve el siteId — INMEDIATAMENTE después delega a ART-DIRECTOR con [Contexto: site <siteId>] para que componga el SPEC (concepto, paleta, tipografía, páginas); con su reporte encadenas a site-builder SIN preguntar. NUNCA saltes directo a site-builder en una generación nueva: sin spec del director el sitio sale genérico. Si el lead ya tiene sitio, lo devuelve sin duplicar.",
   inputSchema: z.object({
     query: z.string().min(2).describe("Nombre (parcial) del negocio."),
     referenceSlug: z
@@ -48,7 +48,7 @@ export default defineTool({
         slug: existing.slug,
         status: existing.status,
         alreadyExisted: true,
-        hint: "El lead ya tiene sitio: para iterarlo delega a site-builder con este siteId; no crees otro.",
+        hint: "El lead ya tiene sitio: no crees otro. Iteración puntual sobre el preview → delega a site-builder con este siteId. Rediseño mayor (concepto/paleta/estructura nuevos) → delega primero a art-director, luego site-builder.",
       }
     }
 
@@ -75,7 +75,7 @@ export default defineTool({
       siteId: site.id,
       slug: site.slug,
       alreadyExisted: false,
-      hint: `Ahora delega a site-builder: "Genera el sitio web para el site ${site.id} (lead \"${lead.name}\")${referenceSlug ? ` — referencia guía: ${referenceSlug}` : ""}${instructions ? ` — instrucciones del humano: ${instructions}` : ""}".`,
+      hint: `Ahora delega a ART-DIRECTOR (NO a site-builder): "Compón el SPEC de diseño del site ${site.id} (lead \"${lead.name}\")${referenceSlug ? ` — referencia guía: ${referenceSlug}` : ""}${instructions ? ` — instrucciones del humano: ${instructions}` : ""}". Con su reporte (site_id + notes), encadena a site-builder de inmediato y sin preguntar.`,
     }
   },
 })

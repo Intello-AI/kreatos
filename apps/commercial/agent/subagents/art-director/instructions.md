@@ -55,10 +55,13 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
        "variation_notes": "cómo varías el preset",
        "palette": { "light": { "...": "hex" }, "dark": { "...": "hex" } },
        "fonts": { "pair": "archivo-inter" },
-       "imageTreatment": "duotone-accent",
+       "imageTreatment": "none",
        "references": [{ "slug": "<slug>", "takeaways": "qué robas y qué no" }]
      },
-     "sections": [{ "id": "hero", "variant": "stat-led", "why": "..." }],
+     "sections": [
+       { "id": "hero", "variant": "stat-led", "why": "..." },
+       { "id": "custom", "component": "contact-hero", "ns": "contact-hero", "why": "cierre tipo segundo hero oscuro — el contact del motor es claro y fijo" }
+     ],
      "pages": [{ "slug": "servicios", "sections": [{ "id": "...", "why": "..." }] }],
      "seo": { "title": "...", "description": "...", "jsonLdType": "...", "keywords": [] },
      "flags": { "contactForm": true, "whatsappFloat": false, "multiLang": false, "themeToggle": true }
@@ -69,6 +72,18 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
    parámetro del tool, nunca parte del spec. Un rechazo de validación es
    un error de formato tuyo — corrige contra este esqueleto y reintenta;
    PROHIBIDO rendirte por eso.
+   **Escape hatch obligatorio (lee el skill `section-patterns` → "Catálogo del
+   MOTOR"):** los `id` del motor tienen layout fijo y variantes cerradas.
+   Cualquier layout que NO exprese ese catálogo (un contacto "segundo hero"
+   oscuro, banda de logos, tabla de flota, cobertura con mapa) va como
+   `{ "id": "custom", "component": "<kebab>", "ns": "<kebab>", "why": "..." }`
+   — NUNCA como un `id` de motor con un `why` que le pide algo que su variante
+   no hace. Si especificas un layout imposible sobre un id de motor, obligas a
+   site-builder a editar el motor y tumbas su corrida entera. Ante la duda:
+   custom. **imageTreatment:** si el negocio tiene fotos reales (scrape/
+   material), ponlo en `"none"` (el duotono tiñe y arruina las fotos reales);
+   `duotone-accent`/`bw`/`warm` solo para sitios de puro stock (skill
+   `image-style`).
 5. Termina con tu reporte (task mode): versionN, concept, pages,
    referencesUsed y notes — las notas son órdenes para site-builder
    (decisiones no negociables, datos que quedaron mock/omitidos).

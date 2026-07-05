@@ -29,13 +29,31 @@ export default defineTool({
     const host = new URL(url).host.replace(/^www\./, "")
 
     // Idempotencia: mismo sitio = mismo lead (por website o place_id manual).
+    // Dos queries con .eq (parametrizadas) en vez de un .or() interpolado: la
+    // URL puede traer comas/paréntesis que rompen el parser de PostgREST y
+    // colaban leads duplicados. placeId es slug seguro; url va como parámetro.
     const placeId = `manual-${host.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`
-    const { data: existing } = await supabase
-      .from("leads")
-      .select("id, name, status")
-      .or(`place_id.eq.${placeId},website.eq.${url}`)
-      .limit(1)
-      .maybeSingle()
+    let existing:
+      | { id: string; name: string | null; status: string }
+      | null = null
+    {
+      const byPlace = await supabase
+        .from("leads")
+        .select("id, name, status")
+        .eq("place_id", placeId)
+        .limit(1)
+        .maybeSingle()
+      existing = byPlace.data ?? null
+      if (!existing) {
+        const byWebsite = await supabase
+          .from("leads")
+          .select("id, name, status")
+          .eq("website", url)
+          .limit(1)
+          .maybeSingle()
+        existing = byWebsite.data ?? null
+      }
+    }
     if (existing) {
       return {
         leadId: existing.id,

@@ -7,6 +7,50 @@ description: Recetario de secciones por giro — cuáles usar, en qué orden, co
 El orden en `spec.sections` es el orden de render. Menos secciones bien resueltas
 ganan a muchas a medias.
 
+## Catálogo del MOTOR y su escape hatch (lee esto ANTES de componer sections)
+
+Cada `id` de sección del motor tiene un LAYOUT FIJO y un set CERRADO de
+variantes. site-builder NO puede reestilizar un id del motor más allá de sus
+variantes: si tú especificas un layout que el id no soporta, la única salida
+que le queda es EDITAR el motor —está prohibido y tumba la corrida entera—.
+Si lo que la dirección de arte pide no cabe en el catálogo, va como `custom`.
+
+Catálogo exacto (id → variantes soportadas; nada fuera de esto existe):
+
+- `navbar` → minimal | split | centered-logo
+- `hero` → editorial | split-image | full-bleed | stat-led (+ `image`)
+- `trust-bar` → layout único (sin variante)
+- `services` → numbered-list | asym-grid | bordered-table (+ `count`)
+- `about` → portrait | timeline | plain (+ `image`)
+- `process` → layout único (+ `count`)
+- `portfolio` → masonry | rows (+ `images`)
+- `coverage` → layout único
+- `testimonials` → layout único (+ `count`)
+- `faq` → layout único (+ `count`)
+- `cta-band` → layout único
+- `contact` → layout único (solo toggle `showMap`; NO tiene variante de
+  "footer-hero"/"segundo hero"/oscuro — ese layout NO existe en el motor)
+- `footer` → layout único
+- `page-header` → solo en páginas interiores
+- `custom` → `{ id: "custom", component: "<kebab>", ns: "<kebab>" }` — layout
+  que TÚ inventas; site-builder lo escribe desde cero en components/custom/.
+
+**Regla dura del escape hatch:** cualquier layout que el catálogo de arriba
+NO exprese va como `custom`, con su `component`, su `ns` y su `why`. Ejemplos
+que SON custom (no reestilizar un id del motor): hero partido con mapa+flota
+que una variante `hero` no logra, bloque de contacto tipo "segundo hero"
+oscuro (el `contact` del motor es claro y fijo), banda de logos de clientes,
+tabla de flota, timeline de cobertura con mapa. Si dudas si un layout cabe en
+una variante: NO cabe → custom.
+
+**Las commodity se quedan SIEMPRE en el motor** (navbar, footer, contact, faq,
+trust-bar, aviso de privacidad): de ellas dependen SEO, accesibilidad y el
+formulario. Si el concepto pide drama visual en el cierre de la home, NO
+reestilices `contact`: especifica una `custom` (p. ej. `contact-hero`) para el
+gesto visual y CONSERVA además el `contact`/`footer` del motor para el
+formulario real y el SEO. Nunca describas una commodity haciendo algo que su
+layout fijo no hace.
+
 ## Recetas base
 
 - **Despacho contable/legal** (obsidiana): hero `editorial` → trust-bar →

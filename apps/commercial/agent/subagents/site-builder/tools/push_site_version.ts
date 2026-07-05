@@ -94,8 +94,16 @@ export default defineTool({
         (path) => !EDITABLE_PATHS.some((re) => re.test(path)),
       )
       if (engineTouched.length > 0) {
+        const list = engineTouched.slice(0, 12).join(" ")
         throw new Error(
-          `Push rechazado: modificaste ${engineTouched.length} archivo(s) del MOTOR del template (prohibido por contrato): ${engineTouched.slice(0, 12).join(", ")}. El motor nunca se adapta a tu config — tu config se adapta al motor (lib/config.ts es la fuente de verdad). Revierte con \`git checkout -- <archivos>\` (o corre reset_site_repo si el motor quedó irreconocible), ajusta site.config.ts/es.json al schema real y vuelve a build.`,
+          `Push rechazado: modificaste ${engineTouched.length} archivo(s) del MOTOR del template (prohibido por contrato): ${engineTouched.slice(0, 12).join(", ")}.\n\n` +
+            `RECOVERY SELECTIVO (haz ESTO — NO borres tu trabajo):\n` +
+            `1. Revierte SOLO esos archivos de motor a su estado original — funciona aunque los hayas commiteado en un checkpoint:\n` +
+            `     cd site && git checkout origin/main -- ${list}\n` +
+            `   (\`git checkout -- <archivo>\` NO basta si el cambio ya entró en un checkpoint: usa \`origin/main --\` para traer la versión del motor limpio.)\n` +
+            `2. Si la sección que parchaste requería un layout que el motor no soporta (p. ej. un contact "footer-hero"), NO re-parches el motor: créala como CUSTOM en components/custom/<nombre>.tsx, regístrala y decláralala en config como { id: "custom", component, ns }. El motor nunca se adapta a tu config; tu config y tus customs se adaptan al motor (lib/config.ts es la fuente de verdad).\n` +
+            `3. Re-corre pnpm build y vuelve a pushear. TODO tu trabajo custom/config/copy sigue intacto — solo revertiste el motor.\n\n` +
+            `PROHIBIDO usar reset_site_repo aquí: borra TODO el working tree y tira tu trabajo bueno. reset_site_repo es SOLO para un motor desactualizado/irreconocible, no para revertir unos archivos concretos que el guard ya te listó arriba.`,
         )
       }
     }
@@ -163,6 +171,47 @@ export default defineTool({
       if (configLower.includes("lópez y asociados") || !mentionsBusiness) {
         throw new Error(
           `El repo sigue siendo el TEMPLATE sin personalizar (site.config.ts no menciona "${names.join('" ni "')}"${configLower.includes("lópez y asociados") ? ' y aún trae el demo "López y Asociados"' : ""}). El run anterior murió sin checkpoints y este clone salió de main: re-materializa TODO desde latestSpec (config, es.json, theme, fonts, imágenes, custom) ANTES de pushear. Un fix puntual sobre el template pelón NO es una versión.`,
+        )
+      }
+    }
+
+    // Gate de QA (solo push FINAL): el contrato exige validate-config verde y
+    // un qa-report guardado para esta versión. En el runtime real el agente se
+    // saltó `pnpm qa` entero y pusheó a ciegas — este gate lo hace determinista
+    // (no depende de que el modelo se acuerde de correrlo).
+    if (!checkpoint) {
+      // 1. validate-config: rápido, sin navegador. Caza el espejo config<->copy
+      //    (namespaces faltantes/huérfanos como coverage-map.home), el schema,
+      //    colores literales en custom, y customs sin registrar.
+      const validate = await sandbox.run({
+        command: `cd site && pnpm validate-config 2>&1`,
+      })
+      if (validate.exitCode !== 0) {
+        const out = [validate.stdout, validate.stderr]
+          .filter(Boolean)
+          .join("\n")
+          .slice(-1600)
+        const missingScript = /validate-config.*not found|Command .*validate-config/i.test(out)
+        throw new Error(
+          missingScript
+            ? `Push rechazado: este clone no tiene el script \`validate-config\` (template viejo). Corre \`reset_site_repo\` y re-materializa desde latestSpec.`
+            : `Push rechazado: \`pnpm validate-config\` falló — corrígelo ANTES de pushear (es el mismo check que corre \`pnpm qa\`, pero en segundos y sin navegador):\n${out}`,
+        )
+      }
+      // 2. qa-report guardado para esta versión: prueba de que el QA visual
+      //    corrió al menos una vez. El reporte PUEDE anotar screenshots
+      //    saltados (navegador no disponible) — eso se admite; lo que no se
+      //    admite es pushear sin haber corrido `pnpm qa` + save_qa_report.
+      const { getSupabaseClient: getClient } = await import("../../../lib/supabase")
+      const { data: versionRow } = await getClient()
+        .from("site_versions")
+        .select("qa_report")
+        .eq("site_id", siteId)
+        .eq("version_n", versionN)
+        .maybeSingle()
+      if (!versionRow?.qa_report) {
+        throw new Error(
+          `Push rechazado: no hay qa-report guardado para v${versionN}. El QA visual es obligatorio antes del push final: corre el flujo de screenshots + \`pnpm qa\`, lee \`.qa/qa-report.json\` y guárdalo con \`save_qa_report\` (si el navegador del sandbox no está disponible, el reporte lo anota y aun así se guarda). Este gate NO aplica a checkpoint:true.`,
         )
       }
     }

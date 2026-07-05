@@ -37,6 +37,24 @@ export default defineTool({
         .in("id", ids)
     }
 
-    return { references: data ?? [], count: data?.length ?? 0 }
+    // remainingPending: cuántas referencias siguen SIN reclamar (status
+    // 'pending') tras este claim. Es el resto de la cola — el subagente lo usa
+    // para decidir si drena más (o el root re-delega mientras sea > 0). Antes
+    // el outputSchema lo exigía pero ninguna tool lo calculaba: el modelo lo
+    // fabricaba. Con `url` (analiza una puntual) no aplica el concepto de cola.
+    let remainingPending = 0
+    if (!url) {
+      const { count } = await supabase
+        .from("design_references")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending")
+      remainingPending = count ?? 0
+    }
+
+    return {
+      references: data ?? [],
+      count: data?.length ?? 0,
+      remainingPending,
+    }
   },
 })

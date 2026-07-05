@@ -4,14 +4,28 @@ description: Estrategia de imágenes — un treatment por sitio, queries especí
 
 # Imágenes
 
-La v1 usa stock; que no se note. El 80% de la coherencia la pone el **treatment**
-(overlay CSS con la paleta del sitio), no la foto.
+Cuando el sitio usa STOCK, el treatment (overlay CSS con la paleta) da la
+coherencia. Cuando usa FOTOS REALES del cliente, el treatment las ARRUINA.
 
-## Reglas
+## Regla de oro: la foto real del cliente manda, no el filtro
 
-- **Un solo treatment por sitio**, definido en `design.imageTreatment`:
-  `duotone-accent` (cantera, ruta), `bw` (obsidiana, norte), `warm` (bodega),
-  `none` solo con fotos reales del cliente.
+- **Si el sitio usa fotos reales del cliente (scrape de su web, material que
+  entregó): `design.imageTreatment: "none"`.** Sin filtro. Un duotono rojo/
+  ámbar sobre la foto de su flota o su obra la tiñe de rosa y se ve peor que
+  la original — el cliente reconoce sus fotos y las quiere tal cual. Esto
+  aplica aunque la paleta del sitio sea muy marcada: las fotos reales NO se
+  someten al acento.
+- **`duotone-accent`/`bw`/`warm` son SOLO para sitios cuyo material es
+  íntegramente STOCK** (el cliente no dio fotos): ahí el treatment unifica
+  stock disímil y lo amarra a la marca. Aun así, prefiere `bw` o un duotono
+  SUTIL cuando el acento es un color cálido saturado (rojo, naranja, ámbar):
+  `duotone-accent` empuja los medios tonos hacia el acento y sobre fotos con
+  piel/metal/cielo produce un tinte rosado desagradable.
+- **Caso mixto (fotos reales + algo de stock): treatment `none` para todo el
+  sitio.** Más vale un stock crudo bien elegido que una foto real tiñada.
+  Nunca sacrifiques las fotos reales por unificar el stock.
+- Registra en el spec (`design.variation_notes` o el changelog) qué fotos son
+  reales del cliente para que site-builder no las trate.
 - Preferir **detalle, textura y lugar** sobre personas: manos sobre planos,
   estructura de acero a contraluz, estantería de almacén, documentos y sello,
   camión en carretera al amanecer.

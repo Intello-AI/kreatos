@@ -9,8 +9,12 @@ import {
 } from "../lib/constants"
 import { fetchPlaceDetails, sleep, textSearchIds } from "../lib/places"
 
-/** Lead calificado: negocio local encontrado en Google Maps, con o sin sitio web. */
-export interface QualifiedLead {
+/**
+ * Candidato a lead: negocio local encontrado en Google Maps, con o sin sitio
+ * web. NO está filtrado por los criterios de kreatos — es materia prima cruda
+ * que TÚ debes cribar con el skill `lead-criteria` antes de `save_leads`.
+ */
+export interface CandidateLead {
   placeId: string
   name: string | null
   category: string
@@ -29,7 +33,7 @@ export interface QualifiedLead {
 
 export default defineTool({
   description:
-    "Busca negocios locales de una categoría en Google Maps (Places API) y los devuelve como candidatos a lead, con o sin sitio web. Excluye automáticamente los negocios que ya están en la tabla `leads` (`alreadyInDatabase` reporta cuántos). `website` viene lleno cuando el negocio ya tiene sitio (candidato a rediseño) y null cuando no tiene (candidato a sitio nuevo).",
+    "Busca negocios locales de una categoría en Google Maps (Places API) y los devuelve en `candidates` como candidatos a lead SIN filtrar, con o sin sitio web. Estos NO están cribados: antes de `save_leads` DEBES pasar cada candidato por los criterios del skill `lead-criteria` (perfil corporativo, descartar giros no objetivo) — guardar `candidates` tal cual mete basura al pipeline. Excluye automáticamente los negocios que ya están en la tabla `leads` (`alreadyInDatabase` reporta cuántos). `website` viene lleno cuando el negocio ya tiene sitio (candidato a rediseño) y null cuando no tiene (candidato a sitio nuevo).",
   inputSchema: z.object({
     category: z
       .string()
@@ -60,7 +64,7 @@ export default defineTool({
     const known = new Set((existing ?? []).map((row) => row.place_id))
     const newPlaceIds = placeIds.filter((id) => !known.has(id))
 
-    const leads: QualifiedLead[] = []
+    const leads: CandidateLead[] = []
     let withWebsite = 0
 
     // Secuencial con delay: amable con el rate limit y con el costo.
@@ -95,7 +99,7 @@ export default defineTool({
       candidatesFound: placeIds.length,
       alreadyInDatabase: known.size,
       withWebsite,
-      qualifiedLeads: leads,
+      candidates: leads,
     }
   },
 })

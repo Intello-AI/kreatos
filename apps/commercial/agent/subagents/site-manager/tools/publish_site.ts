@@ -1,7 +1,9 @@
 import { defineTool } from "eve/tools"
+import { always } from "eve/tools/approval"
 import { z } from "zod"
 
 import { addActivity } from "../../../lib/leads"
+import { getSiteVersion } from "../../site-builder/lib/sites"
 import { getGithubEnv, getRepoFileText, mergeBranchToMain } from "../../site-builder/lib/github"
 import { getSite, setSiteStatus, updateSite } from "../../site-builder/lib/sites"
 import {
@@ -15,7 +17,13 @@ const TIMEOUT_MS = 6 * 60_000
 
 export default defineTool({
   description:
-    "Publica el sitio: merge de la rama v{N} a main (dispara el deployment de producción en Vercel), espera READY, guarda deploy_url y marca published. SOLO usar cuando el humano pidió publicar explícitamente — nunca por iniciativa propia.",
+    "Publica el sitio: merge de la rama v{N} a main (dispara el deployment de producción en Vercel), espera READY, guarda deploy_url y marca published. SOLO usar cuando el humano pidió publicar explícitamente — nunca por iniciativa propia. Acción IRREVERSIBLE (merge a main + prod): pide aprobación humana antes de correr.",
+  // Merge a main + deployment de producción es la acción más irreversible del
+  // pipeline. Aunque el modelo la invoque, el humano DEBE aprobar cada vez —
+  // defensa en profundidad sobre el guard de status 'approved'. Además hace el
+  // merge replay-safe: un re-run del step no re-dispara el merge sin una
+  // decisión humana fresca.
+  approval: always(),
   inputSchema: z.object({
     siteId: z.string().uuid(),
     versionN: z
@@ -33,6 +41,29 @@ export default defineTool({
     }
     if (!site.vercel_project_id) {
       throw new Error("El site no tiene vercel_project_id.")
+    }
+
+    // Guard pre-merge (H2): NUNCA mergees a main una rama sin verificar que se
+    // construyó y pasó QA. Antes, el merge iba primero y el build roto se
+    // descubría con producción ya rota. Dos señales baratas de que v{N} es
+    // publicable: (a) tiene qa-report guardado (para producirlo el build tuvo
+    // que estar verde y hubo screenshots), (b) el último deployment del
+    // proyecto no está en ERROR.
+    const version = await getSiteVersion(siteId, versionN)
+    if (!version?.qa_report) {
+      throw new Error(
+        `Publicación rechazada: v${versionN} no tiene qa-report guardado — no hay prueba de que se construyó y pasó QA. Materializa/repara esa versión con site-builder hasta dejar un preview READY con QA antes de publicar.`,
+      )
+    }
+    {
+      const lastDeployment = await getLatestDeployment({
+        projectId: site.vercel_project_id,
+      })
+      if (lastDeployment?.state === "ERROR") {
+        throw new Error(
+          `Publicación rechazada: el último deployment del proyecto está en ERROR — publicar mergearía una rama que no compila. Corrige el build (site-builder) y deja un preview READY antes de publicar.`,
+        )
+      }
     }
 
     const env = getGithubEnv()
@@ -110,7 +141,7 @@ export default defineTool({
           leadId: site.lead_id,
           type: "site_published",
           note: `v${versionN} publicada: ${deployUrl}`,
-          actor: "site-builder",
+          actor: "site-manager",
         })
         return {
           state: "READY" as const,

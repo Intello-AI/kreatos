@@ -29,9 +29,29 @@ export default defineTool({
     maxImages: z.number().int().min(0).max(20).default(10),
   }),
   async execute({ leadId, url, maxImages }) {
-    const res = await fetch(url, { headers: { "user-agent": UA } })
+    // Soft-result: una página que responde 403/500/login NO debe tumbar el
+    // modo buitre en su primer paso. Se devuelve {ok:false} para que el
+    // curador pivote (otra página del negocio, web_fetch, screenshots) en vez
+    // de morir. Timeout para que un host colgado no congele el turno durable.
+    let res: Response
+    try {
+      res = await fetch(url, {
+        headers: { "user-agent": UA },
+        signal: AbortSignal.timeout(8000),
+      })
+    } catch (err) {
+      return {
+        ok: false as const,
+        status: 0,
+        hint: `No se pudo conectar con ${url} (${err instanceof Error ? err.message : "timeout/red"}). Prueba otra página del negocio (contacto/nosotros), o continúa con los datos del lead sin el scrape.`,
+      }
+    }
     if (!res.ok) {
-      throw new Error(`La página respondió ${res.status}; no se pudo escrapear.`)
+      return {
+        ok: false as const,
+        status: res.status,
+        hint: `La página respondió ${res.status} (bloqueo de bots, login o caída). No es un error técnico: prueba un internalLink del negocio, o si ya escarbaste sus otras páginas, continúa armando la ficha con lo que tengas — no te detengas por esto.`,
+      }
     }
     const html = await res.text()
 
@@ -96,6 +116,7 @@ export default defineTool({
       try {
         const manifestRes = await fetch(manifestUrl, {
           headers: { "user-agent": UA },
+          signal: AbortSignal.timeout(8000),
         })
         if (manifestRes.ok) {
           const manifest = (await manifestRes.json()) as {
@@ -145,7 +166,10 @@ export default defineTool({
     for (const [iconUrl, rel] of iconCandidates) {
       if (icons.length >= 6) break
       try {
-        const iconRes = await fetch(iconUrl, { headers: { "user-agent": UA } })
+        const iconRes = await fetch(iconUrl, {
+          headers: { "user-agent": UA },
+          signal: AbortSignal.timeout(8000),
+        })
         const type = iconRes.headers.get("content-type") ?? ""
         if (!iconRes.ok) continue
         if (!type.startsWith("image/") && !iconUrl.endsWith(".ico")) continue
@@ -187,7 +211,10 @@ export default defineTool({
     for (const imgUrl of candidates) {
       if (stored.length >= maxImages) break
       try {
-        const imgRes = await fetch(imgUrl, { headers: { "user-agent": UA } })
+        const imgRes = await fetch(imgUrl, {
+          headers: { "user-agent": UA },
+          signal: AbortSignal.timeout(8000),
+        })
         const type = imgRes.headers.get("content-type") ?? ""
         if (!imgRes.ok || !type.startsWith("image/")) continue
         const bytes = new Uint8Array(await imgRes.arrayBuffer())
@@ -238,6 +265,7 @@ export default defineTool({
     ).slice(0, 6)
 
     return {
+      ok: true as const,
       meta: headMeta,
       icons,
       images: stored,
