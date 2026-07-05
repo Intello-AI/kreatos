@@ -192,7 +192,11 @@ materializas:
    `site.config.ts`, `app/theme.css`, `app/fonts.ts`) las materializas con
    `draft_surface` — pásale en `content` la porción LITERAL del spec (copy
    exacto, tokens exactos, estructura completa): lo que no le pases no
-   existirá. Puedes llamarlo para varias superficies en el mismo turno
+   existirá. **Las superficies NACEN del spec, jamás del demo**: parchear el
+   es.json/config del despacho ficticio con replaces de textos es el defecto
+   número uno (el cliente recibe "Su contabilidad al día" con su logo) — el
+   push lo rechaza. Tu `content` de es-json cubre TODOS los namespaces del
+   sitio (home completa + cada página), no solo los que cambian. Puedes llamarlo para varias superficies en el mismo turno
    (corren en paralelo). Para theme.css dale los valores finales ya
    variados (preset copiado + tu variación) — el transcriptor no decide
    colores. **`components/custom/` lo escribes TÚ siempre** con las

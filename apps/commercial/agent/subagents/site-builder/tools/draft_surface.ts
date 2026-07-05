@@ -16,7 +16,7 @@ const SURFACE_RULES: Record<string, string> = {
 - Devuelve JSON VÁLIDO completo (RFC 8259): sin comentarios, sin trailing commas.
 - Estructura de namespaces por sección exactamente como la pide el spec.
 - El copy va LITERAL como viene en el spec — no lo parafrasees ni lo "mejores".
-- El namespace "common" del ARCHIVO BASE es del MOTOR: conserva TODAS sus keys (skipToContent, openMenu, closeMenu, themeToggle, whatsappLabel, whatsappMessage, googleRating, googleReviews, viewOnGoogle...), adaptando solo los valores al negocio. Omitirlas rompe el build con MISSING_MESSAGE.
+- OJO: el ARCHIVO BASE es el DEMO de un cliente FICTICIO (un despacho contable). De él conserva ÚNICAMENTE el namespace "common" con TODAS sus keys (skipToContent, openMenu, closeMenu, themeToggle, whatsappLabel, whatsappMessage, googleRating, googleReviews, viewOnGoogle...), adaptando los valores al negocio real. TODO lo demás (hero, navbar, services, about, pages...) sale EXCLUSIVAMENTE del CONTENIDO A MATERIALIZAR: cualquier namespace o texto del base que el contenido no mencione se ELIMINA — dejar copy del despacho ficticio en el sitio de otro negocio es el peor defecto posible.
 - Español mexicano; escapa comillas dobles dentro de strings.`,
   "site-config": `El archivo es site.config.ts del template de kreatos.
 - TypeScript válido que respeta EXACTAMENTE la estructura del archivo base actual (imports, tipo del export, forma de las secciones).
@@ -48,6 +48,17 @@ async function validate(
       JSON.parse(content)
     } catch (e) {
       return `JSON inválido: ${e instanceof Error ? e.message.slice(0, 200) : e}`
+    }
+    // El demo contable NUNCA sobrevive en el sitio de un cliente real.
+    const demoSignal = [
+      "lópez y asociados",
+      "lopez y asociados",
+      "ricardo lópez",
+      "despacho contable",
+      "buzón tributario",
+    ].find((signal) => content.toLowerCase().includes(signal))
+    if (demoSignal) {
+      return `la salida aún contiene copy del DEMO ficticio ("${demoSignal}") — todo namespace fuera de common debe salir del contenido a materializar, jamás del archivo base`
     }
   }
   if (surface === "site-config" || surface === "fonts") {

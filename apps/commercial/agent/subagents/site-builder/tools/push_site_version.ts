@@ -121,6 +121,24 @@ export default defineTool({
           .eq("lead_id", site.lead_id)
           .maybeSingle(),
       ])
+      // El copy del demo vive en es.json, no solo en el config: un sitio
+      // "maquillado" pasa el check del config y entrega el despacho contable
+      // con el logo del cliente (pasó dos veces).
+      const esJson =
+        (await sandbox.readTextFile({ path: "site/messages/es.json" })) ?? ""
+      const esLower = esJson.toLowerCase()
+      const copyResidue = [
+        "lópez y asociados",
+        "lopez y asociados",
+        "ricardo lópez",
+        "despacho contable",
+        "buzón tributario",
+      ].filter((signal) => esLower.includes(signal))
+      if (copyResidue.length > 0) {
+        throw new Error(
+          `Push rechazado: messages/es.json aún contiene el COPY del demo contable ficticio (${copyResidue.join(", ")}). Parchar textos sueltos sobre el demo no es materializar: regenera es.json COMPLETO desde el spec con draft_surface (del demo solo sobrevive el namespace common adaptado).`,
+        )
+      }
       const configLower = config.toLowerCase()
       // Señales del DEMO más allá del nombre: un sed "López y Asociados" →
       // "<negocio>" deja el nombre correcto pero el NAP/rating/social del
