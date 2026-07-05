@@ -45,12 +45,14 @@ async function validate(
       return `JSON inválido: ${e instanceof Error ? e.message.slice(0, 200) : e}`
     }
     // El demo contable NUNCA sobrevive en el sitio de un cliente real.
+    // Solo firmas ÚNICAS del demo (nombre + fundador ficticio). NUNCA términos
+    // del giro: un cliente contable legítimo dice "despacho contable" y "buzón
+    // tributario" — banearlos rechazaba el regen correcto y forzaba a escribir
+    // es.json a mano (la raíz del sufrimiento en el run de Invoice Laguna).
     const demoSignal = [
       "lópez y asociados",
       "lopez y asociados",
       "ricardo lópez",
-      "despacho contable",
-      "buzón tributario",
     ].find((signal) => content.toLowerCase().includes(signal))
     if (demoSignal) {
       return `la salida aún contiene copy del DEMO ficticio ("${demoSignal}") — todo namespace fuera de common debe salir del contenido a materializar, jamás del archivo base`

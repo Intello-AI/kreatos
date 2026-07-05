@@ -143,12 +143,15 @@ export default defineTool({
       const esJson =
         (await sandbox.readTextFile({ path: "site/messages/es.json" })) ?? ""
       const esLower = esJson.toLowerCase()
+      // Solo firmas ÚNICAS del demo ficticio (nombre + fundador inventado).
+      // NUNCA términos del giro ("despacho contable", "buzón tributario"): el
+      // cliente real ES un despacho contable y su copy legítimo los usa —
+      // banearlos bloqueaba a TODO cliente contable para siempre (Invoice Laguna
+      // rebotó 3 pushes por esto).
       const copyResidue = [
         "lópez y asociados",
         "lopez y asociados",
         "ricardo lópez",
-        "despacho contable",
-        "buzón tributario",
       ].filter((signal) => esLower.includes(signal))
       if (copyResidue.length > 0) {
         throw new Error(
