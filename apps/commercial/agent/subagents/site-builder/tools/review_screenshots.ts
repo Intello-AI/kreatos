@@ -48,7 +48,10 @@ export default defineTool({
       .describe(
         "screenshotUrl de la referencia GUÍA del brief (si existe): el revisor compara la dirección de arte lograda contra ella.",
       ),
-    maxImages: z.number().int().min(1).max(10).default(8),
+    // Visión es el costo por-token más alto del pipeline. 6 cubre lo que juzga
+    // el director (home desktop light+dark+mobile + 2-3 interiores clave) sin
+    // pagar 8-10 fullpages. Subir solo si un sitio tiene muchas páginas densas.
+    maxImages: z.number().int().min(1).max(10).default(6),
   }),
   async execute({ concept, referenceScreenshotUrl, maxImages }, ctx) {
     const sandbox = await ctx.getSandbox()
