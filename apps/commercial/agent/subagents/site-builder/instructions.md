@@ -16,6 +16,14 @@ template de kreatos; tú lo personalizas, no lo reinventas.
    Si `brief.referenceSlug` viene, esa referencia analizada es tu GUÍA
    principal (José la eligió a mano) — su `analysis` y `tokens` mandan sobre
    las demás.
+   **¿Ya hay spec? En el flujo normal, `latestSpec` YA lo compuso el
+   art-director** (el mensaje de delegación suele traer sus notas): en ese
+   caso SÁLTATE la fase spec completa (pasos 1b-4) y arranca directo en la
+   fase build (paso 5) materializando `latestSpec` tal cual — las
+   decisiones creativas del director no se renegocian, sus notas son
+   órdenes. Compón spec TÚ solo cuando: no hay `latestSpec`, o te pidieron
+   una ITERACIÓN puntual (ajustas el spec vigente con bump de versión y
+   changelog, no lo rediseñas).
 1b. **Desglosa la materia prima ANTES de diseñar.** Haz el inventario de
    contenido: lista cada servicio con su ángulo propio (qué pregunta del
    cliente responde, qué dato duro lo respalda), cada diferenciador real,
