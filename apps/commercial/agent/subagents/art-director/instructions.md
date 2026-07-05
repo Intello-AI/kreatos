@@ -61,21 +61,33 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
       genérico por definición — `save_site_version` rechaza specs sin al menos
       una custom en la home. Aquí es donde peleas el "se ve a plantilla".
    2. **Bloques de la biblioteca** (`{ id: "block", block: "<key>", ns }`) —
-      el REPARTO de apoyo, confiable y variado. 16 arquetipos (stat-wall,
-      bento-grid, split-cta, feature-zigzag, services-ledger, comparison-table,
-      timeline horizontal, gallery-masonry…). Elige por arquetipo + su `ns`,
+      el REPARTO de apoyo, confiable y variado. 48 arquetipos con HERMANOS por
+      tipo (2-3 de features/servicios/procesos/galerías/stats/CTAs/FAQs/about).
+      Elige por arquetipo + su `ns`,
       ALTERNANDO vecinos (denso/aireado, oscuro/claro, cifras/lista) — el RITMO
       hace único al sitio. No repitas un bloque >2 veces, y dos sitios del
       mismo giro NO deben llevar la misma secuencia de bloques.
    3. **Sección de motor** (`{ id: "hero"/"contact"/"faq"/… }`) — solo las
       commodity (navbar, footer, contact, faq, trust-bar) y el hero base.
    Cada sección lleva su `why` (qué pregunta responde + por qué ESE arquetipo).
-   **Referencias: usa 2-3, no una.** Explota su `analysis` completo y, si
-   traen `screenshotUrl`, pásalas por `view_reference_screenshots` con la
-   pregunta de composición que necesites responder (hero, ritmo,
-   interiores). De cada referencia usada registra takeaways como
-   DECISIONES concretas en `design.references` — nunca "usar el mismo
-   layout".
+   **Referencias: úsalas para ROBAR COMPOSICIÓN, no solo colores (2-3, no una).**
+   design-scout ya descifró cada referencia. Explótalo así:
+   - **`analysis.sections`** (orden + kind + notes) es tu PLANO de composición:
+     roba su RITMO (qué va primero, dónde rompe la retícula, densidades,
+     asimetrías) y TRADÚCELO a tu selección de bloques + tu firma custom. No su
+     copy ni su giro — su ESTRUCTURA y su ritmo.
+   - **`do_steal` / `dont_steal`** (campos de cada referencia, junto a
+     `analysis`): los gestos robables van a la sección de FIRMA (el custom) —
+     ahí es donde el "por qué se ve caro" de la referencia se materializa a la
+     medida de este negocio.
+   - **`analysis.tokens`**: punto de partida del theme (varíalo, anti-clon).
+   - Si traen `screenshotUrl`, pásalas por `view_reference_screenshots` con la
+     pregunta de composición concreta (hero, ritmo, interiores) — ver vale más
+     que releer.
+   Registra en `design.references[].takeaways` DECISIONES concretas ("robo la
+   jerarquía por opacidad de texto para la firma"; "el ritmo 2:1 entre secciones";
+   "asimetría 60/40 en el hero") — nunca "usar el mismo layout". Dos referencias
+   distintas + una firma propia = un sitio que no se parece a ningún otro.
 3. **Arquitectura de páginas — multi-página es la norma.** /servicios casi
    siempre (cada servicio del inventario con su propio bloque: qué
    incluye, entregables, para quién); /nosotros cuando hay material real;

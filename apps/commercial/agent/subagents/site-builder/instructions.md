@@ -98,7 +98,7 @@ template de kreatos; tú lo personalizas, no lo reinventas.
    Si `brand` es null, aplica la política de datos faltantes (nunca inventes
    logo ni nombre corto que el negocio no usa).
 2b-bis. **BIBLIOTECA DE BLOQUES — tu primera arma contra lo genérico.** El
-   template trae `components/blocks/` (16 arquetipos curados y probados) que se
+   template trae `components/blocks/` (48 arquetipos curados y probados) que se
    COMPONEN, no se escriben: declaras `{ id: "block", block: "<key>", ns }` en
    config y llenas su copy en es.json — **NADA de .tsx**. Lee
    `components/blocks/catalog.md` del clone para el arquetipo y la forma de `ns`
