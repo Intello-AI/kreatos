@@ -16,7 +16,7 @@ function slugFromUrl(url: string): string {
 /** Alta de referencias de diseño desde el chat (después delega el análisis). */
 export default defineTool({
   description:
-    "Agrega URLs a la biblioteca de referencias de diseño (status pending). Tras agregarlas, delega a design-scout 'analiza las referencias pendientes' para que las procese. Úsalo cuando el humano pase sitios que le gustan como referencia.",
+    "Agrega URLs a la biblioteca de referencias de diseño (status pending). Tras agregarlas, delega a design-scout 'analiza las referencias pendientes' para que las procese. Úsalo SOLO cuando el humano pase sitios que le GUSTAN como inspiración a emular. NO lo uses con el sitio ACTUAL de un lead en un rediseño: ese es el target a reemplazar (va al flujo de generación, no a la biblioteca transversal), y meterlo contamina las demás generaciones.",
   inputSchema: z.object({
     urls: z.array(z.string().url()).min(1).max(15),
   }),

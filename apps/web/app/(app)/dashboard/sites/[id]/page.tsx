@@ -307,7 +307,7 @@ export default async function SiteDetailPage({
                   </EmptyHeader>
                 </Empty>
               ) : (
-                <ul className="divide-y border">
+                <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {previewVersions.map((version) => {
                     const isCurrent = version.version_n === site.current_version
                     const branchUrl = site.repo_url
@@ -316,13 +316,32 @@ export default async function SiteDetailPage({
                     return (
                       <li
                         key={version.id}
-                        className="flex items-center justify-between gap-4 p-3 text-sm"
+                        className="flex flex-col border text-sm"
                       >
-                        <div className="min-w-0 space-y-1">
+                        {/* Miniatura del preview de la rama: cada versión se VE,
+                            no solo se lee su changelog. */}
+                        <div className="aspect-[1280/800] w-full overflow-hidden border-b bg-muted/30">
+                          {version.preview_url ? (
+                            <SitePreview
+                              url={version.preview_url}
+                              title={`Preview de v${version.version_n}`}
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center">
+                              <BrowserIcon className="size-6 text-muted-foreground/50" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-1 flex-col gap-2 p-3">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-medium">
                               v{version.version_n}
                             </span>
+                            {isCurrent && (
+                              <Badge variant="outline" className="text-xs">
+                                Actual
+                              </Badge>
+                            )}
                             {branchUrl ? (
                               <Link
                                 href={branchUrl}
@@ -334,12 +353,7 @@ export default async function SiteDetailPage({
                                 {version.version_n}
                               </Link>
                             ) : null}
-                            {isCurrent && (
-                              <Badge variant="outline" className="text-xs">
-                                Actual
-                              </Badge>
-                            )}
-                            <span className="text-xs text-muted-foreground">
+                            <span className="ml-auto text-xs text-muted-foreground">
                               {formatRelative(
                                 version.deployed_at ?? version.created_at
                               )}
@@ -347,30 +361,30 @@ export default async function SiteDetailPage({
                           </div>
                           {version.changelog && (
                             <p
-                              className="line-clamp-1 text-xs text-muted-foreground"
+                              className="line-clamp-2 text-xs text-muted-foreground"
                               title={version.changelog}
                             >
                               {version.changelog}
                             </p>
                           )}
-                        </div>
-                        {version.preview_url && (
-                          <Button
-                            asChild
-                            variant="outline"
-                            size="sm"
-                            className="shrink-0"
-                          >
-                            <Link
-                              href={version.preview_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                          {version.preview_url && (
+                            <Button
+                              asChild
+                              variant="outline"
+                              size="sm"
+                              className="mt-auto w-fit"
                             >
-                              Previsualizar
-                              <ArrowSquareOutIcon />
-                            </Link>
-                          </Button>
-                        )}
+                              <Link
+                                href={version.preview_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                Previsualizar
+                                <ArrowSquareOutIcon />
+                              </Link>
+                            </Button>
+                          )}
+                        </div>
                       </li>
                     )
                   })}
