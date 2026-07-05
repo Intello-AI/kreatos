@@ -125,7 +125,16 @@ template de kreatos; tú lo personalizas, no lo reinventas.
    trust-bar, aviso): de ellas dependen SEO/a11y/form. Cada custom se
    justifica en el spec ("la variante X no logra Y de la referencia").
    Contrato: solo tokens del theme, copy vía next-intl, motion con los
-   primitives del motor, accesibilidad AA, cero dependencias nuevas. Las
+   primitives del motor, accesibilidad AA, cero dependencias nuevas.
+   **Copy = TODAS las claves que el componente lee.** Cada `t("x")` del .tsx
+   DEBE tener su clave en es.json bajo ese ns — si falta, el build ahora TUMBA
+   (next-intl lanza en MISSING_MESSAGE; antes pintaba "ns.clave" cruda en el
+   sitio). Al escribir una custom, escribe su bloque de copy COMPLETO en el
+   mismo turno. **Imágenes en grid/tira/carrusel: SmartImage con aspect FIJO
+   y UNIFORME** (`aspect-[4/5]`, `aspect-[4/3]`… el MISMO para todas las de esa
+   galería) — el object-cover recorta; NUNCA dejes que el tamaño de origen
+   mande el alto (queda disparejo). Masonry es la única excepción (aspect
+   variado a propósito). Las
    referencias analizadas (`designReferences[].analysis`) son tu catálogo de
    patrones — decláralas en el spec (sección con descripción del layout)
    ANTES de la fase build. Si una referencia trae
