@@ -202,11 +202,17 @@ materializas:
    define páginas interiores, decláralas en `pages` de site.config.ts con
    su copy bajo `pages.<slug>.*` en es.json.
    **División del trabajo — tú diseñas, el transcriptor escribe lo
-   mecánico:** las cuatro superficies de transcripción (`messages/es.json`,
-   `site.config.ts`, `app/theme.css`, `app/fonts.ts`) las materializas con
-   `draft_surface` — pásale en `content` la porción LITERAL del spec (copy
-   exacto, tokens exactos, estructura completa): lo que no le pases no
-   existirá. **Las superficies NACEN del spec, jamás del demo**: parchear el
+   mecánico:** TRES superficies (`messages/es.json`, `app/theme.css`,
+   `app/fonts.ts`) las materializas con `draft_surface` — pásale en `content`
+   la porción LITERAL del spec (copy exacto, tokens exactos, estructura
+   completa): lo que no le pases no existirá. **`site.config.ts` lo escribes
+   TÚ directo** (`cat > site.config.ts <<'EOF' … EOF`): el schema del template
+   exige TODOS los campos (address/geo/hours/maps/business/seo/design/
+   sections), así que ya tienes que armar el objeto completo — draft_surface
+   ya NO acepta site-config (el transcriptor barato solo lo degradaba y fallaba
+   siempre). Sigue el contrato: `import type { SiteConfig } from "@/lib/config"`
+   + `const config: SiteConfig = {…}` + `export default config`. Contacto sin
+   dato real → mock marcado `// MOCK`. **Las superficies NACEN del spec, jamás del demo**: parchear el
    es.json/config del despacho ficticio con replaces de textos es el defecto
    número uno (el cliente recibe "Su contabilidad al día" con su logo) — el
    push lo rechaza. Tu `content` de es-json cubre TODOS los namespaces del
@@ -389,7 +395,8 @@ materializas:
     d. SIN checkpoints (clone desde main = template pelón): re-materializa
        TODO desde `latestSpec` ANTES de cualquier corrección puntual — la
        vía rápida: `fetch_brand_assets` (assets+iconos) + `draft_surface`
-       para las 4 superficies + custom sections a mano.
+       para es.json/theme.css/fonts + `site.config.ts` y las custom sections a
+       mano.
     e. **Motor tocado por accidente (tú lo editaste) → revierte SELECTIVO,
        jamás reset.** Si `push_site_version` rechaza por "archivos del MOTOR
        modificados", el error te LISTA los archivos exactos. Revierte SOLO

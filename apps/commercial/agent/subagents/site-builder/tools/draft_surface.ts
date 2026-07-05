@@ -18,11 +18,6 @@ const SURFACE_RULES: Record<string, string> = {
 - El copy va LITERAL como viene en el spec — no lo parafrasees ni lo "mejores".
 - OJO: el ARCHIVO BASE es el DEMO de un cliente FICTICIO (un despacho contable). De él conserva ÚNICAMENTE el namespace "common" con TODAS sus keys (skipToContent, openMenu, closeMenu, themeToggle, whatsappLabel, whatsappMessage, googleRating, googleReviews, viewOnGoogle...), adaptando los valores al negocio real. TODO lo demás (hero, navbar, services, about, pages...) sale EXCLUSIVAMENTE del CONTENIDO A MATERIALIZAR: cualquier namespace o texto del base que el contenido no mencione se ELIMINA — dejar copy del despacho ficticio en el sitio de otro negocio es el peor defecto posible.
 - Español mexicano; escapa comillas dobles dentro de strings.`,
-  "site-config": `El archivo es site.config.ts del template de kreatos.
-- TypeScript válido que respeta EXACTAMENTE la estructura del archivo base actual (imports, tipo del export, forma de las secciones).
-- Solo cambia los valores que el spec dicta; no inventes campos nuevos ni borres los requeridos.
-- Los campos REQUERIDOS del archivo base (address, geo, phone, hours, maps, social, seo, design, sections) SIEMPRE presentes — si el contenido no da un valor, conserva la forma del base con el valor que el contenido indique como mock.
-- SOLO los campos opcionales (founded, whatsapp, email, icon, logo...) se omiten sin dato real (nunca strings vacíos ni ceros de relleno).`,
   "theme-css": `El archivo es app/theme.css del template (tokens shadcn + Tailwind v4).
 - Mantén la estructura del archivo base: :root { ... } y .dark { ... } con las MISMAS variables, más el bloque @theme inline si el base lo tiene.
 - Usa EXACTAMENTE los valores de color/radius que dicta el spec — cero colores inventados.
@@ -61,14 +56,9 @@ async function validate(
       return `la salida aún contiene copy del DEMO ficticio ("${demoSignal}") — todo namespace fuera de common debe salir del contenido a materializar, jamás del archivo base`
     }
   }
-  if (surface === "site-config" || surface === "fonts") {
+  if (surface === "fonts") {
     if (!/export\s/.test(content)) {
       return "el TypeScript no tiene ningún export"
-    }
-    // El contrato del template: el config importa el tipo del motor. Un
-    // helper inventado (defineSiteConfig etc.) rompe el build de tipos.
-    if (surface === "site-config" && !content.includes('from "@/lib/config"')) {
-      return 'site.config.ts debe seguir el contrato del template: `import type { SiteConfig } from "@/lib/config"` + `const config: SiteConfig = {...}` + export default — sin helpers inventados'
     }
     // Chequeo sintáctico real: atrapa TS roto aquí en vez de esperar al
     // `pnpm build` del sandbox (feedback mucho más tardío). Si typescript
@@ -108,9 +98,9 @@ async function validate(
 
 export default defineTool({
   description:
-    "Escribe una superficie MECÁNICA del sitio en el sandbox (messages/es.json, site.config.ts, app/theme.css, app/fonts.ts) transcribiendo el spec con un modelo barato. Tú decides el contenido en el spec; este tool solo lo materializa. Puedes llamarlo varias veces en el mismo turno (superficies en paralelo). NUNCA lo uses para components/custom/ — ese código lo escribes tú.",
+    "Escribe una superficie MECÁNICA del sitio en el sandbox (messages/es.json, app/theme.css, app/fonts.ts) transcribiendo el spec con un modelo barato. Tú decides el contenido en el spec; este tool solo lo materializa. Puedes llamarlo varias veces en el mismo turno (superficies en paralelo). NO incluye site.config.ts: ese objeto exige TODOS los campos del schema (address/geo/hours/maps/...), así que ya lo tienes que armar completo — escríbelo TÚ directo con las herramientas del sandbox (el transcriptor barato solo lo degradaba). NUNCA lo uses para components/custom/ — ese código lo escribes tú.",
   inputSchema: z.object({
-    surface: z.enum(["es-json", "site-config", "theme-css", "fonts"]),
+    surface: z.enum(["es-json", "theme-css", "fonts"]),
     path: z
       .string()
       .regex(/^[\w./-]+$/)
@@ -132,35 +122,6 @@ export default defineTool({
       throw new Error(
         "draft_surface no escribe secciones custom: ese código es diseño y lo escribes tú con las herramientas del sandbox.",
       )
-    }
-    // El spec NO es el config: el schema del template (lib/config.ts) exige
-    // estos campos SIEMPRE. Rechazar aquí el contenido incompleto ahorra el
-    // whack-a-mole de errores de tipos build por build.
-    if (surface === "site-config") {
-      const required = [
-        "address",
-        "geo",
-        "phone",
-        "hours",
-        "maps",
-        "social",
-        "seo",
-        "design",
-        "sections",
-      ]
-      const missing = required.filter(
-        (key) => !new RegExp(`\\b${key}\\s*:`).test(content),
-      )
-      if (missing.length > 0) {
-        throw new Error(
-          `Tu contenido no trae campos REQUERIDOS del schema del template: ${missing.join(", ")}. ` +
-            "El spec no es el config — lee site/lib/config.ts y manda el objeto COMPLETO " +
-            "(business con address/geo/phone/hours/maps/social, seo, design del template " +
-            "(preset/fontPair/defaultMode/density/imageTreatment/motion — SIN concept ni " +
-            "variation_notes: esos viven solo en el spec), sections). Datos de contacto sin " +
-            'valor real → mock local marcado "// MOCK" (política de demo), nunca campos ausentes.',
-        )
-      }
     }
     const sandbox = await ctx.getSandbox()
 

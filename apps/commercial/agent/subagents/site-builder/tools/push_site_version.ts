@@ -91,7 +91,15 @@ export default defineTool({
         })
         .filter(Boolean)
       const engineTouched = touched.filter(
-        (path) => !EDITABLE_PATHS.some((re) => re.test(path)),
+        (path) =>
+          // `.agent/` es tooling del coding-agent (skills/config del sandbox),
+          // NUNCA parte del sitio del cliente: se excluye del repo más abajo
+          // (git rm --cached). El runtime de eve lo re-siembra en cada corrida,
+          // así que aparece como modificado/borrado vs origin/main — pero eso
+          // no es tocar el MOTOR del template. Sin este filtro, el guard lo
+          // marcaba y el push entraba en un loop irreparable.
+          !path.startsWith(".agent/") &&
+          !EDITABLE_PATHS.some((re) => re.test(path)),
       )
       if (engineTouched.length > 0) {
         const list = engineTouched.slice(0, 12).join(" ")
