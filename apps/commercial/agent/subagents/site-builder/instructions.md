@@ -85,11 +85,16 @@ template de kreatos; tú lo personalizas, no lo reinventas.
    - `iconUrl` (isotipo cuadrado elegido por el curador): descárgalo a
      `public/images/icon.<ext>`, decláralo en `business.icon` y en fase
      build GENERA los iconos como archivos ESTÁTICOS en `app/` según el
-     AGENT.md (icon.svg si es SVG; icon.png + favicon.ico + apple-icon.png
-     con ffmpeg si es raster — apple-icon SIEMPRE con fondo sólido del
-     theme y ~18% padding). Sin isotipo: escribe a mano `app/icon.svg`
-     con un monograma simple (fondo acento + inicial). NUNCA uses
-     ImageResponse/Satori para iconos: rompe el build en export.
+     AGENT.md (icon.svg si es SVG; icon.png + apple-icon.png con ffmpeg si es
+     raster — apple-icon SIEMPRE con fondo sólido del theme y ~18% padding).
+     `fetch_brand_assets` ya hace esto. **NO generes `app/favicon.ico`**: el
+     .ico de ffmpeg produce un ICO inválido que rompe el build de Turbopack
+     ("ICO image data size did not match") — Next deriva el favicon de
+     `app/icon.png`. Si te topas ese error de build, la causa es un
+     favicon.ico corrupto: `rm -f app/favicon.ico` y re-build (no lo
+     regeneres). Sin isotipo: escribe a mano `app/icon.svg` con un monograma
+     simple (fondo acento + inicial). NUNCA uses ImageResponse/Satori para
+     iconos: rompe el build en export.
    Si `brand` es null, aplica la política de datos faltantes (nunca inventes
    logo ni nombre corto que el negocio no usa).
 2c. **Secciones custom — tu herramienta contra lo genérico.** El template

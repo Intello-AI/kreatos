@@ -17,7 +17,7 @@ function extOf(path: string): string {
 
 export default defineTool({
   description:
-    "Descarga TODOS los assets de la ficha de marca al repo clonado en un solo paso: logo → public/images/logo.<ext>, isotipo → public/images/icon.<ext> + iconos estáticos de app/ (icon.svg o icon.png + favicon.ico + apple-icon.png con fondo sólido), y fotos aprobadas → public/images/brand-<n>.webp (ffmpeg q80, máx 1600px). Úsalo en fase build justo después de clone_site_repo (y en re-materializaciones). Requiere el clone en /workspace/site.",
+    "Descarga TODOS los assets de la ficha de marca al repo clonado en un solo paso: logo → public/images/logo.<ext>, isotipo → public/images/icon.<ext> + iconos estáticos de app/ (icon.svg, o icon.png + apple-icon.png con fondo sólido; NO genera favicon.ico —Next lo deriva de icon.png y el .ico de ffmpeg rompe el build—), y fotos aprobadas → public/images/brand-<n>.webp (ffmpeg q80, máx 1600px). Úsalo en fase build justo después de clone_site_repo (y en re-materializaciones). Requiere el clone en /workspace/site.",
   inputSchema: z.object({
     siteId: z.string().uuid(),
     appleIconBackground: z
@@ -88,16 +88,18 @@ export default defineTool({
           const result = await sandbox.run({
             command: [
               `ffmpeg -y -i "${src}" -vf "scale='min(512,iw)':-2" site/app/icon.png`,
-              `ffmpeg -y -i "${src}" -vf "scale=48:48:force_original_aspect_ratio=decrease,pad=48:48:(ow-iw)/2:(oh-ih)/2:color=${bg}@0" site/app/favicon.ico`,
               `ffmpeg -y -i "${src}" -vf "scale=132:132:force_original_aspect_ratio=decrease,pad=180:180:(ow-iw)/2:(oh-ih)/2:color=${bg.replace("#", "0x")}" site/app/apple-icon.png`,
+              // NO generamos app/favicon.ico: el .ico de ffmpeg produce un
+              // ICO que el decoder de Turbopack rechaza ("ICO image data size
+              // did not match") y ROMPÍA el build en cada corrida. Next genera
+              // el favicon desde app/icon.png, así que borramos el favicon.ico
+              // del template y dejamos que icon.png mande (build verde, favicon
+              // correcto del cliente).
+              `rm -f site/app/favicon.ico`,
             ].join(" && "),
           })
           if (result.exitCode === 0) {
-            icons = [
-              "site/app/icon.png",
-              "site/app/favicon.ico",
-              "site/app/apple-icon.png",
-            ]
+            icons = ["site/app/icon.png", "site/app/apple-icon.png"]
           } else {
             problems.push(
               `generación de iconos falló: ${[result.stderr, result.stdout].filter(Boolean).join("\n").slice(-300)}`,
