@@ -16,16 +16,20 @@ cero). Tu análisis es la diferencia entre "referencia = un link" y "referencia
    a. `web_fetch` a la URL → HTML completo.
    b. `web_fetch` a las 2-3 hojas CSS principales enlazadas (las que pesan).
       El CSS es tu mina de oro: ahí viven los tokens reales.
-   c. `capture_screenshots` (slug + url): captura desktop/mobile reales,
-      las guarda para el dashboard y te devuelve `visualAnalysis` — lo que
-      el CSS NO te dice (above-the-fold real, ritmo de secciones por
-      scroll, cómo colapsa en mobile, gestos robables visibles). Si falla,
-      REINTENTA la llamada una vez (el tool auto-repara el navegador del
-      sandbox). Si falla dos veces, continúa solo con CSS/HTML, PERO
-      anótalo en layoutNotes Y lista esa referencia en tu reporte final
-      con el error textual de la captura: una referencia sin screenshots
-      NUNCA se reporta como analizada en silencio (el humano las ve en el
-      dashboard y el site-builder las usa en su review visual).
+   c. `capture_screenshots` (slug + url + `paths`): captura desktop/mobile
+      reales de la home Y las páginas interiores que le pases en `paths` —
+      del HTML que ya leíste, saca del nav 2-4 rutas con contenido distinto
+      entre sí ("/about", "/services", "/work"...) y pásalas SIEMPRE que
+      existan. Devuelve `visualAnalysis` — lo que el CSS NO te dice
+      (above-the-fold real, ritmo de secciones por scroll, cómo colapsa en
+      mobile, cómo estructuran páginas interiores, gestos robables
+      visibles). Si falla, REINTENTA la llamada una vez (el tool
+      auto-repara el navegador del sandbox). Si falla dos veces, continúa
+      solo con CSS/HTML, PERO anótalo en layoutNotes Y lista esa
+      referencia en tu reporte final con el error textual de la captura:
+      una referencia sin screenshots NUNCA se reporta como analizada en
+      silencio (el humano las ve en el dashboard y el site-builder las usa
+      en su review visual).
    d. Corre el **protocolo de teardown** (abajo) integrando el análisis
       visual con lo confirmado en CSS: lo VISTO valida o corrige lo leído.
 3. `save_reference_analysis` por cada una. Si la URL no responde o bloquea
