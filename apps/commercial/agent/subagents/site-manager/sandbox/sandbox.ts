@@ -22,7 +22,11 @@ const CHROMIUM_BOOTSTRAP = `cd /tmp && pnpm dlx playwright@1.61.1 install chromi
  * solo en local.
  */
 export default defineSandbox({
-  backend: defaultBackend(),
+  // timeout 20 min (default eve = 30): eve no extiende el timeout con la
+  // actividad, así que es ventana fija — tras la corrida el sandbox quedaba
+  // idle facturándose hasta los 30. Recorta el idle-tail; los checkpoints en
+  // v{N} cubren una rara corrida que pase de 20 min. Solo aplica en Vercel.
+  backend: defaultBackend({ vercel: { timeout: 20 * 60 * 1000 } }),
   // v6: deps del sistema vía dnf (el sandbox es Amazon Linux 2023, sin apt)
   // — chromium descargaba pero moría al arrancar (libnspr4.so faltante).
   // v2: precalienta el store de pnpm con las deps del template (repo público)

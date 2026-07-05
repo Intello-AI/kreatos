@@ -22,7 +22,14 @@ const CHROMIUM_BOOTSTRAP = `cd /tmp && pnpm dlx playwright@1.61.1 install chromi
  * solo en local.
  */
 export default defineSandbox({
-  backend: defaultBackend(),
+  // timeout: 20 min (default de eve = 30). eve NO extiende el timeout con la
+  // actividad (verificado: no llama extendTimeout), así que es una ventana FIJA
+  // desde que se crea — tras una generación de ~12 min el sandbox quedaba ~18
+  // min IDLE facturándose hasta los 30. Bajarlo a 20 recorta ese idle-tail sin
+  // arriesgar las corridas normales; una rara que pase de 20 min muere pero los
+  // checkpoints en la rama v{N} sobreviven y se retoma. Solo aplica al backend
+  // Vercel (prod); el docker local lo ignora.
+  backend: defaultBackend({ vercel: { timeout: 20 * 60 * 1000 } }),
   // v7: además del sistema, se precalienta el STORE de pnpm con las deps del
   // template (repo público) para que el `pnpm install` de cada corrida linkee
   // desde el store caliente en vez de descargar ~415 paquetes.
