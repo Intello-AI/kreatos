@@ -22,6 +22,8 @@ import {
 import { PublishVersionButton } from "@/features/sites/components/publish-version-button"
 import { SiteRefresh } from "@/features/sites/components/site-refresh"
 import { SiteStatusBadge } from "@/features/sites/components/site-status-badge"
+import { getSiteCost } from "@/features/costs/queries"
+import { LeadCostPanel } from "@/features/costs/components/lead-cost-panel"
 import { getSiteDetail } from "@/features/sites/queries"
 import { formatDate, formatRelative } from "@/lib/dates"
 import { Badge } from "@/components/ui/badge"
@@ -65,7 +67,10 @@ export default async function SiteDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const { site, versions, error } = await getSiteDetail(id)
+  const [{ site, versions, error }, cost] = await Promise.all([
+    getSiteDetail(id),
+    getSiteCost(id),
+  ])
 
   if (error) {
     return (
@@ -393,6 +398,10 @@ export default async function SiteDetailPage({
                 </ul>
               )}
             </div>
+
+            <Separator />
+
+            <LeadCostPanel cost={cost} />
           </div>
         </div>
 

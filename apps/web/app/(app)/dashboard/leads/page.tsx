@@ -5,6 +5,7 @@ import { LeadsFilters } from "@/features/leads/components/leads-filters"
 import { LeadsPagination } from "@/features/leads/components/leads-pagination"
 import { LeadsTable } from "@/features/leads/components/leads-table"
 import { LeadsTableSkeleton } from "@/features/leads/components/leads-table-skeleton"
+import { getLeadCostMap } from "@/features/costs/queries"
 import {
   getLeadCities,
   getLeads,
@@ -96,12 +97,14 @@ async function LeadsSection({
     )
   }
 
+  const costs = await getLeadCostMap(leads.map((l) => l.id))
+
   const totalPages = Math.max(1, Math.ceil(count / LEADS_PAGE_SIZE))
   const hasFilters = Boolean(q || status || city)
 
   return (
     <div className="space-y-4">
-      <LeadsTable leads={leads} hasFilters={hasFilters} />
+      <LeadsTable leads={leads} hasFilters={hasFilters} costs={costs} />
 
       {count > 0 && (
         <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-between">

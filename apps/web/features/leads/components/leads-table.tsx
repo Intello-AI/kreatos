@@ -4,6 +4,7 @@ import { SiteStatusBadge } from "@/features/sites/components/site-status-badge"
 import type { SiteStatus } from "@/features/sites/types"
 import { LeadStatusBadge } from "@/features/leads/components/lead-status-badge"
 import { formatDate } from "@/lib/dates"
+import { formatUsd } from "@/lib/format"
 import {
   Table,
   TableBody,
@@ -60,9 +61,12 @@ function LeadBrandCell({
 export function LeadsTable({
   leads,
   hasFilters,
+  costs = {},
 }: {
   leads: Lead[]
   hasFilters: boolean
+  /** Mapa lead_id → costo USD de IA. Sin entrada = sin tokens registrados aún. */
+  costs?: Record<string, number>
 }) {
   if (leads.length === 0) {
     return (
@@ -85,6 +89,7 @@ export function LeadsTable({
             <TableHead>Teléfono</TableHead>
             <TableHead>Rating</TableHead>
             <TableHead>Estado</TableHead>
+            <TableHead className="text-right">Costo IA</TableHead>
             <TableHead>Marca</TableHead>
             <TableHead>Creado</TableHead>
             <TableHead>Sitio</TableHead>
@@ -120,6 +125,13 @@ export function LeadsTable({
               </TableCell>
               <TableCell>
                 <LeadStatusBadge status={lead.status} />
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                {costs[lead.id] ? (
+                  formatUsd(costs[lead.id])
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
               </TableCell>
               <TableCell>
                 <LeadBrandCell brand={lead.lead_brand} name={lead.name} />

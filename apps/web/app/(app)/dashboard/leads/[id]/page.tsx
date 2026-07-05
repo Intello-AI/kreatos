@@ -10,6 +10,8 @@ import {
   StarIcon,
 } from "@phosphor-icons/react/ssr"
 
+import { getLeadCost } from "@/features/costs/queries"
+import { LeadCostPanel } from "@/features/costs/components/lead-cost-panel"
 import { getLeadBrand } from "@/features/leads/brand-actions"
 import {
   LeadBrandAside,
@@ -64,9 +66,10 @@ export default async function LeadDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const [{ lead, error }, brand] = await Promise.all([
+  const [{ lead, error }, brand, cost] = await Promise.all([
     getLeadDetail(id),
     getLeadBrand(id),
+    getLeadCost(id),
   ])
 
   if (error) {
@@ -355,6 +358,10 @@ export default async function LeadDetailPage({
                 </p>
               )}
             </div>
+
+            <Separator />
+
+            <LeadCostPanel cost={cost} />
           </div>
         </div>
 

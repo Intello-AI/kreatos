@@ -15,6 +15,7 @@ const COLUMNS = [
   "Teléfono",
   "Rating",
   "Estado",
+  "Costo IA",
   "Creado",
 ]
 

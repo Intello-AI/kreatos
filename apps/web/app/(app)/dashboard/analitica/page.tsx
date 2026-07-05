@@ -4,11 +4,14 @@ import { Suspense } from "react"
 import {
   ArrowUpRightIcon,
   BrowserIcon,
+  CoinsIcon,
   HandshakeIcon,
   RocketLaunchIcon,
   UsersThreeIcon,
 } from "@phosphor-icons/react/ssr"
 
+import { getCostOverview } from "@/features/costs/queries"
+import { CostChart } from "@/features/costs/components/cost-chart"
 import { getDashboardStats } from "@/features/dashboard/queries"
 import { ActivityChart } from "@/features/dashboard/components/activity-chart"
 import { DashboardSkeleton } from "@/features/dashboard/components/dashboard-skeleton"
@@ -16,6 +19,7 @@ import { LeadStatusBadge } from "@/features/leads/components/lead-status-badge"
 import { LEAD_STATUSES } from "@/features/leads/types"
 import { SiteStatusBadge } from "@/features/sites/components/site-status-badge"
 import { formatRelative } from "@/lib/dates"
+import { formatUsd } from "@/lib/format"
 import {
   Card,
   CardContent,
@@ -83,7 +87,10 @@ export default function DashboardPage() {
 }
 
 async function DashboardContent() {
-  const stats = await getDashboardStats()
+  const [stats, costOverview] = await Promise.all([
+    getDashboardStats(),
+    getCostOverview(),
+  ])
 
   if (stats.error) {
     return <p className="text-sm text-destructive">Error: {stats.error}</p>
@@ -94,6 +101,9 @@ async function DashboardContent() {
       ? Math.round((stats.won / stats.leads.total) * 100)
       : 0
   const maxCategory = stats.leads.topCategories[0]?.count ?? 1
+  const wonCostAvg =
+    stats.won > 0 ? costOverview.total.costUsd / stats.won : 0
+  const maxStageCost = costOverview.byStage[0]?.costUsd ?? 1
 
   return (
     <div className="space-y-6">
@@ -160,6 +170,75 @@ async function DashboardContent() {
                 </li>
               ))}
             </ul>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Costo de IA: gasto en tokens en el tiempo + desglose por etapa */}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-1.5 text-sm">
+              <CoinsIcon className="size-4" />
+              Costo de IA
+            </CardTitle>
+            <CardDescription>
+              Gasto en tokens de los agentes en los últimos 30 días.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
+              <div>
+                <p className="text-2xl font-semibold tabular-nums">
+                  {formatUsd(costOverview.total.costUsd)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Total atribuido a leads
+                </p>
+              </div>
+              <div>
+                <p className="text-lg font-medium tabular-nums">
+                  {formatUsd(wonCostAvg)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Promedio por sitio vendido
+                </p>
+              </div>
+            </div>
+            <CostChart data={costOverview.series} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Costo por etapa</CardTitle>
+            <CardDescription>Qué agente consume más.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {costOverview.byStage.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Sin registro de tokens aún.
+              </p>
+            ) : (
+              costOverview.byStage.map((stage) => (
+                <div key={stage.agent} className="space-y-1">
+                  <div className="flex items-center justify-between gap-2 text-sm">
+                    <span className="truncate">{stage.agent}</span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {formatUsd(stage.costUsd)}
+                    </span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-chart-1"
+                      style={{
+                        width: `${Math.round((stage.costUsd / maxStageCost) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
       </div>
