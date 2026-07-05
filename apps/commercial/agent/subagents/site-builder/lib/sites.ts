@@ -54,6 +54,28 @@ export async function getSite(
   return data
 }
 
+/**
+ * Espera a que sites.repo_url exista (create_site_repo puede estar corriendo
+ * EN PARALELO en el mismo turno — el agente emite las tools juntas y el
+ * insert tarda unos segundos). Robustez al orden > obligar secuencia.
+ */
+export async function waitForRepoUrl(
+  siteId: string,
+  timeoutMs = 60_000,
+): Promise<SiteRow> {
+  const deadline = Date.now() + timeoutMs
+  for (;;) {
+    const site = await getSite(siteId)
+    if (site.repo_url) return site
+    if (Date.now() >= deadline) {
+      throw new Error(
+        "El site no tiene repo_url tras esperar 60s: corre create_site_repo (¿falló en este turno?) y reintenta.",
+      )
+    }
+    await new Promise((resolve) => setTimeout(resolve, 3_000))
+  }
+}
+
 export async function getLatestVersion(
   siteId: string,
 ): Promise<SiteVersionRow | null> {

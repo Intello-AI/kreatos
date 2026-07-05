@@ -2,7 +2,7 @@ import { defineTool } from "eve/tools"
 import { z } from "zod"
 
 import { getAuthenticatedCloneUrl, getGithubEnv } from "../lib/github"
-import { getSite } from "../lib/sites"
+import { waitForRepoUrl } from "../lib/sites"
 
 export default defineTool({
   description:
@@ -11,12 +11,8 @@ export default defineTool({
     siteId: z.string().uuid(),
   }),
   async execute({ siteId }, ctx) {
-    const site = await getSite(siteId)
-    if (!site.repo_url) {
-      throw new Error(
-        "El site no tiene repo_url; corre create_site_repo primero.",
-      )
-    }
+    // Tolera ejecutarse en paralelo con create_site_repo (mismo turno).
+    const site = await waitForRepoUrl(siteId)
     const env = getGithubEnv()
     const fullName = `${env.org}/${site.slug}`
 

@@ -2,7 +2,7 @@ import { defineTool } from "eve/tools"
 import { z } from "zod"
 
 import { getGithubEnv } from "../lib/github"
-import { getSite, updateSite } from "../lib/sites"
+import { updateSite, waitForRepoUrl } from "../lib/sites"
 import { ensureVercelProject } from "../lib/vercel"
 
 export default defineTool({
@@ -12,10 +12,8 @@ export default defineTool({
     siteId: z.string().uuid(),
   }),
   async execute({ siteId }) {
-    const site = await getSite(siteId)
-    if (!site.repo_url) {
-      throw new Error("El site no tiene repo_url; corre create_site_repo primero.")
-    }
+    // Tolera ejecutarse en paralelo con create_site_repo (mismo turno).
+    const site = await waitForRepoUrl(siteId)
     const env = getGithubEnv()
     const { projectId, alreadyExisted } = await ensureVercelProject({
       slug: site.slug,
