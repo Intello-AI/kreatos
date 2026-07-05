@@ -4,6 +4,7 @@ import { StarIcon, ArrowUpRightIcon } from "@phosphor-icons/react/ssr"
 
 import { ReanalyzeButton } from "@/features/references/components/reanalyze-button"
 import { ReferencePreview } from "@/features/references/components/reference-preview"
+import { ReferenceScreenshotsDialog } from "@/features/references/components/reference-screenshots-dialog"
 import { ReferencesRefresh } from "@/features/references/components/references-refresh"
 import { ReferencesComposer } from "@/features/references/components/references-toolbar"
 import { getReferences } from "@/features/references/queries"
@@ -79,8 +80,16 @@ export default async function ReferencesPage() {
           </Empty>
         ) : (
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {references.map((ref) => (
-              <li key={ref.id} className="relative flex flex-col border">
+            {references.map((ref) => {
+              const storageBase = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/design-references`
+              const desktopUrl = ref.screenshot_path
+                ? `${storageBase}/${ref.screenshot_path}`
+                : null
+              const mobileUrl = ref.screenshot_mobile_path
+                ? `${storageBase}/${ref.screenshot_mobile_path}`
+                : null
+              return (
+              <li key={ref.id} className="group relative flex flex-col border">
                 <div className="aspect-[1280/800] w-full overflow-hidden border-b">
                   <ReferencePreview
                     url={ref.url}
@@ -89,9 +98,14 @@ export default async function ReferencesPage() {
                       ref.screenshot_path
                         ? // card.png = viewport-only: el full-page (miles de px
                           // de alto × 26 cards) crasheaba Safari iOS por memoria.
-                          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/design-references/${ref.screenshot_path.replace(/desktop\.png$/, "card.png")}`
+                          `${storageBase}/${ref.screenshot_path.replace(/desktop\.png$/, "card.png")}`
                         : null
                     }
+                  />
+                  <ReferenceScreenshotsDialog
+                    desktopUrl={desktopUrl}
+                    mobileUrl={mobileUrl}
+                    title={ref.slug}
                   />
                   <div className="absolute top-2 right-2 bg-background h-fit w-fit flex">
                     <Badge
@@ -127,7 +141,8 @@ export default async function ReferencesPage() {
                   <ReanalyzeButton id={ref.id} />
                 </div>
               </li>
-            ))}
+              )
+            })}
           </ul>
         )}
       </div>
