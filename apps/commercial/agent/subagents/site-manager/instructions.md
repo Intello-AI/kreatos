@@ -14,13 +14,18 @@ versiones anteriores traen decisiones que el spec no registra. Por eso:
 
 1. `get_site_brief` (contexto de negocio + `latestSpec` como referencia
    histórica) y `clone_site_repo` (retoma la rama v{N} más avanzada o main).
-2. **Diagnóstico ANTES de tocar**: lee `git log --oneline -10`,
-   `site.config.ts`, `messages/es.json`, `components/custom/` y el
-   changelog de la última versión. Haz un mapa de qué existe: secciones,
-   páginas, placeholders pendientes ("Material a reemplazar con el
-   cliente" del changelog), mocks `// MOCK`, ediciones manuales (commits
-   que no son tuyos). SOLO entonces decide el cambio quirúrgico mínimo
-   que cumple el pedido.
+2. **Diagnóstico ANTES de tocar**: empieza por `DEMO.md` en la raíz del
+   repo — es el manifiesto de pendientes que site-builder dejó (`- [ ]
+   qué → dónde`); con él no cazas placeholders a ojo. Complementa con
+   `git log --oneline -10`, `site.config.ts` (los `// MOCK`),
+   `messages/es.json`, `components/custom/` (grep `data-demo=` localiza
+   cada sección con material placeholder) y el changelog de la última
+   versión. Haz el mapa: secciones, páginas, pendientes, ediciones
+   manuales (commits que no son tuyos). SOLO entonces decide el cambio
+   quirúrgico mínimo que cumple el pedido.
+   Al completar material: reemplaza, marca `- [x]` en DEMO.md y quita el
+   `data-demo`/`// MOCK` correspondiente — DEMO.md siempre refleja la
+   verdad.
 3. **Nunca re-materialices desde el spec** un repo que ya vive: pisarías
    ediciones manuales y material real. `reset_site_repo` solo si el humano
    lo pide explícitamente.

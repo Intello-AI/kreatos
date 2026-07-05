@@ -66,6 +66,19 @@ export default defineTool({
       }
     }
 
+    // Aviso (no bloqueo): pendientes del manifiesto DEMO.md. Los mocks de
+    // contacto se bloquean arriba; los placeholders aspiracionales publican
+    // solo con decisión humana — este conteo va al reporte para que conste.
+    let pendingDemoItems = 0
+    {
+      const demo = await getRepoFileText(
+        `${env.org}/${site.slug}`,
+        "DEMO.md",
+        `v${versionN}`,
+      )
+      if (demo) pendingDemoItems = (demo.match(/^- \[ \]/gm) ?? []).length
+    }
+
     const { mergeSha } = await mergeBranchToMain(
       `${env.org}/${site.slug}`,
       `v${versionN}`,
@@ -99,7 +112,15 @@ export default defineTool({
           note: `v${versionN} publicada: ${deployUrl}`,
           actor: "site-builder",
         })
-        return { state: "READY" as const, deployUrl }
+        return {
+          state: "READY" as const,
+          deployUrl,
+          ...(pendingDemoItems > 0
+            ? {
+                warning: `DEMO.md aún lista ${pendingDemoItems} pendiente(s) de material del cliente — el humano decidió publicar así; inclúyelo en tu reporte.`,
+              }
+            : {}),
+        }
       }
       if (deployment?.state === "ERROR") {
         const buildLog = deployment.uid

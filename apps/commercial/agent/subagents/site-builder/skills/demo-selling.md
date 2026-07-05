@@ -36,6 +36,30 @@ Lo que puede confundirse con un HECHO del negocio real:
 - Nombres de clientes REALES que no lo son (los rectángulos tipográficos
   usan monogramas/genéricos, no "CEMEX" si CEMEX no es cliente).
 
+## Convención de marcado (para que site-manager encuentre TODO rápido)
+
+Tres marcadores, uno por superficie — el que completa el sitio no debe
+cazar placeholders a ojo:
+
+1. **`DEMO.md` en la raíz del repo** (manifiesto canónico): checklist de
+   TODO material pendiente, escrito al terminar el build. Formato:
+
+   ```markdown
+   # Pendientes del demo — <negocio>
+
+   - [ ] Logos de clientes (3-6) → components/custom/clients-strip.tsx + ns "clients-strip" en es.json
+   - [ ] Fotos de proyectos (4+) → public/images/proyecto-*.webp (hoy stock ilustrativo)
+   - [ ] Teléfono real → site.config.ts business.phone (// MOCK)
+   ```
+
+   Cada línea: qué material se necesita → dónde vive exactamente. Al
+   completar un ítem se marca `- [x]` y se reemplaza el material.
+2. **`data-demo="<qué>"`** en el contenedor JSX de toda custom section con
+   material placeholder (`<section data-demo="logos-clientes">`) —
+   greppeable en código y localizable inspeccionando el DOM.
+3. **`// MOCK`** en cada línea de site.config.ts con dato de contacto
+   provisional (ya obligatorio; publish_site los bloquea).
+
 ## Reglas
 
 - Todo placeholder aspiracional queda LISTADO en el changelog bajo

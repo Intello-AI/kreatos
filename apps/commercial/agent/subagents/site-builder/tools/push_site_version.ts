@@ -17,6 +17,8 @@ const EDITABLE_PATHS: RegExp[] = [
   /^public\//,
   /^components\/custom\//,
   /^CHANGELOG/i,
+  // Manifiesto de pendientes del demo (material a reemplazar al vender).
+  /^DEMO\.md$/i,
   /^\.qa\//,
   /^pnpm-lock\.yaml$/,
 ]

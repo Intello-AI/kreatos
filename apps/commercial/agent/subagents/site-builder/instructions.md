@@ -270,6 +270,13 @@ materializas:
    - **minor**: anótalos en el changelog, no gastes ciclos.
    Si el paso screenshots del QA falló (sin navegador), anótalo en el
    changelog y continúa — pero nunca lo saltes si los screenshots existen.
+9c. **Escribe `DEMO.md` en la raíz del repo** antes del push final: el
+   checklist de TODO material pendiente (placeholders aspiracionales,
+   mocks de contacto) con formato `- [ ] <qué se necesita> → <dónde vive
+   exacto>` (ver skill demo-selling). Es el mapa que site-manager usará al
+   vender: si está vacío porque no hubo placeholders, escríbelo igual con
+   "Sin pendientes". Marca también `data-demo="<qué>"` en el contenedor de
+   cada custom section con material placeholder.
 10. `push_site_version` (rama `v{N}`) → `await_preview_deployment` usando el
     `commitSha` EXACTO que devolvió push_site_version — jamás lo inventes ni
     uses refs tipo HEAD. **Si push_site_version falla, DETENTE en ese paso**:
