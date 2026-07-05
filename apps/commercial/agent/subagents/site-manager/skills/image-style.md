@@ -1,6 +1,7 @@
 ---
 description: Estrategia de imágenes — un treatment por sitio, queries específicas, qué stock está prohibido. Úsalo al definir images en el spec.
 ---
+<!-- ESPEJO: copia idéntica en art-director/, site-builder/ y site-manager/skills/image-style.md. Si editas una, edita las TRES. -->
 
 # Imágenes
 
@@ -30,6 +31,26 @@ coherencia. Cuando usa FOTOS REALES del cliente, el treatment las ARRUINA.
   estructura de acero a contraluz, estantería de almacén, documentos y sello,
   camión en carretera al amanecer.
 - Toda imagen lleva `alt` descriptivo en español.
+
+## Logo del negocio (NO lo derives ni lo repurposes)
+
+`fetch_brand_assets` baja el logo tal cual a `public/images/logo.<ext>` (y el
+isotipo a `icon.<ext>`). Úsalo ASÍ:
+
+- **`business.logo` apunta al `logo.<ext>` descargado, SIN convertirlo.**
+  NUNCA lo re-generes a `.webp`/`.jpg` con ffmpeg para el navbar: la conversión
+  APLANA la transparencia sobre negro y deja una **caja negra** alrededor del
+  logo (pasó en HR Transportes: el navbar mostró el logo enmarcado en un cuadro
+  negro). El PNG transparente original se ve limpio sobre cualquier fondo.
+- Si el logo es oscuro y el theme es dark (o al revés) y queda invisible, NO lo
+  encajones en un color: es un problema de contraste del logo — déjalo tal cual
+  (el navbar tiene su propio fondo al hacer scroll) o usa el isotipo `icon` si
+  contrasta mejor. Encuadrar en negro NO lo resuelve y se ve peor.
+- **El logo y el isotipo son de MARCA (navbar, footer, favicon), JAMÁS imágenes
+  de contenido de una sección.** No pongas el logo ni una letra/monograma del
+  negocio como la imagen de un `about`, `hero` o bloque (en HR salió un "HRT"
+  gigante sobre negro llenando la columna de la sección). Las imágenes de
+  sección salen de `brand-N` (fotos reales) o stock del giro con treatment.
 
 ## Prohibido
 
