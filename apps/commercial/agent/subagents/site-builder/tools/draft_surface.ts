@@ -16,6 +16,7 @@ const SURFACE_RULES: Record<string, string> = {
 - Devuelve JSON VÁLIDO completo (RFC 8259): sin comentarios, sin trailing commas.
 - Estructura de namespaces por sección exactamente como la pide el spec.
 - El copy va LITERAL como viene en el spec — no lo parafrasees ni lo "mejores".
+- El namespace "common" del ARCHIVO BASE es del MOTOR: conserva TODAS sus keys (skipToContent, openMenu, closeMenu, themeToggle, whatsappLabel, whatsappMessage, googleRating, googleReviews, viewOnGoogle...), adaptando solo los valores al negocio. Omitirlas rompe el build con MISSING_MESSAGE.
 - Español mexicano; escapa comillas dobles dentro de strings.`,
   "site-config": `El archivo es site.config.ts del template de kreatos.
 - TypeScript válido que respeta EXACTAMENTE la estructura del archivo base actual (imports, tipo del export, forma de las secciones).

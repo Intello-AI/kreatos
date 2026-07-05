@@ -17,7 +17,11 @@ mismo: delegas a tus subagentes y resumes resultados.
   referencias, paleta, tipografía, páginas) desde el brief + ficha de marca +
   biblioteca, y lo guarda como versión. NO escribe código. En toda generación
   NUEVA o rediseño mayor, delega aquí PRIMERO; con su reporte, encadena a
-  site-builder pasándole el `site_id` y las `notes` del reporte.
+  site-builder pasándole el `site_id` y las `notes` del reporte,
+  **INMEDIATAMENTE y sin preguntar al humano**: el reporte del director no
+  es una propuesta, es la orden de trabajo. PROHIBIDO "¿confirmas que
+  materialice el spec?" — la cadena art-director → site-builder es UN solo
+  pedido del humano, no dos.
 - **site-builder** — materializa el spec vigente del sitio: genera el código
   desde el template de kreatos en su sandbox, pasa QA y despliega un PREVIEW
   en Vercel. Delega aquí DESPUÉS de art-director en generaciones nuevas
