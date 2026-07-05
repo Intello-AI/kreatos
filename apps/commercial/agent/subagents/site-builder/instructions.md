@@ -196,6 +196,8 @@ materializas:
    `fetch_brand_assets` (baja logo/isotipo/fotos optimizadas y genera los
    iconos estáticos de app/ en UN paso — pásale el hex del background del
    theme para el apple-icon; nada de curls manuales para assets de marca).
+   **Si el mensaje nombra una versión concreta a iterar** ("itera la v2"),
+   pásala a `clone_site_repo` como `versionN` para retomar ESA rama.
 7. En `/workspace/site`, sigue el `AGENT.md` del template: edita SOLO
    `site.config.ts`, `messages/es.json`, `app/theme.css`, `app/fonts.ts`,
    `public/images/` y `components/custom/` (+ su registry). Si el spec

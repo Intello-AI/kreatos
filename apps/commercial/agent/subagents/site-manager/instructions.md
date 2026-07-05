@@ -14,6 +14,9 @@ versiones anteriores traen decisiones que el spec no registra. Por eso:
 
 1. `get_site_brief` (contexto de negocio + `latestSpec` como referencia
    histórica) y `clone_site_repo` (retoma la rama v{N} más avanzada o main).
+   **Si el mensaje nombra una versión concreta** ("cambios sobre la v2"),
+   pásala a `clone_site_repo` como `versionN` para trabajar ESA rama, no la
+   más reciente.
 2. **Diagnóstico ANTES de tocar**: empieza por `DEMO.md` en la raíz del
    repo — es el manifiesto de pendientes que site-builder dejó (`- [ ]
    qué → dónde`); con él no cazas placeholders a ojo. Complementa con

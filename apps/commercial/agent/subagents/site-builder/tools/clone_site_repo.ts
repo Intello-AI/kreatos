@@ -2,15 +2,23 @@ import { defineTool } from "eve/tools"
 import { z } from "zod"
 
 import { getAuthenticatedCloneUrl, getGithubEnv } from "../lib/github"
-import { getLatestVersion, waitForRepoUrl } from "../lib/sites"
+import { getLatestVersion, getSiteVersion, waitForRepoUrl } from "../lib/sites"
 
 export default defineTool({
   description:
-    "Clona el repo del cliente en /workspace/site dentro del sandbox y configura git (user, credenciales). Después de esto edita los archivos con las herramientas de sandbox y corre `pnpm install` ahí.",
+    "Clona el repo del cliente en /workspace/site dentro del sandbox y configura git (user, credenciales). Por default retoma la rama de la versión vigente (current_version); pasa `versionN` para clonar y trabajar una versión CONCRETA (p. ej. el humano eligió iterar la v2 aunque exista v3). Después de esto edita los archivos con las herramientas de sandbox y corre `pnpm install` ahí.",
   inputSchema: z.object({
     siteId: z.string().uuid(),
+    versionN: z
+      .number()
+      .int()
+      .min(1)
+      .optional()
+      .describe(
+        "Versión/rama concreta a retomar (v{N}). Sin él, se usa la versión vigente (current_version).",
+      ),
   }),
-  async execute({ siteId }, ctx) {
+  async execute({ siteId, versionN }, ctx) {
     // Tolera ejecutarse en paralelo con create_site_repo (mismo turno).
     const site = await waitForRepoUrl(siteId)
     const env = getGithubEnv()
@@ -41,25 +49,30 @@ export default defineTool({
     // Continuar donde se quedó: si la rama de la versión vigente ya existe en
     // origin (checkpoints de un run anterior), se retoma desde ahí en vez de
     // re-materializar todo desde main.
+    // Versión objetivo: la que pidió el humano (versionN) o la vigente.
+    const targetVersion = versionN ?? site.current_version
     let resumedFromBranch: string | null = null
-    if (site.current_version) {
-      const branch = `v${site.current_version}`
+    if (targetVersion) {
+      const branch = `v${targetVersion}`
       const fetch = await sandbox.run({
         command: `cd site && git fetch --depth 1 origin ${branch} && git checkout -B ${branch} FETCH_HEAD`,
       })
       if (fetch.exitCode === 0) resumedFromBranch = branch
     }
 
-    // El spec vigente viaja COMO ARCHIVO junto al código: siempre re-leíble
-    // aunque el contexto del run se compacte o el output de get_site_brief
-    // quede atrás. Vive en .agent/ (excluido del repo por el push tool).
+    // El spec de la versión objetivo viaja COMO ARCHIVO junto al código:
+    // siempre re-leíble aunque el contexto del run se compacte. Vive en
+    // .agent/ (excluido del repo por el push tool). Con versionN se lee ESE
+    // spec; sin él, el vigente.
     let specWritten = false
-    const latest = await getLatestVersion(siteId)
-    if (latest?.spec) {
+    const target = versionN
+      ? await getSiteVersion(siteId, versionN)
+      : await getLatestVersion(siteId)
+    if (target?.spec) {
       await sandbox.writeTextFile({
         path: "site/.agent/spec.json",
         content: JSON.stringify(
-          { versionN: latest.version_n, changelog: latest.changelog, spec: latest.spec },
+          { versionN: target.version_n, changelog: target.changelog, spec: target.spec },
           null,
           2,
         ),
