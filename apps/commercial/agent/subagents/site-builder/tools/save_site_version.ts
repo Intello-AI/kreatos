@@ -205,6 +205,16 @@ export default defineTool({
       )
     }
 
+    // 2b. Momento FIRMA obligatorio: cada sitio necesita ≥1 sección `custom`
+    // hecha a la medida (el gesto memorable). Solo bloques + motor = un sitio
+    // armado de piezas prefabricadas, genérico por definición.
+    const hasSignature = sections.some((s) => String(s["id"]) === "custom")
+    if (!hasSignature) {
+      problems.push(
+        "la home no tiene NINGUNA sección `custom` de firma: todo son bloques de la biblioteca y/o secciones de motor → se ve a plantilla. Diseña 1-2 `custom` a la medida de ESTE negocio (el gesto memorable, robando composición de las referencias del brief). Los bloques son el reparto de apoyo, no el sitio entero.",
+      )
+    }
+
     // 3. Con biblioteca de referencias disponible, el spec cita qué robó.
     // Tolerante en shape: slug/refSlug/ref/id; takeaways string o array.
     const refsAvailable = await countAnalyzedReferences()

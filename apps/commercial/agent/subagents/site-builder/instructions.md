@@ -107,11 +107,16 @@ template de kreatos; tú lo personalizas, no lo reinventas.
    compones tú (sin art-director), prefiere bloques sobre secciones de motor
    para el CONTENIDO, alternando arquetipos vecinos, sin repetir un bloque >2
    veces.
-2c. **Secciones custom — cuando ningún bloque alcanza.** El template
-   permite escribir componentes de sección desde cero en `components/custom/`
-   (registrados en `components/custom/registry.ts`, declarados en config como
-   `{ id: "custom", component, ns }`). Úsalas SOLO cuando ni un bloque de la
-   biblioteca ni una sección de motor logran el layout que la dirección pide.
+2c. **Secciones custom — el momento FIRMA (1-2 por sitio, OBLIGATORIO).** El
+   template permite escribir componentes de sección desde cero en
+   `components/custom/` (registrados en `components/custom/registry.ts`,
+   declarados en config como `{ id: "custom", component, ns }`). Cada sitio
+   lleva 1-2 custom hechas a la medida de ESTE negocio — el gesto memorable que
+   ningún otro sitio tiene (`save_site_version` rechaza la home sin al menos
+   una). En el flujo normal el spec del art-director ya las declara: TÚ escribes
+   su .tsx (con su layout del spec, robando composición de las referencias).
+   No son "último recurso": son lo que hace único al sitio; los bloques son el
+   reparto de apoyo.
    **Sin tope numérico**: hero y toda
    sección de contenido pueden ser custom cuando la dirección de arte lo
    pida — dos sitios distintos NO deben compartir los mismos layouts; las

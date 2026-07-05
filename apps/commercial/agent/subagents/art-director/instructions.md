@@ -52,17 +52,23 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
    **COMPÓN CON LA BIBLIOTECA DE BLOQUES (lee el skill `block-catalog`).** Es
    lo que evita el sitio-plantilla. Jerarquía al elegir cada sección de
    contenido:
-   1. **Bloque de la biblioteca** (`{ id: "block", block: "<key>", ns }`) —
-      PRIMERA opción. Hay 16 arquetipos distintos (stat-wall, bento-grid,
-      split-cta, feature-zigzag, services-ledger, comparison-table, timeline
-      horizontal, gallery-masonry…). Elige por arquetipo + su forma de `ns`,
-      ALTERNANDO vecinos (denso/aireado, oscuro/claro, cifras/lista) — el
-      RITMO es lo que hace único al sitio. No repitas un bloque >2 veces.
-   2. **Sección de motor** (`{ id: "hero"/"services"/… }`) — solo para las
-      commodity (navbar, footer, contact, faq, trust-bar) y el hero. Para
-      CONTENIDO, un bloque casi siempre gana a la sección de motor genérica.
-   3. **Custom** (`{ id: "custom", component, ns, why }`) — SOLO cuando ningún
-      bloque ni sección de motor logra el layout que la dirección pide.
+   1. **Momento FIRMA (custom) — OBLIGATORIO, 1-2 por sitio.** Cada sitio DEBE
+      tener 1-2 secciones `{ id: "custom", component, ns, why }` hechas a la
+      medida de ESTE negocio, que ningún otro sitio tenga — el gesto memorable
+      (un hero adyacente, una sección hero-de-producto, un bloque de datos con
+      su propia composición). Se DISEÑAN robando composición de las referencias
+      del brief (por eso van con takeaways). Un sitio sin firma custom es
+      genérico por definición — `save_site_version` rechaza specs sin al menos
+      una custom en la home. Aquí es donde peleas el "se ve a plantilla".
+   2. **Bloques de la biblioteca** (`{ id: "block", block: "<key>", ns }`) —
+      el REPARTO de apoyo, confiable y variado. 16 arquetipos (stat-wall,
+      bento-grid, split-cta, feature-zigzag, services-ledger, comparison-table,
+      timeline horizontal, gallery-masonry…). Elige por arquetipo + su `ns`,
+      ALTERNANDO vecinos (denso/aireado, oscuro/claro, cifras/lista) — el RITMO
+      hace único al sitio. No repitas un bloque >2 veces, y dos sitios del
+      mismo giro NO deben llevar la misma secuencia de bloques.
+   3. **Sección de motor** (`{ id: "hero"/"contact"/"faq"/… }`) — solo las
+      commodity (navbar, footer, contact, faq, trust-bar) y el hero base.
    Cada sección lleva su `why` (qué pregunta responde + por qué ESE arquetipo).
    **Referencias: usa 2-3, no una.** Explota su `analysis` completo y, si
    traen `screenshotUrl`, pásalas por `view_reference_screenshots` con la
