@@ -73,7 +73,7 @@ export default defineTool({
       leadId: lead.id,
       name: name ?? host,
       alreadyExisted: false,
-      hint: `Ahora delega a brand-curator: "[Contexto: lead ${lead.id}] Modo buitre sobre ${url}: extrae TODO (nombre real del negocio, email, teléfono, categoría, dirección → update_lead_info) y arma la ficha de marca (logo, iconos, colores, voz, fotos)".`,
+      hint: `OBLIGATORIO AHORA (mismo turno, sin preguntar ni reportar antes): delega a brand-curator → "[Contexto: lead ${lead.id}] Modo buitre sobre ${url}: extrae TODO (nombre real del negocio, email, teléfono, categoría, dirección → update_lead_info) y arma la ficha de marca (logo, iconos, colores, voz, fotos)". Un lead sin buitre queda sin datos y el pipeline se atora.`,
     }
   },
 })
