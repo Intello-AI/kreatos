@@ -363,14 +363,20 @@ materializas:
    referencia guía trae `screenshotUrl`, pásala en
    `referenceScreenshotUrl` — el revisor compara la dirección de arte
    lograda contra ella). Es un director de arte independiente: no discutas
-   sus hallazgos visuales.
+   sus hallazgos visuales. **El veredicto es un GATE, no un consejo**:
+   `review_screenshots` deja su JSON en `site/.qa/review.json` y
+   `push_site_version` FINAL lo lee — un `approved:false` o cualquier
+   `critical` RECHAZA el push (ya no "se anota y continúa").
    - **critical** (roto: overflow, texto cortado, dark mode mal, imágenes
-     deformadas): corrige TODOS, re-corre `pnpm qa` y re-revisa. NUNCA
-     pushees con un critical abierto.
-   - **major** (jerarquía plana, hero débil, spacing inconsistente):
-     corrige los que puedas en esta corrida; máximo 2 ciclos de
-     corrección+re-review — si tras 2 ciclos quedan majors, anótalos en el
-     changelog y continúa (el humano decide).
+     deformadas): corrige TODOS, re-corre `pnpm qa` y re-revisa. Un critical
+     NUNCA se entrega — ni con `overrideReview`.
+   - **`approved:false`** (típicamente monotonía de layout o 2+ major):
+     RECOMPÓN de verdad — rompe la repetición de arquetipos (alterna
+     familias: denso/aireado, cifras/lista, imagen/texto), sube la jerarquía,
+     mete una `custom`. Re-corre `pnpm qa` + `review_screenshots`. Máximo 2
+     ciclos de rediseño real; si tras esos 2 el review sigue sin aprobar por
+     CRITERIO (no por algo roto), pushea con `overrideReview:true` — queda
+     anotado que se entregó sin aprobación. No lo uses en el primer intento.
    - **minor**: anótalos en el changelog, no gastes ciclos.
    Si el paso screenshots del QA falló (sin navegador), anótalo en el
    changelog y continúa — pero nunca lo saltes si los screenshots existen.

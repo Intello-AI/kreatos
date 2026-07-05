@@ -143,10 +143,29 @@ export default defineTool({
     })
 
     const raw = result.text.trim().replace(/^```(?:json)?\n?|```$/g, "")
+    // Persistir el veredicto en site/.qa/review.json: push_site_version lo lee
+    // como GATE determinista (approved:false o critical bloquean el push). Sin
+    // esto el review solo "aconsejaba" y un sitio genérico se entregaba igual.
+    // Se escribe SIEMPRE (incluso si el JSON no parseó: un marcador que fuerza
+    // re-review) vía base64 para no pelear con el quoting del shell.
+    const persist = async (obj: unknown) => {
+      const payload = Buffer.from(JSON.stringify(obj)).toString("base64")
+      await sandbox.run({
+        command: `mkdir -p site/.qa && echo ${payload} | base64 -d > site/.qa/review.json`,
+      })
+    }
     try {
       const review = JSON.parse(raw) as Record<string, unknown>
+      await persist(review)
       return { screensReviewed: images.map((i) => i.name), review }
     } catch {
+      // JSON ilegible: guardar un veredicto no-aprobado para que el gate exija
+      // re-correr el review en vez de dejar pasar por ausencia de archivo.
+      await persist({
+        approved: false,
+        verdict: "El review no devolvió JSON válido; re-córrelo.",
+        issues: [],
+      })
       return {
         screensReviewed: images.map((i) => i.name),
         review: null,

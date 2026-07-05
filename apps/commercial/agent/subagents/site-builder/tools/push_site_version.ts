@@ -39,8 +39,17 @@ export default defineTool({
       .describe(
         "true = commit WIP intermedio pusheado al remoto: NO requiere validate/build/QA verdes (es WIP por definición — pushea aunque todo esté roto). Mensaje prefijado 'wip:'. Working tree limpio es no-op, no error.",
       ),
+    overrideReview: z
+      .boolean()
+      .default(false)
+      .describe(
+        "Escape hatch del gate de review visual: solo tras 2+ rediseños REALES en los que review_screenshots siguió marcando approved:false SIN issues critical. Entrega el sitio pese al veredicto y lo anota. NUNCA lo uses para saltarte issues critical ni en el primer intento.",
+      ),
   }),
-  async execute({ siteId, versionN, commitMessage, checkpoint }, ctx) {
+  async execute(
+    { siteId, versionN, commitMessage, checkpoint, overrideReview },
+    ctx,
+  ) {
     const site = await getSite(siteId)
     // Invariante: una versión = una rama. Solo se puede pushear la versión
     // que save_site_version acaba de registrar como current_version.
@@ -223,6 +232,47 @@ export default defineTool({
       if (!versionRow?.qa_report) {
         throw new Error(
           `Push rechazado: no hay qa-report guardado para v${versionN}. El QA visual es obligatorio antes del push final: corre el flujo de screenshots + \`pnpm qa\`, lee \`.qa/qa-report.json\` y guárdalo con \`save_qa_report\` (si el navegador del sandbox no está disponible, el reporte lo anota y aun así se guarda). Este gate NO aplica a checkpoint:true.`,
+        )
+      }
+      // 3. Gate de REVIEW visual: review_screenshots deja su veredicto en
+      //    site/.qa/review.json. Un review approved:false (monotonía, 2+ major)
+      //    o CUALQUIER issue critical BLOQUEA el push — antes solo advertía y un
+      //    sitio genérico se entregaba igual. Escape hatch: overrideReview:true
+      //    (solo tras rediseños reales; nunca salta criticals).
+      const reviewRead = await sandbox.run({
+        command: `cat site/.qa/review.json 2>/dev/null || echo ""`,
+      })
+      let review: {
+        approved?: boolean
+        verdict?: string
+        issues?: Array<{ severity?: string; issue?: string; screen?: string }>
+      } | null = null
+      try {
+        const txt = reviewRead.stdout.trim()
+        if (txt) review = JSON.parse(txt)
+      } catch {
+        review = null
+      }
+      if (!review) {
+        throw new Error(
+          `Push rechazado: no hay veredicto de review visual (site/.qa/review.json). Después de \`pnpm qa\` corre \`review_screenshots\` (director de arte con visión) y deja que juzgue los screenshots ANTES del push final. Sin ese ojo independiente no se entrega.`,
+        )
+      }
+      const issues = Array.isArray(review.issues) ? review.issues : []
+      const criticals = issues.filter((i) => i?.severity === "critical")
+      if (criticals.length > 0) {
+        throw new Error(
+          `Push rechazado: el review visual encontró ${criticals.length} issue(s) CRITICAL — nunca se entregan (ni con overrideReview):\n- ${criticals
+            .map((i) => `${i.screen ?? "?"}: ${i.issue ?? ""}`)
+            .join("\n- ")}\nCorrígelos, re-corre \`pnpm qa\` + \`review_screenshots\`, y vuelve a pushear.`,
+        )
+      }
+      if (review.approved === false && !overrideReview) {
+        const majors = issues.filter((i) => i?.severity === "major")
+        throw new Error(
+          `Push rechazado: el review visual NO aprobó el sitio (${review.verdict ?? "sin veredicto"}). ${majors.length} problema(s) major:\n- ${majors
+            .map((i) => `${i.screen ?? "?"}: ${i.issue ?? ""}`)
+            .join("\n- ")}\nRecompón (rompe la monotonía, sube la jerarquía, mete una custom) y re-corre el flujo. Si YA hiciste 2+ rediseños reales y el review sigue sin aprobar por criterio (no por algo roto), pushea con overrideReview:true — queda anotado que se entregó sin aprobación.`,
         )
       }
     }

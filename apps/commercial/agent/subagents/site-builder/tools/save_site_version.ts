@@ -71,6 +71,35 @@ const COMMODITY_SECTIONS = new Set([
   "aviso",
 ])
 
+/**
+ * Familia de arquetipo de un bloque de la biblioteca, derivada del prefijo de
+ * su key. Dos bloques de la MISMA familia producen el mismo gesto visual
+ * (eyebrow + título + grid/lista) aunque tengan key distinta — apilarlos es la
+ * "monotonía de layout" que abarata el sitio. Se usa para exigir ritmo.
+ */
+function blockFamily(blockKey: string): string {
+  const k = blockKey.toLowerCase()
+  const table: Array<[RegExp, string]> = [
+    [/^about|manifesto|editorial-intro|callout-quote/, "editorial"],
+    [/^feature|values-cards|bento|offset-cards/, "features"],
+    [/^services/, "services"],
+    [/^process|steps/, "process"],
+    [/^gallery|image-fullbleed/, "gallery"],
+    [/^stat|metric/, "stats"],
+    [/^cta|split-cta|banner-statement/, "cta"],
+    [/^faq/, "faq"],
+    [/^logo/, "logos"],
+    [/^testimonial/, "testimonial"],
+    [/^pricing|comparison|product-spec/, "pricing"],
+    [/^history/, "timeline"],
+    [/^hours|coverage/, "info"],
+    [/^team/, "team"],
+    [/^certifications|download/, "misc"],
+  ]
+  for (const [re, fam] of table) if (re.test(k)) return fam
+  return `block:${k}`
+}
+
 /** Longitud de la subsecuencia común más larga (orden preservado). */
 function lcsLength(a: string[], b: string[]): number {
   const dp: number[] = new Array(b.length + 1).fill(0)
@@ -213,6 +242,42 @@ export default defineTool({
       problems.push(
         "la home no tiene NINGUNA sección `custom` de firma: todo son bloques de la biblioteca y/o secciones de motor → se ve a plantilla. Diseña 1-2 `custom` a la medida de ESTE negocio (el gesto memorable, robando composición de las referencias del brief). Los bloques son el reparto de apoyo, no el sitio entero.",
       )
+    }
+
+    // 2c. Ritmo de arquetipos: la home no puede ser el mismo gesto repetido.
+    // Se miran los bloques de contenido de la home por FAMILIA de arquetipo
+    // (blockFamily): apilar bloques de la misma familia = "monotonía de layout"
+    // (4 secciones eyebrow+título+lista se leen a plantilla). Reglas: nada de
+    // 3 bloques seguidos de la misma familia, y ≥50% de familias distintas.
+    {
+      const blockFams = sections
+        .filter((s) => String(s["id"]) === "block")
+        .map((s) => blockFamily(String(s["block"] ?? "")))
+      if (blockFams.length >= 3) {
+        // 3 consecutivos de la misma familia
+        let run = 1
+        let worstFam = ""
+        let maxRun = 1
+        for (let i = 1; i < blockFams.length; i++) {
+          run = blockFams[i] === blockFams[i - 1] ? run + 1 : 1
+          if (run > maxRun) {
+            maxRun = run
+            worstFam = blockFams[i]
+          }
+        }
+        if (maxRun >= 3) {
+          problems.push(
+            `monotonía de layout: ${maxRun} bloques seguidos de la familia "${worstFam}" (mismo gesto: eyebrow+título+grid/lista). Alterna arquetipos vecinos (denso/aireado, cifras/lista, imagen/texto) o mete una custom entre medias — un sitio de venta tiene ritmo, no la misma tarjeta N veces.`,
+          )
+        }
+        // diversidad global de familias
+        const distinct = new Set(blockFams).size
+        if (distinct / blockFams.length < 0.5) {
+          problems.push(
+            `poca diversidad de arquetipos: ${blockFams.length} bloques pero solo ${distinct} familia(s) distinta(s) [${[...new Set(blockFams)].join(", ")}]. Elige bloques de familias variadas del catálogo (about, features, process, stats, gallery, cta…), no repitas la misma forma.`,
+          )
+        }
+      }
     }
 
     // 3. Con biblioteca de referencias disponible, el spec cita qué robó.
