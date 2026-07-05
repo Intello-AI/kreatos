@@ -1,7 +1,7 @@
 import { defineTool } from "eve/tools"
 import { z } from "zod"
 
-import { addActivity, findLead, listActivity } from "../../../lib/leads"
+import { addActivity, findLead, hasActivityOfType } from "../../../lib/leads"
 
 export default defineTool({
   description:
@@ -29,8 +29,7 @@ export default defineTool({
     }
 
     const activityType = `outreach_draft_${channel}`
-    const existing = await listActivity(lead.id, 50)
-    if (existing.some((a) => a.type === activityType)) {
+    if (await hasActivityOfType(lead.id, activityType)) {
       return {
         saved: false,
         reason: `Lead "${lead.name}" ya tiene un borrador ${channel}; no se duplica.`,

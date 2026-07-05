@@ -74,6 +74,7 @@ export type Database = {
           active: boolean
           analysis: Json | null
           analyzed_at: string | null
+          claimed_at: string | null
           created_at: string
           do_steal: string | null
           dont_steal: string | null
@@ -95,6 +96,7 @@ export type Database = {
           active?: boolean
           analysis?: Json | null
           analyzed_at?: string | null
+          claimed_at?: string | null
           created_at?: string
           do_steal?: string | null
           dont_steal?: string | null
@@ -116,6 +118,7 @@ export type Database = {
           active?: boolean
           analysis?: Json | null
           analyzed_at?: string | null
+          claimed_at?: string | null
           created_at?: string
           do_steal?: string | null
           dont_steal?: string | null

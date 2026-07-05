@@ -83,6 +83,27 @@ export async function listActivity(
   return data ?? []
 }
 
+/**
+ * ¿El lead ya tiene una actividad de este tipo exacto? Query directa por
+ * (lead_id, type) — no depende de traer las últimas N filas (un lead con
+ * historial largo empujaba el borrador fuera de la ventana y se duplicaba).
+ */
+export async function hasActivityOfType(
+  leadId: string,
+  type: string,
+): Promise<boolean> {
+  const supabase = getSupabaseClient()
+  const { data, error } = await supabase
+    .from("lead_activity")
+    .select("id")
+    .eq("lead_id", leadId)
+    .eq("type", type)
+    .limit(1)
+    .maybeSingle()
+  if (error) throw new Error(`Lectura de lead_activity falló: ${error.message}`)
+  return Boolean(data)
+}
+
 /** Registra un hito en lead_activity. */
 export async function addActivity(input: {
   leadId: string

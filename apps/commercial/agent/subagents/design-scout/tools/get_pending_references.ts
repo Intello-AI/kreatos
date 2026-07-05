@@ -3,9 +3,12 @@ import { z } from "zod"
 
 import { getSupabaseClient } from "../../../lib/supabase"
 
+/** Lease del claim: una 'analyzing' más vieja que esto se considera de un run muerto. */
+const CLAIM_LEASE_MS = 10 * 60_000
+
 export default defineTool({
   description:
-    "Lista las referencias de diseño por analizar (status pending, más las atoradas en analyzing por runs muertos — se re-reclaman), o una específica por URL si se pasa el filtro.",
+    "Lista las referencias de diseño por analizar (status pending, más las atoradas en analyzing por runs MUERTOS — solo las de lease vencido, no las que otra corrida trabaja ahora mismo), o una específica por URL si se pasa el filtro.",
   inputSchema: z.object({
     url: z
       .string()
@@ -15,25 +18,29 @@ export default defineTool({
   }),
   async execute({ url, limit }) {
     const supabase = getSupabaseClient()
-    // Incluye también las atoradas en "analyzing": si un run anterior murió
-    // tras reclamarlas quedarían huérfanas para siempre — se re-reclaman.
+    // Elegibles: pending (claimed_at null), o analyzing con lease VENCIDO (run
+    // que murió sin terminar). Una analyzing recién reclamada por OTRA corrida
+    // (claimed_at reciente) NO se toma — evita el doble análisis / la carrera.
+    const staleBefore = new Date(Date.now() - CLAIM_LEASE_MS).toISOString()
     let query = supabase
       .from("design_references")
       .select("id, slug, url, source, status, created_at")
       .in("status", ["pending", "analyzing"])
+      .or(`claimed_at.is.null,claimed_at.lt.${staleBefore}`)
       .order("created_at", { ascending: true })
       .limit(limit)
     if (url) query = query.eq("url", url)
     const { data, error } = await query
     if (error) throw new Error(`Lectura de referencias falló: ${error.message}`)
 
-    // Claim: quedan 'analyzing' para que el dashboard muestre en vivo qué se
-    // está trabajando (y otra corrida no las tome doble).
+    // Claim con timestamp fresco: quedan 'analyzing' con claimed_at=now para
+    // que el dashboard muestre en vivo qué se trabaja y el lease proteja de
+    // que otra corrida las tome mientras esta las procesa.
     const ids = (data ?? []).map((r) => r.id)
     if (ids.length > 0) {
       await supabase
         .from("design_references")
-        .update({ status: "analyzing" })
+        .update({ status: "analyzing", claimed_at: new Date().toISOString() })
         .in("id", ids)
     }
 
