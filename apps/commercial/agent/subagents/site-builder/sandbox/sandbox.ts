@@ -23,9 +23,10 @@ const CHROMIUM_BOOTSTRAP = `cd /tmp && pnpm dlx playwright@1.61.1 install chromi
  */
 export default defineSandbox({
   backend: defaultBackend(),
-  // v6: deps del sistema vía dnf (el sandbox es Amazon Linux 2023, sin apt)
-  // — chromium descargaba pero moría al arrancar (libnspr4.so faltante).
-  revalidationKey: () => "site-builder-v6",
+  // v7: además del sistema, se precalienta el STORE de pnpm con las deps del
+  // template (repo público) para que el `pnpm install` de cada corrida linkee
+  // desde el store caliente en vez de descargar ~415 paquetes.
+  revalidationKey: () => "site-builder-v7",
   async bootstrap({ use }) {
     const sandbox = await use()
     // La imagen base puede no traer pnpm; corepack lo habilita sin red extra.
@@ -52,6 +53,22 @@ export default defineSandbox({
     // el aviso queda en el log del build.
     await sandbox.run({
       command: `(${CHROMIUM_BOOTSTRAP}) || echo 'AVISO: chromium NO se precalento — pnpm qa lo intentara en runtime (lento)'`,
+    })
+    // Precalienta el STORE de pnpm con las deps del template (repo PÚBLICO,
+    // sin token). El store es content-addressable y global: tras esto, el
+    // `pnpm install` de cada corrida (mismo lockfile) linkea desde el store en
+    // SEGUNDOS en vez de descargar ~415 paquetes. El proyecto temporal se
+    // borra; el store queda caliente en el snapshot. Best-effort (un fallo
+    // aquí no debe tumbar el template — solo se pierde la aceleración).
+    const templateOrg = process.env.GITHUB_ORG ?? "Kreatos-sites"
+    const templateRepo = process.env.SITE_TEMPLATE_REPO ?? "site-template"
+    await sandbox.run({
+      command:
+        `rm -rf /tmp/tmpl && ` +
+        `git clone --depth 1 https://github.com/${templateOrg}/${templateRepo}.git /tmp/tmpl && ` +
+        `cd /tmp/tmpl && pnpm install --prod=false && ` +
+        `cd / && rm -rf /tmp/tmpl` +
+        ` || echo 'AVISO: no se precalento el store de pnpm — pnpm install de cada corrida sera mas lento'`,
     })
   },
 })

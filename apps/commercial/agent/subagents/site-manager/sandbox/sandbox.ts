@@ -25,7 +25,9 @@ export default defineSandbox({
   backend: defaultBackend(),
   // v6: deps del sistema vía dnf (el sandbox es Amazon Linux 2023, sin apt)
   // — chromium descargaba pero moría al arrancar (libnspr4.so faltante).
-  revalidationKey: () => "site-manager-v1",
+  // v2: precalienta el store de pnpm con las deps del template (repo público)
+  // — el pnpm install de cada corrida linkea desde el store en vez de bajar ~415.
+  revalidationKey: () => "site-manager-v2",
   async bootstrap({ use }) {
     const sandbox = await use()
     // La imagen base puede no traer pnpm; corepack lo habilita sin red extra.
@@ -52,6 +54,18 @@ export default defineSandbox({
     // el aviso queda en el log del build.
     await sandbox.run({
       command: `(${CHROMIUM_BOOTSTRAP}) || echo 'AVISO: chromium NO se precalento — pnpm qa lo intentara en runtime (lento)'`,
+    })
+    // Precalienta el STORE de pnpm con las deps del template (repo PÚBLICO):
+    // el `pnpm install` de cada corrida linkea desde el store en segundos.
+    const templateOrg = process.env.GITHUB_ORG ?? "Kreatos-sites"
+    const templateRepo = process.env.SITE_TEMPLATE_REPO ?? "site-template"
+    await sandbox.run({
+      command:
+        `rm -rf /tmp/tmpl && ` +
+        `git clone --depth 1 https://github.com/${templateOrg}/${templateRepo}.git /tmp/tmpl && ` +
+        `cd /tmp/tmpl && pnpm install --prod=false && ` +
+        `cd / && rm -rf /tmp/tmpl` +
+        ` || echo 'AVISO: no se precalento el store de pnpm'`,
     })
   },
 })
