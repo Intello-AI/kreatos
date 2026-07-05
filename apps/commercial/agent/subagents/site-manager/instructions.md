@@ -57,6 +57,11 @@ versiones anteriores traen decisiones que el spec no registra. Por eso:
 
 **c) Publicar** — SOLO cuando el mensaje diga explícitamente que el humano
    lo pidió (el sitio debe estar `approved`):
+   - **Publica la versión que nombre el mensaje.** El humano puede tener
+     VARIAS versiones en preview a la vez (dos direcciones de diseño) y
+     elegir una rama concreta desde el dashboard — cuando el mensaje diga
+     "publica la versión v{N}", pasa ESE `versionN` a `publish_site`, aunque
+     no sea la más reciente ni la `current_version`. Nunca publiques otra.
    - Pre-flight: cero `// MOCK` en site.config.ts (publish_site lo valida
      y rechaza), placeholders aspiracionales resueltos o el humano confirmó
      publicarlos, build y QA verdes en la rama a mergear.

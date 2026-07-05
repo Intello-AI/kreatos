@@ -19,6 +19,7 @@ import {
   SitePreview,
   SitePreviewSkeleton,
 } from "@/features/sites/components/site-preview"
+import { PublishVersionButton } from "@/features/sites/components/publish-version-button"
 import { SiteRefresh } from "@/features/sites/components/site-refresh"
 import { SiteStatusBadge } from "@/features/sites/components/site-status-badge"
 import { getSiteDetail } from "@/features/sites/queries"
@@ -368,21 +369,22 @@ export default async function SiteDetailPage({
                             </p>
                           )}
                           {version.preview_url && (
-                            <Button
-                              asChild
-                              variant="outline"
-                              size="sm"
-                              className="mt-auto w-fit"
-                            >
-                              <Link
-                                href={version.preview_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                Previsualizar
-                                <ArrowSquareOutIcon />
-                              </Link>
-                            </Button>
+                            <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
+                              <Button asChild variant="outline" size="sm">
+                                <Link
+                                  href={version.preview_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  Previsualizar
+                                  <ArrowSquareOutIcon />
+                                </Link>
+                              </Button>
+                              <PublishVersionButton
+                                siteId={site.id}
+                                versionN={version.version_n}
+                              />
+                            </div>
                           )}
                         </div>
                       </li>

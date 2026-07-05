@@ -246,6 +246,65 @@ export async function publishSite(siteId: string): Promise<SiteActionState> {
 }
 
 /**
+ * Promueve una versión-rama concreta a producción. Sirve cuando hay varias
+ * versiones en preview a la vez (p. ej. dos direcciones de diseño): el humano
+ * elige cuál rama sube. Delega el merge + cambio de current_version al agente
+ * (site-manager), igual que publishSite pero con la versión elegida a mano.
+ */
+export async function publishSiteVersion(
+  siteId: string,
+  versionN: number,
+): Promise<SiteActionState> {
+  const supabase = getAdminClient()
+  const { data: site } = await supabase
+    .from("sites")
+    .select("id, status, lead_id")
+    .eq("id", siteId)
+    .maybeSingle()
+  if (!site) return { formError: "Sitio no encontrado." }
+  if (site.status === "brief" || site.status === "generating") {
+    return { formError: "Espera a que termine la generación." }
+  }
+
+  // La rama debe existir, tener preview (código subido) y qa_report — mismos
+  // requisitos que exige publish_site: no se mergea a main algo sin QA.
+  const { data: version } = await supabase
+    .from("site_versions")
+    .select("id, preview_url, qa_report")
+    .eq("site_id", siteId)
+    .eq("version_n", versionN)
+    .maybeSingle()
+  if (!version) return { formError: `No existe la versión v${versionN}.` }
+  if (!version.preview_url) {
+    return { formError: `La v${versionN} todavía no tiene preview.` }
+  }
+  if (!version.qa_report) {
+    return { formError: `La v${versionN} no pasó QA todavía; no se puede publicar.` }
+  }
+
+  // publish_site exige status 'approved' (guard de acción irreversible).
+  // Aprobar es decisión humana directa en BDD; deja el sitio listo para que
+  // el agente mergee la RAMA ELEGIDA (no necesariamente la más reciente).
+  const { error } = await supabase
+    .from("sites")
+    .update({ status: "approved" })
+    .eq("id", siteId)
+  if (error) return { formError: error.message }
+
+  await supabase.from("lead_activity").insert({
+    lead_id: site.lead_id,
+    type: "site_approved",
+    note: `Aprobación manual de v${versionN} para publicar desde el dashboard.`,
+    actor: "manual",
+  })
+
+  return sendFollowUp(
+    siteId,
+    `El humano aprobó y pidió publicar la versión v${versionN} del site ${siteId} a producción. Había varias versiones en preview y eligió ESTA rama. Usa publish_site con versionN=${versionN} (merge de la rama v${versionN} a main → deployment de producción → published). Publica exactamente esa versión, aunque no sea la más reciente.`,
+  )
+}
+
+/**
  * Responde un input request pendiente (pregunta HITL del agente). A diferencia
  * de un mensaje suelto, esto reanuda el turno pausado CON el contexto de la
  * pregunta — el agente recibe la respuesta donde la pidió.
