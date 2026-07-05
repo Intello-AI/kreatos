@@ -304,6 +304,33 @@ export type Database = {
         }
         Relationships: []
       }
+      pending_inputs: {
+        Row: {
+          created_at: string
+          options: Json | null
+          prompt: string
+          request_id: string
+          responded_at: string | null
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          options?: Json | null
+          prompt: string
+          request_id: string
+          responded_at?: string | null
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          options?: Json | null
+          prompt?: string
+          request_id?: string
+          responded_at?: string | null
+          session_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

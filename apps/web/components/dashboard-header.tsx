@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation"
 import { Logo } from "@/components/icons"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 
+import { PendingQuestionsBell } from "@/features/notifications/components/pending-questions-bell"
+
 /**
  * Header global del dashboard. En `/dashboard` (el chat) no se renderiza:
  * el chat trae su propio header (selector de conversaciones + nueva) que
@@ -27,6 +29,9 @@ export function DashboardHeader() {
       >
         <Logo className="h-5 w-auto" />
       </Link>
+      <div className="ml-auto">
+        <PendingQuestionsBell />
+      </div>
     </header>
   )
 }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { CaretDownIcon, ChatCircleDotsIcon, PlusIcon } from "@phosphor-icons/react"
 
 import { type ChatConversation } from "@/features/chat/actions"
+import { PendingQuestionsBell } from "@/features/notifications/components/pending-questions-bell"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { formatRelative } from "@/lib/dates"
 import { Button } from "@/components/ui/button"
@@ -105,6 +106,7 @@ export function ChatHeader({
           </DropdownMenu>
         )}
       </div>
+      <PendingQuestionsBell />
       {current && (
         <Button
           asChild
