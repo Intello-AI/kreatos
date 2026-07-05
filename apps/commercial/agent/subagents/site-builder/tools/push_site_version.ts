@@ -104,14 +104,25 @@ export default defineTool({
       })
       const touched = changed.stdout
         .split("\n")
-        .map((line) => {
-          // Línea porcelain ("XY path") o de diff (path puro).
-          const path = /^[A-Z?! ]{2} /.test(line) ? line.slice(3) : line
-          const trimmed = path.trim()
-          // Renames: "R  viejo -> nuevo" — cuenta el destino.
-          return trimmed.includes(" -> ")
-            ? trimmed.split(" -> ")[1]
-            : trimmed
+        .flatMap((line) => {
+          // Dos fuentes en el mismo stdout:
+          //  - `git diff origin/main --name-only`: rutas puras. Compara el
+          //    WORKING TREE contra main, así que YA refleja el contenido final
+          //    (incluido lo commiteado en checkpoints). Un archivo revertido a
+          //    main con `git checkout origin/main -- <f>` NO aparece aquí.
+          //  - `git status --porcelain`: líneas "XY path". De aquí SOLO cuentan
+          //    los archivos NUEVOS sin trackear ("??"); los "M "/" M" (incluida
+          //    la REVERSIÓN staged de un checkpoint) ya los cubre el diff por
+          //    contenido — contarlos re-marcaba como "motor tocado" un archivo
+          //    ya revertido a main → loop infinito (Copper Wolf no pudo entregar).
+          const isPorcelain = /^[A-Z?! ]{2} /.test(line)
+          if (isPorcelain) {
+            if (!line.startsWith("??")) return []
+            const p = line.slice(3).trim()
+            return p ? [p.includes(" -> ") ? p.split(" -> ")[1] : p] : []
+          }
+          const p = line.trim()
+          return p ? [p] : []
         })
         .filter(Boolean)
       const engineTouched = touched.filter(
