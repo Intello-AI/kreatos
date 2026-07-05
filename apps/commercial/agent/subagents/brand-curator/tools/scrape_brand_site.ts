@@ -22,11 +22,11 @@ function absolutize(src: string, base: string): string | null {
 
 export default defineTool({
   description:
-    "Modo buitre: dado un sitio web, extrae TODO lo aprovechable — imágenes (las descarga al inbox de marca en Storage), los ICONOS del <head> (favicon/apple-touch-icon/manifest → candidatos a isotipo), metadatos (title, description, og:site_name, theme-color = color de marca), emails, teléfonos, redes sociales y links internos (contacto/nosotros) para seguir escarbando. Una llamada por página.",
+    "Modo buitre: dado un sitio web, extrae TODOS los assets aprovechables de la página — imágenes de <img>, srcset/lazy-load, background-image de CSS, preload, poster de video y og/twitter:image (las descarga al inbox de marca en Storage), los ICONOS del <head> (favicon/apple-touch-icon/manifest → candidatos a isotipo), metadatos (title, description, og:site_name, theme-color = color de marca), emails, teléfonos, redes sociales, documentos descargables (brochure/catálogo PDF en `documents`), y el mapa del sitio COMPLETO (`sitemapUrls` del sitemap.xml + `internalLinks`) para crawlear todas las páginas. Una llamada por página: recórrelas todas para no dejar assets fuera.",
   inputSchema: z.object({
     leadId: z.string().uuid(),
     url: z.string().url(),
-    maxImages: z.number().int().min(0).max(20).default(10),
+    maxImages: z.number().int().min(0).max(40).default(20),
   }),
   async execute({ leadId, url, maxImages }) {
     // Soft-result: una página que responde 403/500/login NO debe tumbar el
@@ -137,18 +137,44 @@ export default defineTool({
       iconCandidates.set(new URL("/favicon.ico", url).toString(), "favicon")
     }
 
-    // ——— Imágenes: <img src/srcset> + og:image ———
+    // ——— Imágenes: TODOS los assets visuales de la página, no solo <img> ———
+    // Cubre <img src>, srcset (img/source — lazy-load y responsive viven aquí),
+    // background-image de CSS inline y de <style>, <link rel=preload as=image>
+    // / image_src, <video poster>, y og:image/twitter:image.
     const candidates = new Set<string>()
-    for (const m of html.matchAll(/<img[^>]+src=["']([^"']+)["']/gi)) {
-      const abs = absolutize(m[1], url)
+    const addAbs = (raw: string | undefined) => {
+      if (!raw) return
+      const abs = absolutize(raw.trim(), url)
       if (abs) candidates.add(abs)
     }
+    // <img src>
+    for (const m of html.matchAll(/<img[^>]+src=["']([^"']+)["']/gi)) addAbs(m[1])
+    // srcset de <img> y <source> (responsive/lazy): "url 1x, url2 2x, url3 640w"
+    for (const m of html.matchAll(/<(?:img|source)[^>]+srcset=["']([^"']+)["']/gi)) {
+      for (const part of m[1].split(",")) addAbs(part.trim().split(/\s+/)[0])
+    }
+    // data-src / data-srcset (lazy-load libraries)
+    for (const m of html.matchAll(/\sdata-(?:src|lazy-src|original)=["']([^"']+)["']/gi)) addAbs(m[1])
+    // background-image: url(...) — inline style y bloques <style>
+    for (const m of html.matchAll(/background(?:-image)?\s*:\s*url\((['"]?)([^'")]+)\1\)/gi)) addAbs(m[2])
+    // <link rel="preload" as="image" href> y <link rel="image_src" href>
+    for (const m of html.matchAll(/<link[^>]+>/gi)) {
+      const tag = m[0]
+      const rel = /rel=["']([^"']+)["']/i.exec(tag)?.[1]?.toLowerCase() ?? ""
+      const as = /\bas=["']image["']/i.test(tag)
+      if ((rel.includes("preload") && as) || rel.includes("image_src")) {
+        addAbs(/href=["']([^"']+)["']/i.exec(tag)?.[1])
+      }
+    }
+    // <video poster>
+    for (const m of html.matchAll(/<video[^>]+poster=["']([^"']+)["']/gi)) addAbs(m[1])
+    // og:image / twitter:image (property u name, en cualquier orden de atributos)
     for (const m of html.matchAll(
-      /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/gi,
-    )) {
-      const abs = absolutize(m[1], url)
-      if (abs) candidates.add(abs)
-    }
+      /<meta[^>]+(?:property|name)=["'](?:og:image(?::secure_url)?|twitter:image(?::src)?)["'][^>]+content=["']([^"']+)["']/gi,
+    )) addAbs(m[1])
+    for (const m of html.matchAll(
+      /<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image(?::secure_url)?|twitter:image(?::src)?)["']/gi,
+    )) addAbs(m[1])
 
     const supabase = getSupabaseClient()
     const supabaseUrl = process.env.SUPABASE_URL ?? ""
@@ -244,30 +270,70 @@ export default defineTool({
       }
     }
 
-    // ——— Links internos útiles para seguir escarbando ———
+    // ——— Links internos y documentos: mapa del sitio para seguir escarbando ———
     const host = new URL(url).host
-    const internalLinks = Array.from(
+    const origin = new URL(url).origin
+    const sameHost = (h: string): boolean => {
+      try {
+        return new URL(h).host === host
+      } catch {
+        return false
+      }
+    }
+    const allLinks = Array.from(
       new Set(
-        Array.from(html.matchAll(/<a[^>]+href=["']([^"'#]+)["']/gi))
+        Array.from(html.matchAll(/<a[^>]+href=["']([^"'#][^"']*)["']/gi))
           .map((m) => absolutize(m[1], url))
-          .filter((h): h is string => Boolean(h))
-          .filter((h) => {
-            try {
-              return (
-                new URL(h).host === host &&
-                /contact|nosotros|about|menu|carta|servicio|equipo|galer/i.test(h)
-              )
-            } catch {
-              return false
-            }
-          }),
+          .filter((h): h is string => Boolean(h) && sameHost(h!)),
       ),
-    ).slice(0, 6)
+    )
+    // Documentos de marca (brochures, catálogos, fichas técnicas): no se
+    // descargan al bucket, se listan para que el curador los pase/note.
+    const docRe = /\.(pdf|docx?|pptx?|xlsx?)($|\?)/i
+    const documents = allLinks.filter((h) => docRe.test(h)).slice(0, 12)
+    // Páginas internas para crawlear: todo link de página (no documento, no
+    // asset), con las de más botín primero. Tope alto — el curador decide
+    // cuáles seguir; antes se cortaba a 6 y solo a contacto/nosotros.
+    const highValue =
+      /contact|nosotros|about|quienes|empresa|menu|carta|servicio|producto|catalog|equipo|galer|portafolio|proyecto|flota|cobertura|marca|blog|noticia/i
+    const pageLinks = allLinks.filter(
+      (h) => !docRe.test(h) && !/\.(jpe?g|png|webp|gif|svg|mp4|zip)($|\?)/i.test(h),
+    )
+    const internalLinks = [
+      ...pageLinks.filter((h) => highValue.test(h)),
+      ...pageLinks.filter((h) => !highValue.test(h)),
+    ].slice(0, 20)
+
+    // sitemap.xml: el índice COMPLETO de páginas del sitio (mejor que adivinar
+    // por links del home). Best-effort; muchos sitios lo publican.
+    let sitemapUrls: string[] = []
+    for (const sm of [`${origin}/sitemap.xml`, `${origin}/sitemap_index.xml`]) {
+      try {
+        const smRes = await fetch(sm, {
+          headers: { "user-agent": UA },
+          signal: AbortSignal.timeout(8000),
+        })
+        if (!smRes.ok) continue
+        const xml = await smRes.text()
+        sitemapUrls = Array.from(
+          new Set(
+            Array.from(xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi))
+              .map((m) => m[1])
+              .filter((h) => sameHost(h) && !/\.xml($|\?)/i.test(h)),
+          ),
+        ).slice(0, 50)
+        if (sitemapUrls.length > 0) break
+      } catch {
+        // sin sitemap: seguimos con los links del home
+      }
+    }
 
     return {
       ok: true as const,
       meta: headMeta,
       icons,
+      documents,
+      sitemapUrls,
       images: stored,
       imagesFound: candidates.size,
       emails,
@@ -284,6 +350,14 @@ export default defineTool({
         stored.length > 0
           ? "Analiza las imágenes descargadas con analyze_brand_image y decide cuáles promover; guarda contactos con update_lead_info."
           : "Sin imágenes útiles en esta página; prueba un internalLink (galería/nosotros).",
+        sitemapUrls.length > 0
+          ? `sitemapUrls trae ${sitemapUrls.length} página(s) del sitio COMPLETO: recórrelas con scrape_brand_site para no dejar assets fuera (no te quedes solo en el home).`
+          : internalLinks.length > 0
+            ? `Sin sitemap; internalLinks trae ${internalLinks.length} página(s) — crawléalas para juntar TODOS los assets del sitio.`
+            : null,
+        documents.length > 0
+          ? `documents: ${documents.length} archivo(s) descargable(s) (brochure/catálogo/ficha) — anótalos en las notas del lead con update_lead_info; son material de venta.`
+          : null,
       ]
         .filter(Boolean)
         .join(" "),

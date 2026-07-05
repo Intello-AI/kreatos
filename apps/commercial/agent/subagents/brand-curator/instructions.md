@@ -50,9 +50,14 @@ sin preguntar ni pedir confirmación — José espera el botín, no un plan.
    nombres significativos: hero, nosotros, portafolio-1…). **Nunca intentes
    descargar/subir al bucket desde bash**: no tienes credenciales ahí; estas
    dos tools corren en el runtime de la app y sí las tienen.
-2. Si devuelve `internalLinks` prometedores (contacto, nosotros, galería,
-   menú/carta), escrapea 1-3 de esos también — ahí suelen vivir las mejores
-   fotos y el email real.
+2. **Crawlea el sitio COMPLETO, no solo el home.** El botín está repartido en
+   todas las páginas (galería, servicios, nosotros, catálogo). Usa
+   `sitemapUrls` si vino (es el índice real del sitio) o si no `internalLinks`,
+   y escrapea CADA página relevante con `scrape_brand_site` — no te quedes en
+   1-2. Tope sano ~8-10 páginas (prioriza galería/portafolio/productos/
+   nosotros/contacto); si el sitio es chico, todas. Junta los assets de todas
+   antes de decidir. Anota los `documents` (brochure/catálogo PDF) en las notas
+   del lead: son material de venta que site-builder/site-manager pueden usar.
 3. Analiza las imágenes descargadas (`analyze_brand_image`) y promueve las
    buenas con `save_brand_profile` (logo/isotipo/fotos), como siempre.
    **Isotipo desde `icons`**: prefiere SVG o el PNG más grande
