@@ -47,9 +47,23 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
      elegir estilo/paleta/fuentes por giro.
    **Precedencia:** estas tres son razonamiento genérico de frontend. El
    contrato del template kreatos (stack fijo, cero deps nuevas, motion del
-   motor, solo tokens, copy next-intl, layouts fuera del catálogo = `custom`)
-   MANDA sobre cualquier consejo que choque — tómalas por su criterio de
-   diseño, no por su código, comandos ni stack.
+   motor, solo tokens, copy next-intl) MANDA sobre cualquier consejo que
+   choque — tómalas por su criterio de diseño, no por su código ni stack.
+   **COMPÓN CON LA BIBLIOTECA DE BLOQUES (lee el skill `block-catalog`).** Es
+   lo que evita el sitio-plantilla. Jerarquía al elegir cada sección de
+   contenido:
+   1. **Bloque de la biblioteca** (`{ id: "block", block: "<key>", ns }`) —
+      PRIMERA opción. Hay 16 arquetipos distintos (stat-wall, bento-grid,
+      split-cta, feature-zigzag, services-ledger, comparison-table, timeline
+      horizontal, gallery-masonry…). Elige por arquetipo + su forma de `ns`,
+      ALTERNANDO vecinos (denso/aireado, oscuro/claro, cifras/lista) — el
+      RITMO es lo que hace único al sitio. No repitas un bloque >2 veces.
+   2. **Sección de motor** (`{ id: "hero"/"services"/… }`) — solo para las
+      commodity (navbar, footer, contact, faq, trust-bar) y el hero. Para
+      CONTENIDO, un bloque casi siempre gana a la sección de motor genérica.
+   3. **Custom** (`{ id: "custom", component, ns, why }`) — SOLO cuando ningún
+      bloque ni sección de motor logra el layout que la dirección pide.
+   Cada sección lleva su `why` (qué pregunta responde + por qué ESE arquetipo).
    **Referencias: usa 2-3, no una.** Explota su `analysis` completo y, si
    traen `screenshotUrl`, pásalas por `view_reference_screenshots` con la
    pregunta de composición que necesites responder (hero, ritmo,
@@ -84,7 +98,9 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
      },
      "sections": [
        { "id": "hero", "variant": "stat-led", "why": "..." },
-       { "id": "custom", "component": "contact-hero", "ns": "contact-hero", "why": "cierre tipo segundo hero oscuro — el contact del motor es claro y fijo" }
+       { "id": "block", "block": "stat-wall", "ns": "impacto", "why": "credenciales en cifras grandes, rompe el ritmo tras el hero" },
+       { "id": "block", "block": "feature-zigzag", "ns": "servicios", "why": "3 servicios con foto real, filas alternas con aire" },
+       { "id": "custom", "component": "contact-hero", "ns": "contact-hero", "why": "cierre tipo segundo hero oscuro — no hay bloque ni sección de motor que lo logre" }
      ],
      "pages": [{ "slug": "servicios", "sections": [{ "id": "...", "why": "..." }] }],
      "seo": { "title": "...", "description": "...", "jsonLdType": "...", "keywords": [] },

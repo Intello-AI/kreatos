@@ -233,7 +233,12 @@ export default defineTool({
       .filter((s) => !["navbar", "footer", "contact"].includes(String(s["id"])))
       .map((s) => {
         const id = String(s["id"] ?? "")
-        const key = id === "custom" ? `custom:${s["component"] ?? ""}` : id
+        const key =
+          id === "custom"
+            ? `custom:${s["component"] ?? ""}`
+            : id === "block"
+              ? `block:${s["block"] ?? ""}`
+              : id
         return `${key}:${s["variant"] ?? "-"}`
       })
     const previous = await getRecentHomeSignatures({ excludeSiteId: siteId })

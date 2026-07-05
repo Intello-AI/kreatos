@@ -97,10 +97,22 @@ template de kreatos; tú lo personalizas, no lo reinventas.
      iconos: rompe el build en export.
    Si `brand` es null, aplica la política de datos faltantes (nunca inventes
    logo ni nombre corto que el negocio no usa).
-2c. **Secciones custom — tu herramienta contra lo genérico.** El template
+2b-bis. **BIBLIOTECA DE BLOQUES — tu primera arma contra lo genérico.** El
+   template trae `components/blocks/` (16 arquetipos curados y probados) que se
+   COMPONEN, no se escriben: declaras `{ id: "block", block: "<key>", ns }` en
+   config y llenas su copy en es.json — **NADA de .tsx**. Lee
+   `components/blocks/catalog.md` del clone para el arquetipo y la forma de `ns`
+   de cada bloque. En el flujo normal el spec del art-director YA eligió los
+   bloques: solo transcríbelos (config + su copy con la forma del catálogo). Si
+   compones tú (sin art-director), prefiere bloques sobre secciones de motor
+   para el CONTENIDO, alternando arquetipos vecinos, sin repetir un bloque >2
+   veces.
+2c. **Secciones custom — cuando ningún bloque alcanza.** El template
    permite escribir componentes de sección desde cero en `components/custom/`
    (registrados en `components/custom/registry.ts`, declarados en config como
-   `{ id: "custom", component, ns }`). **Sin tope numérico**: hero y toda
+   `{ id: "custom", component, ns }`). Úsalas SOLO cuando ni un bloque de la
+   biblioteca ni una sección de motor logran el layout que la dirección pide.
+   **Sin tope numérico**: hero y toda
    sección de contenido pueden ser custom cuando la dirección de arte lo
    pida — dos sitios distintos NO deben compartir los mismos layouts; las
    variantes del motor son piso de velocidad, no techo de diseño. Quedan
