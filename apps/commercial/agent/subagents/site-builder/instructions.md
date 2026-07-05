@@ -62,6 +62,15 @@ template de kreatos; tú lo personalizas, no lo reinventas.
    definitivo, imágenes con alt, SEO). El preset es paleta de emergencia y
    piso de velocidad — NUNCA receta de composición. Si `lead.website`
    existe, es un rediseño: aplica también el skill `redesign`.
+   **Skills senior de diseño (razonamiento, opcionales):** `taste-skill`
+   (anti-slop: design read + diales VARIANCE/MOTION/DENSITY) y `ui-ux-pro-max`
+   (base buscable de estilos/paletas/pares tipográficos/tipos de producto, ya
+   cubre Tailwind/shadcn/Next) suben el nivel del concepto y la elección de
+   estilo. **Precedencia dura:** son consejo genérico de frontend — el
+   contrato del template (stack fijo, CERO deps nuevas —nada de GSAP—, motion
+   solo con los primitives del motor, solo tokens semánticos, copy next-intl,
+   layout fuera del catálogo = `custom`) MANDA sobre cualquier cosa que
+   choque. Tómalas por criterio de diseño, no por su código ni su stack.
 2b. **Ficha de marca (brand) — obligatoria cuando existe.** Si `brand` viene:
    - `shortName` es el nombre del header/navbar; la razón social completa
      SOLO en footer legal, aviso de privacidad y JSON-LD.

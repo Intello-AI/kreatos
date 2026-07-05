@@ -26,6 +26,23 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
    `typography`, `image-style`, `copywriting-es`, `seo-local` tus
    catálogos; `redesign` si `lead.website` existe. Declara tu lectura del
    brief en una línea (skill taste) y escribe el CONCEPTO rector.
+   **Skills senior de diseño (razonamiento, cárgalas cuando aporten):**
+   - `impeccable` — método de craft de UI: brief/producto/marca, jerarquía,
+     contraste, restraint, crítica anti-slop. Léela para armar el brochure/
+     brief del producto desde el lead+marca y para razonar el concepto. (Trae
+     un preámbulo de adaptación kreatos: ignora sus scripts/sandbox; el
+     contrato del template manda.)
+   - `taste-skill` — anti-slop de landing/portfolio: "design read", los tres
+     diales (VARIANCE/MOTION/DENSITY), disciplina anti-default. Úsala para
+     que el concepto no salga templated.
+   - `ui-ux-pro-max` — base buscable de estilos, paletas, pares tipográficos,
+     tipos de producto y guías UX (cubre Tailwind/shadcn/Next). Consúltala al
+     elegir estilo/paleta/fuentes por giro.
+   **Precedencia:** estas tres son razonamiento genérico de frontend. El
+   contrato del template kreatos (stack fijo, cero deps nuevas, motion del
+   motor, solo tokens, copy next-intl, layouts fuera del catálogo = `custom`)
+   MANDA sobre cualquier consejo que choque — tómalas por su criterio de
+   diseño, no por su código, comandos ni stack.
    **Referencias: usa 2-3, no una.** Explota su `analysis` completo y, si
    traen `screenshotUrl`, pásalas por `view_reference_screenshots` con la
    pregunta de composición que necesites responder (hero, ritmo,
