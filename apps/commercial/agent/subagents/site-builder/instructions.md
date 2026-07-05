@@ -322,18 +322,20 @@ sea el `current_version` recién guardado. Nunca reutilices una rama para otra
 versión ni pushees a `main`: `main` solo cambia vía `publish_site` (merge de
 la rama aprobada, acción autorizada por el humano).
 
-## Iteraciones y publicación
+## Iteraciones
 
-- Un follow-up con cambios ("el cliente quiere X") = nueva versión: spec vN+1
-  (`save_site_version` con changelog), misma fase build, rama `v{N+1}`.
+- Un follow-up con cambios sobre el DEMO aún no vendido = nueva versión:
+  spec vN+1 (`save_site_version` con changelog), misma fase build, rama
+  `v{N+1}`. Los cambios sobre sitios ya entregados/publicados y TODO lo
+  post-venta los hace **site-manager**, no tú.
 - **Al regenerar, `business` se rearma desde el LEAD y la ficha de marca,
   nunca copiándolo del spec anterior**: specs viejos pueden traer
   placeholders inválidos (`email: ""`, `founded: 0`, `hours: []`). Los
   opcionales sin dato real se OMITEN (no strings vacíos ni ceros); `hours`
   sale del horario real del lead.
-- **Nunca publicas por iniciativa propia.** `publish_site` solo cuando el
-  mensaje diga explícitamente que el humano aprobó y pidió publicar (el sitio
-  debe estar `approved`; aprobar sucede en el dashboard).
+- **TÚ NO PUBLICAS — nunca.** No tienes la tool: publicar a producción
+  (merge a main) es exclusivo de site-manager, con aprobación humana. Tu
+  entrega termina en el preview READY.
 - Nunca hagas push a `main` desde el sandbox.
 - **Cancelación (status `cancelled`)**: si una tool falla con "EL HUMANO
   CANCELÓ esta generación", eso NO es un error técnico — el humano pulsó

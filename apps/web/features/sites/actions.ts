@@ -241,7 +241,7 @@ export async function publishSite(siteId: string): Promise<SiteActionState> {
 
   return sendFollowUp(
     siteId,
-    `El humano aprobó y pidió publicar el site ${siteId}. Publica la versión v${site.current_version ?? 1} con publish_site.`,
+    `El humano aprobó y pidió publicar el site ${siteId}. Delega a site-manager: publicar la versión v${site.current_version ?? 1} a producción.`,
   )
 }
 

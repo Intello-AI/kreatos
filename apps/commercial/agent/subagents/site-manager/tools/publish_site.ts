@@ -2,13 +2,13 @@ import { defineTool } from "eve/tools"
 import { z } from "zod"
 
 import { addActivity } from "../../../lib/leads"
-import { getGithubEnv, getRepoFileText, mergeBranchToMain } from "../lib/github"
-import { getSite, setSiteStatus, updateSite } from "../lib/sites"
+import { getGithubEnv, getRepoFileText, mergeBranchToMain } from "../../site-builder/lib/github"
+import { getSite, setSiteStatus, updateSite } from "../../site-builder/lib/sites"
 import {
   getDeploymentBuildLog,
   getLatestDeployment,
   getPreferredUrl,
-} from "../lib/vercel"
+} from "../../site-builder/lib/vercel"
 
 const POLL_INTERVAL_MS = 10_000
 const TIMEOUT_MS = 6 * 60_000
