@@ -2,6 +2,7 @@ import { CoinsIcon } from "@phosphor-icons/react/ssr"
 
 import type { LeadCost } from "@/features/costs/queries"
 import { formatTokens, formatUsd } from "@/lib/format"
+import { ClaudeAI, OpenAI } from "@/components/icons"
 import {
   Table,
   TableBody,
@@ -25,6 +26,18 @@ const AGENT_LABELS: Record<string, string> = {
 
 function agentLabel(agent: string): string {
   return AGENT_LABELS[agent] ?? agent
+}
+
+/** Icono del proveedor del modelo: Claude (Anthropic) vs OpenAI (todo lo gpt/o). */
+function ProviderIcon({ model }: { model: string }) {
+  const isClaude = model.toLowerCase().startsWith("claude")
+  const Logo = isClaude ? ClaudeAI : OpenAI
+  return (
+    <Logo
+      aria-label={isClaude ? "Anthropic" : "OpenAI"}
+      className="size-3.5 shrink-0"
+    />
+  )
 }
 
 /**
@@ -77,7 +90,10 @@ export function LeadCostPanel({ cost }: { cost: LeadCost }) {
                     {agentLabel(s.agent)}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {s.model}
+                    <span className="flex items-center gap-1.5">
+                      <ProviderIcon model={s.model} />
+                      {s.model}
+                    </span>
                   </TableCell>
                   <TableCell className="text-right tabular-nums text-muted-foreground">
                     {formatTokens(s.inputTokens)}
