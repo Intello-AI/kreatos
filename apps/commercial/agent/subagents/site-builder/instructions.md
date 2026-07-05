@@ -208,31 +208,35 @@ materializas:
    esqueleto de eyebrow+title+grid son relleno, no diseño — el review
    visual las marca). PROHIBIDO generar stubs idénticos en masa para
    "cumplir" el registro: una sección sin su layout del spec NO se escribe.
-   **Fan-out con tu tool built-in `agent`** (copias que comparten tu
-   sandbox) es una alternativa OPCIONAL para 4+ customs — UNA sección por
-   copia, llamadas en un solo turno. Si la PRIMERA llamada falla, ABANDONA
-   el fan-out por completo y escribe todo tú en lotes: reintentarlo
-   desperdicia pasos (el fallo típico es mandar la clave outputSchema).
-   Cada mensaje debe ser autocontenido (la copia nace sin tu contexto):
-   la porción del spec de ESA sección (layout, ns de copy, why), el
-   contrato (solo tokens del theme, copy vía next-intl, motion con los
-   primitives del motor, AA, cero dependencias nuevas, leer
-   `.agent/skills/` si toca el stack) y el scope ESTRICTO: "escribe SOLO
-   components/custom/<nombre>.tsx — ningún otro archivo". **La clave
-   `outputSchema` NO debe EXISTIR en estas llamadas — ni con valor, ni con
-   `null`** (su sola presencia fuerza task mode y la copia falla con
-   SUBAGENT_EXECUTION_FAILED): la copia responde en texto libre — la
-   verificación real la haces TÚ leyendo el archivo escrito en el sandbox.
-   **Si una copia reporta error, `read_file` su archivo objetivo ANTES de
-   reintentar**: muchas veces SÍ lo escribió antes de morir — si lo escrito
-   cumple el encargo, úsalo o repáralo; no lo pises con una versión tuya
-   distinta (doble trabajo y conflictos).
-   El fan-out también sirve POR PÁGINA: con 3+ páginas interiores densas,
-   una copia por página (sus custom sections + su bloque de es.json como
-   texto que TÚ integras después) acelera sin perder control. Verificación
-   OBLIGATORIA por copia: lee CADA archivo que la copia dice haber escrito
-   (read_file) antes de registrarlo o integrarlo — una copia que respondió
-   bonito pero escribió un archivo roto se detecta aquí, no en el build.
+   **Fan-out con tu tool built-in `agent` — tu default cuando hay VOLUMEN.**
+   Las copias comparten tu sandbox (escriben archivos en paralelo; el build/QA
+   lo corres TÚ una sola vez al final). El cuello de botella de una corrida es
+   la ESCRITURA creativa, no el build — así que **con 4+ custom sections o 3+
+   páginas interiores densas, reparte el trabajo en copias** en vez de
+   escribir todo secuencial. UNA unidad por copia (una sección, o una página
+   con sus customs + su bloque de es.json), todas las llamadas en un solo
+   turno para que corran en paralelo. Con 1-3 customs no vale la pena: escríbelas directo en lotes.
+   Cada mensaje a una copia es autocontenido (la copia nace sin tu contexto):
+   la porción del spec de ESA unidad (layout, ns de copy, why), el contrato
+   (solo tokens del theme, copy vía next-intl, motion con los primitives del
+   motor, AA, cero dependencias nuevas, leer `.agent/skills/` si toca el
+   stack) y el scope ESTRICTO: "escribe SOLO components/custom/<nombre>.tsx —
+   ningún otro archivo del motor". **La clave `outputSchema` NO debe EXISTIR
+   en estas llamadas — ni con valor, ni con `null`** (su sola presencia fuerza
+   task mode y la copia falla con SUBAGENT_EXECUTION_FAILED): la copia
+   responde en texto libre — la verificación la haces TÚ leyendo el archivo.
+   **Manejo de fallos POR COPIA — nunca abandones todo el fan-out por una que
+   falló.** Si una copia reporta error: (1) `read_file` su archivo objetivo —
+   muchas veces SÍ lo escribió antes de morir; si cumple el encargo, úsalo o
+   repáralo (no lo pises con una versión distinta). (2) Si no lo escribió,
+   re-lanza SOLO esa copia UNA vez (revisando que no mandaste `outputSchema`),
+   o escribe TÚ esa única unidad en el sandbox. Las demás copias que sí
+   funcionaron se conservan — repartir el trabajo entre 6 copias y tirarlo
+   todo porque una falló es el desperdicio que hay que evitar.
+   **Verificación OBLIGATORIA por copia:** lee CADA archivo que la copia dice
+   haber escrito (read_file) antes de registrarlo o integrarlo — una copia que
+   respondió bonito pero escribió un archivo roto se detecta aquí, no en el
+   build.
    El registry.ts lo editas TÚ al final y revisas cada componente antes
    del build. Al reescribirlo CONSERVA el tipo exacto del template
    (`export const customSections: Record<string, ComponentType<{ ns:
