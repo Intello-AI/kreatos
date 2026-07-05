@@ -161,10 +161,14 @@ export async function getCostOverview(): Promise<CostOverview> {
   for (const u of usage ?? []) {
     const p = price.get(u.model)
     if (!p) continue
+    // input_tokens incluye los cached → cobra solo el excedente a tarifa full,
+    // y los cached a tarifa cache (igual que la vista lead_cost_by_stage).
+    const cached = u.cache_read_tokens ?? 0
+    const fullInput = Math.max((u.input_tokens ?? 0) - cached, 0)
     const cost =
-      ((u.input_tokens ?? 0) / 1e6) * p.i +
-      ((u.output_tokens ?? 0) / 1e6) * p.o +
-      ((u.cache_read_tokens ?? 0) / 1e6) * p.c
+      (fullInput / 1e6) * p.i +
+      (cached / 1e6) * p.c +
+      ((u.output_tokens ?? 0) / 1e6) * p.o
     const day = (u.created_at ?? "").slice(0, 10)
     if (!day) continue
     dayMap.set(day, (dayMap.get(day) ?? 0) + cost)
