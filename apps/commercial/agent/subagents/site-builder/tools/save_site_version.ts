@@ -23,7 +23,9 @@ const sectionRecord = repairedRecord("elemento de sections[]")
 const specSchema = z
   .object({
     version: z.number().int().min(1),
-    mode: z.enum(["new", "redesign"]),
+    // "edit" = bump post-venta de site-manager (delta quirúrgico sobre un sitio
+    // ya vendido): salta el gauntlet creativo de sitio-nuevo (ver execute).
+    mode: z.enum(["new", "redesign", "edit"]),
     industry: z.string().min(1),
     business: repairedRecord("business"),
     design: repairedObject(
@@ -94,7 +96,7 @@ function asText(value: unknown): string {
 
 export default defineTool({
   description:
-    "Guarda una nueva versión del spec en site_versions (version_n incremental) y actualiza sites.current_version. Valida pensamiento de diseño: exige design.concept (idea rectora), `why` por sección de contenido, design.references con takeaways cuando hay biblioteca, y rechaza esqueletos clonados de sitios recientes (orden+variants), páginas interiores de plantilla, specs que ignoran la ficha de marca y la convergencia preset+hero+acento dentro del giro.",
+    "Guarda una nueva versión del spec en site_versions (version_n incremental) y actualiza sites.current_version. Con mode 'new'/'redesign' valida pensamiento de diseño: exige design.concept (idea rectora), `why` por sección de contenido, design.references con takeaways cuando hay biblioteca, y rechaza esqueletos clonados de sitios recientes (orden+variants), páginas interiores de plantilla, specs que ignoran la ficha de marca y la convergencia preset+hero+acento dentro del giro. Con mode 'edit' (bump post-venta de site-manager sobre un sitio ya vendido) SALTA ese gauntlet creativo — es un delta quirúrgico, no un sitio nuevo — y solo persiste versión+changelog.",
   inputSchema: z.object({
     siteId: z.string().uuid(),
     spec: specSchema.describe(
@@ -110,6 +112,14 @@ export default defineTool({
     // corrige todo en una pasada en vez de jugar ping-pong con el validador.
     const problems: string[] = []
     const site = await getSite(siteId)
+
+    // mode:"edit" (bump post-venta de site-manager) salta TODO el gauntlet de
+    // sitio-nuevo: concepto, `why` por sección, anti-clon, anti-convergencia,
+    // multipágina. Una edición quirúrgica es un delta sobre un sitio que ya
+    // pasó ese gauntlet; re-correrlo rechazaría cambios legítimos (p. ej. por
+    // parecerse a un sitio MÁS nuevo). Solo persiste versión + changelog.
+    const mode = String((spec as Record<string, unknown>)["mode"] ?? "new")
+    if (mode !== "edit") {
 
     // ——— Ficha de marca: obligatoria cuando existe ———
     {
@@ -282,6 +292,8 @@ export default defineTool({
         `otro sitio del giro "${spec.industry}" ya usa preset=${clash.preset} + hero=${clash.heroVariant} + acento=${clash.accent}. Cambia al menos uno (normalmente el acento: varía el hue ±15-30°).`,
       )
     }
+
+    } // fin del gauntlet de sitio-nuevo (se salta con mode:"edit")
 
     if (problems.length > 0) {
       throw new Error(

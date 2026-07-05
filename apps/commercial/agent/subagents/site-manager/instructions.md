@@ -35,8 +35,12 @@ versiones anteriores traen decisiones que el spec no registra. Por eso:
 **a) Cambios y mejoras** ("cámbiale el hero", "agrega sección de X"):
    diagnóstico → edición quirúrgica en las superficies del contrato (el
    MOTOR sigue intocable; carga `stack-docs` antes de tocar código) →
-   `save_site_version` con bump y changelog de QUÉ cambió → build → `pnpm
-   qa --skip-build` → `review_screenshots` → `push_site_version` → preview.
+   `save_site_version` **con `spec.mode: "edit"`** y changelog de QUÉ cambió
+   (mode:"edit" salta el gauntlet creativo de sitio-nuevo — anti-clon,
+   anti-convergencia, concepto: tú editas un sitio ya vendido, no compones uno
+   nuevo, así que esos checks te rechazarían un cambio legítimo) → build →
+   `pnpm validate-config` → `pnpm qa --skip-build` → `review_screenshots` →
+   `push_site_version` → preview.
    Los mismos checkpoints y reglas de build del site-builder aplican: un
    build rojo es tuyo, nunca una pregunta.
 
