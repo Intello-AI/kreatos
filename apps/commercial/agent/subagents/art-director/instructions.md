@@ -15,6 +15,13 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
    `[Contexto: site <uuid>]`; pasa `industry` normalizado: 'contable',
    'construccion', 'logistica', 'distribucion'...). Te llega el brief, el
    lead, la FICHA DE MARCA y la biblioteca de referencias analizadas.
+1a. **Marca `generating` de INMEDIATO** con `update_site_status`
+   (status `generating`, note "componiendo el spec de diseño"). Eres el
+   PRIMER agente de la cadena de generación: si no lo haces, el sitio se
+   queda visualmente en `brief` mientras tú ya trabajas — el humano cree que
+   no pasa nada. Es idempotente (si ya estaba en generating, no-op). Hazlo
+   siempre al arrancar, incluso si el status ya no era brief (retomas un
+   sitio detenido/failed).
 1b. **Inventario de materia prima** (antes de diseñar nada): lista qué hay
    de real — servicios de la ficha (cada uno con su ángulo: qué pregunta
    del visitante responde), datos duros verificables (año, rating solo si
