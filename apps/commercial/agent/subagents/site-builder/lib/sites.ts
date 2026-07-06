@@ -322,7 +322,14 @@ export async function getSiblingSpecs(input: {
   industry: string
   excludeSiteId: string
   limit?: number
-}): Promise<Array<{ preset?: string; heroVariant?: string; accent?: string }>> {
+}): Promise<
+  Array<{
+    preset?: string
+    heroVariant?: string
+    navbarVariant?: string
+    accent?: string
+  }>
+> {
   const supabase = getSupabaseClient()
   const { data, error } = await supabase
     .from("site_versions")
@@ -339,11 +346,13 @@ export async function getSiblingSpecs(input: {
       const design = (spec["design"] ?? {}) as Record<string, unknown>
       const sections = (spec["sections"] ?? []) as Array<Record<string, unknown>>
       const hero = sections.find((s) => s["id"] === "hero")
+      const navbar = sections.find((s) => s["id"] === "navbar")
       const palette = (design["palette"] ?? {}) as Record<string, unknown>
       const dark = (palette["dark"] ?? {}) as Record<string, unknown>
       return {
         preset: design["preset"] as string | undefined,
         heroVariant: hero?.["variant"] as string | undefined,
+        navbarVariant: navbar?.["variant"] as string | undefined,
         accent: dark["accent"] as string | undefined,
       }
     })

@@ -357,6 +357,8 @@ export default defineTool({
       unknown
     >
     const accent = dark["accent"] as string | undefined
+    const navbar = sections.find((s) => s["id"] === "navbar")
+    const navbarVariant = navbar?.["variant"] as string | undefined
     const siblings = await getSiblingSpecs({
       industry: spec.industry,
       excludeSiteId: siteId,
@@ -370,6 +372,53 @@ export default defineTool({
     if (clash) {
       problems.push(
         `otro sitio del giro "${spec.industry}" ya usa preset=${clash.preset} + hero=${clash.heroVariant} + acento=${clash.accent}. Cambia al menos uno (normalmente el acento: varía el hue ±15-30°).`,
+      )
+    }
+    // El HEADER también debe variar entre sitios del giro: mismo hero + mismo
+    // navbar variant = se ven iguales de entrada aunque cambie el acento.
+    const headerClash = siblings.find(
+      (s) =>
+        s.heroVariant === heroVariant && s.navbarVariant === navbarVariant,
+    )
+    if (headerClash && (heroVariant || navbarVariant)) {
+      problems.push(
+        `otro sitio del giro "${spec.industry}" ya combina hero=${heroVariant ?? "editorial"} + navbar=${navbarVariant ?? "minimal"}. Varía el HERO o el NAVBAR (el header no puede verse igual entre clientes): prueba otra variante de navbar (minimal/split/centered-logo) u otro hero (full-bleed/stat-led/split-image).`,
+      )
+    }
+
+    // ——— Momento con FONDO de imagen (contra el "todo tipografía plana") ———
+    // El humano lo pidió: secciones con fondo de imagen, no todo genérico. Se
+    // exige al menos un momento de imagen protagonista: hero full-bleed, o un
+    // bloque/custom de fondo con imagen. Escape: concepto deliberadamente
+    // type-only justificado en el changelog.
+    const IMAGE_BG_BLOCKS = new Set([
+      "image-fullbleed-caption",
+      "banner-image",
+      "cta-bg-image",
+      "stat-bg-image",
+      "feature-bg-split",
+    ])
+    const heroImageForward =
+      heroVariant === "full-bleed" || heroVariant === "split-image"
+    const hasImageBgBlock = sections.some(
+      (s) =>
+        String(s["id"]) === "block" &&
+        IMAGE_BG_BLOCKS.has(String(s["block"])),
+    )
+    // Una custom cuyo why/nombre habla de imagen de fondo también cuenta.
+    const hasImageCustom = sections.some(
+      (s) =>
+        String(s["id"]) === "custom" &&
+        /imagen|foto|fondo|bg|hero|bleed/i.test(
+          `${s["component"] ?? ""} ${asText(s["why"])}`,
+        ),
+    )
+    const typeOnly = /type-only|sin imagen de fondo|solo tipograf/i.test(
+      changelog,
+    )
+    if (!heroImageForward && !hasImageBgBlock && !hasImageCustom && !typeOnly) {
+      problems.push(
+        "el sitio no tiene NINGÚN momento con fondo de imagen (ni hero full-bleed/split-image, ni un bloque de fondo con imagen como image-fullbleed-caption/banner-image/cta-bg-image, ni una custom con imagen). Un sitio 100% tipografía sobre fondo plano se lee a plantilla — mete al menos uno (foto real del cliente, o stock del giro con treatment). Si el concepto es deliberadamente type-only, justifícalo con 'type-only' en el changelog.",
       )
     }
 

@@ -51,7 +51,36 @@ gesto visual y CONSERVA además el `contact`/`footer` del motor para el
 formulario real y el SEO. Nunca describas una commodity haciendo algo que su
 layout fijo no hace.
 
-## Recetas base
+## Las recetas son PUNTO DE PARTIDA, no plantilla (lee esto primero)
+
+El defecto #1 que reporta el humano: **todos los sitios salen iguales** —
+mismo hero, mismo header, misma secuencia. Eso NO es una regla del sistema,
+es pereza. Las recetas de abajo son un ANDAMIO para no arrancar en blanco;
+tu trabajo es DIVERGIR de ellas según ESTE negocio. Reglas duras de divergencia
+(el gate las valida contra los sitios recientes del mismo giro):
+
+- **Varía el HERO.** No default a `editorial` siempre. Elige la variante por lo
+  que le queda al negocio y por lo que NO usaron los sitios recientes del giro:
+  `full-bleed` (foto a sangre + overlay — el más distinto, úsalo cuando haya
+  buena foto), `stat-led` (cifras protagonistas), `split-image` (imagen al lado),
+  `editorial` (titular dominante). Dos sitios del mismo giro NO llevan el mismo
+  hero variant.
+- **Varía el NAVBAR.** `minimal` / `split` / `centered-logo` — no siempre `split`.
+  El header puede y debe verse distinto entre sitios.
+- **Al menos UN momento con imagen protagonista** cuando la marca tiene fotos:
+  hero `full-bleed`, o un bloque de fondo con imagen (`image-fullbleed-caption`,
+  o una `custom` con imagen de fondo + overlay). Un sitio 100% tipografía-sobre-
+  fondo-plano se lee a plantilla. El fondo con imagen es un recurso, úsalo.
+- **Rompe la secuencia.** Cambia el ORDEN respecto a la receta y respecto a otros
+  sitios del giro: mete la firma custom en una posición distinta, alterna qué va
+  después del hero (a veces stats, a veces manifiesto, a veces banda de imagen).
+- **La FIRMA custom (1-2) es donde más peleas la mismidad**: dale a este negocio
+  un gesto que ningún otro sitio tenga (composición robada de una referencia).
+
+Si dos sitios del mismo giro comparten hero variant + navbar variant + secuencia,
+fallaste — el gate `save_site_version` rechaza la convergencia.
+
+## Recetas base (andamio — DIVERGE de ellas)
 
 - **Despacho contable/legal** (obsidiana): hero `editorial` → trust-bar →
   services `numbered-list` (5–6) → about `plain` → testimonials → faq (5, fiscal/
