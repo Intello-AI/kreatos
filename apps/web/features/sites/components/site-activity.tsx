@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import {
   ArrowBendUpLeftIcon,
+  ArrowLeftIcon,
+  ArrowsOutSimpleIcon,
   CaretDownIcon,
   CaretRightIcon,
   CheckIcon,
@@ -450,6 +452,10 @@ export function SiteActivity({
   // El root está generando (entre eventos no hay nada visible: p. ej. tras
   // el reporte del subagente, mientras redacta su respuesta) → "Pensando…".
   const [rootBusy, setRootBusy] = useState(false)
+  // "Entrar" a un subagente: su TaskBlock se abre como chat full read-only.
+  // Guarda la key del block (header.id, estable); la vista se re-deriva de
+  // `blocks` en cada render, así que sigue viva mientras el subagente trabaja.
+  const [focusedKey, setFocusedKey] = useState<string | null>(null)
 
   useEffect(() => {
     lifetimeAbort.current = new AbortController()
@@ -1100,8 +1106,25 @@ export function SiteActivity({
     return acc
   }, [])
 
+  // Block del subagente en foco (si "entraste"): se re-deriva de `blocks`
+  // cada render → el overlay recibe items vivos sin re-abrir streams.
+  const focusedBlock = focusedKey
+    ? blocks.find(
+        (b): b is Extract<Block, { type: "task" }> =>
+          b.type === "task" && b.key === focusedKey
+      )
+    : undefined
+
   return (
     <div className="relative flex h-full min-h-0 flex-col" {...dndProps}>
+      {focusedBlock && (
+        <SubagentFocus
+          name={focusedBlock.header?.subagentName ?? "subagente"}
+          header={focusedBlock.header}
+          items={focusedBlock.items}
+          onBack={() => setFocusedKey(null)}
+        />
+      )}
       {dragging && (
         <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center border-2 border-dashed border-primary bg-background/85">
           <div className="flex flex-col items-center gap-1.5 text-sm">
@@ -1215,7 +1238,11 @@ export function SiteActivity({
                     </MessageScrollerItem>
                   ) : block.type === "task" ? (
                     <MessageScrollerItem key={block.key} messageId={block.key}>
-                      <TaskBlock header={block.header} items={block.items} />
+                      <TaskBlock
+                        header={block.header}
+                        items={block.items}
+                        onFocus={() => setFocusedKey(block.key)}
+                      />
                     </MessageScrollerItem>
                   ) : (
                     <BlockItem
@@ -1432,7 +1459,14 @@ export function SiteActivity({
  * solo el estado — la acción en curso con spinner, o "N pasos" al terminar —
  * y al expandir se ve la lista completa de acciones.
  */
-function ActionsBlock({ items }: { items: ActivityItem[] }) {
+function ActionsBlock({
+  items,
+  flush = false,
+}: {
+  items: ActivityItem[]
+  /** Sin sangría de subagente (para la vista "entrar" donde ya es el foco). */
+  flush?: boolean
+}) {
   const running = items.filter((i) => !i.done)
   const active = running.length > 0
   const failed = items.some((i) => i.failed)
@@ -1445,7 +1479,7 @@ function ActionsBlock({ items }: { items: ActivityItem[] }) {
     <Collapsible
       className={cn(
         "border-l-2 border-border/60 py-0.5 pl-3",
-        items[0]?.depth === 1 && "ml-5"
+        !flush && items[0]?.depth === 1 && "ml-5"
       )}
     >
       <CollapsibleTrigger className="group flex w-full items-center gap-2 text-left text-xs">
@@ -1727,9 +1761,12 @@ function CopyTaskButton({ getText }: { getText: () => string }) {
 function TaskBlock({
   header,
   items,
+  onFocus,
 }: {
   header: ActivityItem | null
   items: ActivityItem[]
+  /** "Entrar" al subagente: abre su transcript como chat full read-only. */
+  onFocus?: () => void
 }) {
   const name = header?.subagentName ?? "subagente"
   const runningChildren = items.filter((i) => i.kind === "action" && !i.done)
@@ -1776,6 +1813,17 @@ function TaskBlock({
             />
           </span>
         </CollapsibleTrigger>
+        {onFocus && (
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label={`Entrar a ${name} (ver su chat completo)`}
+            className="shrink-0 text-muted-foreground"
+            onClick={onFocus}
+          >
+            <ArrowsOutSimpleIcon />
+          </Button>
+        )}
         <CopyTaskButton getText={() => taskTranscript(name, header, items)} />
       </div>
       <CollapsibleContent>
@@ -1953,6 +2001,233 @@ function BlockItem({
           <MarkerContent>{item.label}</MarkerContent>
         </Marker>
       )}
+    </MessageScrollerItem>
+  )
+}
+
+/**
+ * Vista "Entrar al subagente": el transcript del subagente como chat completo
+ * (encargo del orquestador → trabajo con tools → reportes), read-only. eve no
+ * deja chatear de vuelta con un subagente —es un tool que el root invoca y sus
+ * preguntas burbujean al root—, así que NO lleva composer. Los items ya están
+ * en memoria (los mismos del TaskBlock); esta vista solo los re-encuadra como
+ * conversación y sigue viva mientras el subagente trabaja.
+ */
+function SubagentFocus({
+  name,
+  header,
+  items,
+  onBack,
+}: {
+  name: string
+  header: ActivityItem | null
+  items: ActivityItem[]
+  onBack: () => void
+}) {
+  const model = items.find((i) => i.model)?.model ?? header?.model
+  const active = header
+    ? !header.done
+    : items.some((i) => i.kind === "action" && !i.done)
+  const failed =
+    Boolean(header?.failed) || items.some((i) => i.failed || i.kind === "error")
+
+  // Acciones consecutivas → grupo colapsable (igual que el timeline del root);
+  // el resto (encargo, reportes, preguntas, errores) va como burbuja de chat.
+  type Group =
+    | { key: string; type: "actions"; items: ActivityItem[] }
+    | { key: string; type: "single"; item: ActivityItem }
+  const groups = items.reduce<Group[]>((acc, item) => {
+    if (item.kind === "action") {
+      const last = acc[acc.length - 1]
+      if (last?.type === "actions") {
+        last.items.push(item)
+        return acc
+      }
+      acc.push({ key: item.id, type: "actions", items: [item] })
+    } else {
+      acc.push({ key: item.id, type: "single", item })
+    }
+    return acc
+  }, [])
+
+  return (
+    <div className="absolute inset-0 z-40 flex flex-col bg-background">
+      <div className="flex shrink-0 items-center gap-2 border-b p-3">
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          onClick={onBack}
+          aria-label="Volver al monitor"
+        >
+          <ArrowLeftIcon />
+        </Button>
+        <AirTrafficControlIcon
+          className={cn(
+            "size-4 shrink-0",
+            failed ? "text-destructive" : "text-muted-foreground"
+          )}
+        />
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <h2 className="truncate text-sm font-medium">{name}</h2>
+            <ModelBadge model={model} />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {active
+              ? "Trabajando…"
+              : failed
+                ? "Terminó con errores"
+                : "Completado"}
+            {header ? ` · delegado ${formatTime(header.at)}` : ""}
+          </p>
+        </div>
+        <div className="ml-auto">
+          <CopyTaskButton getText={() => taskTranscript(name, header, items)} />
+        </div>
+      </div>
+      <MessageScrollerProvider
+        defaultScrollPosition="end"
+        autoScroll
+        scrollEdgeThreshold={120}
+      >
+        <MessageScroller className="min-h-0 flex-1">
+          <MessageScrollerViewport className="p-3">
+            <MessageScrollerContent className="gap-4">
+              {groups.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Delegado; esperando actividad…
+                </p>
+              ) : (
+                groups.map((g) =>
+                  g.type === "actions" ? (
+                    <MessageScrollerItem key={g.key} messageId={g.key}>
+                      <ActionsBlock items={g.items} flush />
+                    </MessageScrollerItem>
+                  ) : (
+                    <SubagentMessage key={g.key} name={name} item={g.item} />
+                  )
+                )
+              )}
+              {active && (
+                <MessageScrollerItem scrollAnchor={false}>
+                  <div className="flex items-center gap-2">
+                    <AirTrafficControlIcon className="size-3 text-muted-foreground" />
+                    <ThinkingIndicator />
+                  </div>
+                </MessageScrollerItem>
+              )}
+            </MessageScrollerContent>
+          </MessageScrollerViewport>
+          <MessageScrollerButton />
+        </MessageScroller>
+      </MessageScrollerProvider>
+    </div>
+  )
+}
+
+/**
+ * Un item no-acción del subagente, renderizado como turno de chat dentro de la
+ * vista "Entrar": el encargo del orquestador entra como burbuja saliente; los
+ * reportes/preguntas/errores del subagente, como burbujas suyas.
+ */
+function SubagentMessage({ name, item }: { name: string; item: ActivityItem }) {
+  if (item.kind === "delegation") {
+    // Encargo del orquestador → quien instruye al subagente (burbuja saliente).
+    return (
+      <MessageScrollerItem messageId={item.id}>
+        <Message align="end">
+          <MessageContent>
+            <MessageHeader className="justify-end">
+              Orquestador · {formatTime(item.at)}
+            </MessageHeader>
+            <Bubble variant="tinted" align="end">
+              <BubbleContent>{item.label}</BubbleContent>
+            </Bubble>
+          </MessageContent>
+        </Message>
+      </MessageScrollerItem>
+    )
+  }
+  if (item.kind === "report") {
+    return (
+      <MessageScrollerItem messageId={item.id}>
+        <Message>
+          <MessageContent>
+            <MessageHeader className="gap-3 pl-0">
+              <div className="flex gap-1">
+                <AirTrafficControlIcon className="size-3" />
+                {name}
+              </div>
+              <ModelBadge model={item.model} />
+            </MessageHeader>
+            <Bubble variant="muted">
+              <BubbleContent>
+                <Streamdown className="text-xs leading-relaxed [&_:not(pre)>code]:mx-0 [&_:not(pre)>code]:rounded-none [&_:not(pre)>code]:border [&_:not(pre)>code]:border-border [&_:not(pre)>code]:bg-background [&_:not(pre)>code]:px-1 [&_:not(pre)>code]:py-px [&_:not(pre)>code]:text-[11px] [&_h1]:my-1.5 [&_h1]:text-sm [&_h2]:my-1.5 [&_h2]:text-sm [&_h3]:my-1 [&_h3]:text-xs [&_li]:my-0.5 [&_ol]:my-1 [&_p]:my-1 [&_pre]:my-1.5 [&_pre]:text-[11px] [&_ul]:my-1">
+                  {item.label}
+                </Streamdown>
+              </BubbleContent>
+            </Bubble>
+          </MessageContent>
+        </Message>
+      </MessageScrollerItem>
+    )
+  }
+  if (item.kind === "question") {
+    return (
+      <MessageScrollerItem messageId={item.id}>
+        <Message>
+          <MessageContent>
+            <MessageHeader className="gap-3 pl-0">
+              <div className="flex gap-1">
+                <AirTrafficControlIcon className="size-3" />
+                {name}
+              </div>
+              <ModelBadge model={item.model} />
+            </MessageHeader>
+            <Bubble variant="muted">
+              <BubbleContent>
+                <Streamdown className="text-xs leading-relaxed [&_p]:my-1">
+                  {item.label}
+                </Streamdown>
+                {item.options && item.options.length > 0 && (
+                  <span className="mt-1.5 flex flex-wrap gap-1">
+                    {item.options.map((option) => (
+                      <Badge
+                        key={option}
+                        variant="outline"
+                        className="text-[10px] font-normal"
+                      >
+                        {option}
+                      </Badge>
+                    ))}
+                  </span>
+                )}
+              </BubbleContent>
+            </Bubble>
+          </MessageContent>
+        </Message>
+      </MessageScrollerItem>
+    )
+  }
+  if (item.kind === "error") {
+    return (
+      <MessageScrollerItem messageId={item.id}>
+        <Message>
+          <MessageContent>
+            <Bubble variant="destructive">
+              <BubbleContent>{item.label}</BubbleContent>
+            </Bubble>
+          </MessageContent>
+        </Message>
+      </MessageScrollerItem>
+    )
+  }
+  // status u otros: separador discreto.
+  return (
+    <MessageScrollerItem messageId={item.id}>
+      <Marker variant="separator">
+        <MarkerContent>{item.label}</MarkerContent>
+      </Marker>
     </MessageScrollerItem>
   )
 }
