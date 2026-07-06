@@ -19,7 +19,9 @@ import {
   LeadBrandTrigger,
 } from "@/features/leads/components/lead-brand-panel"
 import { LeadStatusSelect } from "@/features/leads/components/lead-status-select"
+import { LeadRatingControl } from "@/features/leads/components/lead-rating-control"
 import { getLeadDetail } from "@/features/leads/queries"
+import type { ManualRating } from "@/features/leads/types"
 import { GenerateSiteDialog } from "@/features/sites/components/generate-site-dialog"
 import { formatDate } from "@/lib/dates"
 import { Badge } from "@/components/ui/badge"
@@ -204,6 +206,23 @@ export default async function LeadDetailPage({
                   </MetaRow>
                 </div>
               )}
+            </div>
+
+            <Separator />
+
+            {/* Calificación manual */}
+            <div className="space-y-3">
+              <div className="space-y-0.5">
+                <h2 className="text-sm font-medium">Calificación</h2>
+                <p className="text-xs text-muted-foreground">
+                  Tu valoración a mano de este lead, con una nota opcional.
+                </p>
+              </div>
+              <LeadRatingControl
+                leadId={lead.id}
+                rating={(lead.manual_rating as ManualRating | null) ?? null}
+                note={lead.rating_note}
+              />
             </div>
 
             <Separator />

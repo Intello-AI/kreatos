@@ -12,6 +12,10 @@ import {
   LEADS_PAGE_SIZE,
   parseLeadStatus,
 } from "@/features/leads/queries"
+import {
+  parseManualRating,
+  parseWebsiteQuality,
+} from "@/features/leads/types"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export const metadata: Metadata = {
@@ -25,6 +29,10 @@ type LeadsSearchParams = Promise<{
   status?: string
   city?: string
   page?: string
+  hasBrand?: string
+  hasSite?: string
+  quality?: string
+  rating?: string
 }>
 
 export default async function LeadsPage({
@@ -36,6 +44,10 @@ export default async function LeadsPage({
   const q = params.q?.trim() || undefined
   const status = parseLeadStatus(params.status)
   const city = params.city || undefined
+  const hasBrand = params.hasBrand === "1"
+  const hasSite = params.hasSite === "1"
+  const quality = parseWebsiteQuality(params.quality)
+  const rating = parseManualRating(params.rating)
   const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1)
 
   return (
@@ -53,10 +65,19 @@ export default async function LeadsPage({
         </Suspense>
 
         <Suspense
-          key={`${q ?? ""}|${status ?? ""}|${city ?? ""}|${page}`}
+          key={`${q ?? ""}|${status ?? ""}|${city ?? ""}|${hasBrand}|${hasSite}|${quality ?? ""}|${rating ?? ""}|${page}`}
           fallback={<LeadsTableSkeleton />}
         >
-          <LeadsSection q={q} status={status} city={city} page={page} />
+          <LeadsSection
+            q={q}
+            status={status}
+            city={city}
+            hasBrand={hasBrand}
+            hasSite={hasSite}
+            quality={quality}
+            rating={rating}
+            page={page}
+          />
         </Suspense>
       </div>
     </main>
@@ -82,14 +103,31 @@ async function LeadsSection({
   q,
   status,
   city,
+  hasBrand,
+  hasSite,
+  quality,
+  rating,
   page,
 }: {
   q?: string
   status?: ReturnType<typeof parseLeadStatus>
   city?: string
+  hasBrand?: boolean
+  hasSite?: boolean
+  quality?: ReturnType<typeof parseWebsiteQuality>
+  rating?: ReturnType<typeof parseManualRating>
   page: number
 }) {
-  const { leads, count, error } = await getLeads({ q, status, city, page })
+  const { leads, count, error } = await getLeads({
+    q,
+    status,
+    city,
+    hasBrand,
+    hasSite,
+    quality,
+    rating,
+    page,
+  })
 
   if (error) {
     return (
@@ -100,7 +138,9 @@ async function LeadsSection({
   const costs = await getLeadCostMap(leads.map((l) => l.id))
 
   const totalPages = Math.max(1, Math.ceil(count / LEADS_PAGE_SIZE))
-  const hasFilters = Boolean(q || status || city)
+  const hasFilters = Boolean(
+    q || status || city || hasBrand || hasSite || quality || rating
+  )
 
   return (
     <div className="space-y-4">
@@ -115,7 +155,15 @@ async function LeadsSection({
           <LeadsPagination
             page={page}
             totalPages={totalPages}
-            filters={{ q, status, city }}
+            filters={{
+              q,
+              status,
+              city,
+              hasBrand: hasBrand ? "1" : undefined,
+              hasSite: hasSite ? "1" : undefined,
+              quality,
+              rating,
+            }}
           />
         </div>
       )}

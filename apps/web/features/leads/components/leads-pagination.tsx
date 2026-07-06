@@ -15,7 +15,15 @@ interface LeadsPaginationProps {
   page: number
   totalPages: number
   /** Filtros activos que deben sobrevivir al cambiar de página. */
-  filters: { q?: string; status?: string; city?: string }
+  filters: {
+    q?: string
+    status?: string
+    city?: string
+    hasBrand?: string
+    hasSite?: string
+    quality?: string
+    rating?: string
+  }
 }
 
 function pageHref(
@@ -26,6 +34,10 @@ function pageHref(
   if (filters.q) params.set("q", filters.q)
   if (filters.status) params.set("status", filters.status)
   if (filters.city) params.set("city", filters.city)
+  if (filters.hasBrand) params.set("hasBrand", filters.hasBrand)
+  if (filters.hasSite) params.set("hasSite", filters.hasSite)
+  if (filters.quality) params.set("quality", filters.quality)
+  if (filters.rating) params.set("rating", filters.rating)
   if (page > 1) params.set("page", String(page))
   const qs = params.toString()
   return qs ? `?${qs}` : "?"

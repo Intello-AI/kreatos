@@ -247,12 +247,15 @@ export type Database = {
           fetched_at: string
           google_types: string[] | null
           id: string
+          manual_rating: string | null
           maps_uri: string | null
           name: string | null
           notes: string | null
           phone: string | null
           place_id: string
+          rated_at: string | null
           rating: number | null
+          rating_note: string | null
           reviews_count: number | null
           site_instructions: string | null
           status: string
@@ -273,12 +276,15 @@ export type Database = {
           fetched_at?: string
           google_types?: string[] | null
           id?: string
+          manual_rating?: string | null
           maps_uri?: string | null
           name?: string | null
           notes?: string | null
           phone?: string | null
           place_id: string
+          rated_at?: string | null
           rating?: number | null
+          rating_note?: string | null
           reviews_count?: number | null
           site_instructions?: string | null
           status?: string
@@ -299,12 +305,15 @@ export type Database = {
           fetched_at?: string
           google_types?: string[] | null
           id?: string
+          manual_rating?: string | null
           maps_uri?: string | null
           name?: string | null
           notes?: string | null
           phone?: string | null
           place_id?: string
+          rated_at?: string | null
           rating?: number | null
+          rating_note?: string | null
           reviews_count?: number | null
           site_instructions?: string | null
           status?: string

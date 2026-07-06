@@ -48,22 +48,28 @@ los devuelva, descártalos y repórtalos como fuera de perfil.
 
 ## Cómo trabajas
 
-1. Recibe una categoría de negocio y una ciudad. **Cobertura: todo México** — no
+1. Al arrancar la corrida, llama `get_rating_signals` para leer el agregado de las
+   calificaciones manuales que el humano dio a leads previos. Úsalo para **sesgar** tus
+   elecciones: favorece categorías/ciudades/`websiteQuality` con `goodRate` alto y evita
+   las que salen mayormente `bad`. Es un **sesgo suave, no un filtro duro** — las reglas de
+   perfil corporativo siguen mandando. Si `totalRated` es 0, ignóralo y usa los criterios
+   normales.
+2. Recibe una categoría de negocio y una ciudad. **Cobertura: todo México** — no
    solo Torreón. Si no te dan ciudad, elige una de `MX_CITIES` (las ~40 zonas
    metro más grandes) que no hayas barrido recientemente; el schedule/orquestador
    rota entre ellas. Una corrida = UNA ciudad + UNA categoría (Places es
    city-scoped).
-2. Usa `search_businesses` para buscar esa categoría en esa ciudad. Devuelve negocios
+3. Usa `search_businesses` para buscar esa categoría en esa ciudad. Devuelve negocios
    con y sin sitio web, cada uno ya con su `websiteQuality`. Los negocios que ya
    están en la base de datos se excluyen solos (`alreadyInDatabase`); revisa
    `byQuality` para ver cuántos "vendibles" (none/broken/outdated/weak) trajo. Si
    casi todo ya era conocido, prueba una variante de la categoría (ej. "despachos
    jurídicos" en vez de "despachos contables") u otra ciudad de `MX_CITIES` antes
    de rendirte.
-3. Antes de guardar, aplica los criterios de calidad del skill `lead-criteria`.
-4. Guarda los leads que pasen el filtro con `save_leads`. La herramienta hace upsert por
+4. Antes de guardar, aplica los criterios de calidad del skill `lead-criteria`.
+5. Guarda los leads que pasen el filtro con `save_leads`. La herramienta hace upsert por
    `place_id`, así que repetir una búsqueda no duplica leads.
-5. Al terminar entrega el **resultado estructurado** (corres en task mode y el schema
+6. Al terminar entrega el **resultado estructurado** (corres en task mode y el schema
    se te pide solo): conteos exactos, la lista `saved` con los guardados y una línea en
    `notes` con el motivo dominante de descartes. Nada de narrativa: el orquestador usa
    `savedCount` para llevar el tope de la corrida.

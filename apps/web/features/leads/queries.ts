@@ -12,6 +12,14 @@ export interface GetLeadsParams {
   q?: string
   status?: LeadStatus
   city?: string
+  /** Solo leads con ficha de marca (inner join en lead_brand). */
+  hasBrand?: boolean
+  /** Solo leads con sitio generado (inner join en sites). */
+  hasSite?: boolean
+  /** website_quality exacto. */
+  quality?: string
+  /** manual_rating exacto. */
+  rating?: string
 }
 
 export interface GetLeadsResult {
@@ -27,15 +35,28 @@ export async function getLeads({
   q,
   status,
   city,
+  hasBrand,
+  hasSite,
+  quality,
+  rating,
 }: GetLeadsParams = {}): Promise<GetLeadsResult> {
   const supabase = getAdminClient()
+
+  // Los embeds usan !inner cuando se filtra por presencia (solo leads CON
+  // marca / CON sitio); si no, se dejan como join normal para mostrar todos.
+  const sitesEmbed = hasSite
+    ? "sites!inner(id, status, status_updated_at)"
+    : "sites(id, status, status_updated_at)"
+  const brandEmbed = hasBrand
+    ? "lead_brand!inner(short_name, logo_path, colors)"
+    : "lead_brand(short_name, logo_path, colors)"
 
   let query = supabase
     .from("leads")
     .select(
       // sites: 1:1 por lead — decide "Generar sitio" vs "Ver sitio" y pinta
       // su status. lead_brand: la ficha de marca (columna Marca).
-      "id, place_id, name, category, business_type, google_types, description, address, phone, email, rating, reviews_count, maps_uri, city, status, status_updated_at, notes, site_instructions, fetched_at, created_at, website, sites(id, status, status_updated_at), lead_brand(short_name, logo_path, colors)",
+      `id, place_id, name, category, business_type, google_types, description, address, phone, email, rating, reviews_count, maps_uri, city, status, status_updated_at, notes, site_instructions, fetched_at, created_at, website, website_quality, manual_rating, ${sitesEmbed}, ${brandEmbed}`,
       { count: "exact" }
     )
 
@@ -48,6 +69,8 @@ export async function getLeads({
   }
   if (status) query = query.eq("status", status)
   if (city) query = query.eq("city", city)
+  if (quality) query = query.eq("website_quality", quality)
+  if (rating) query = query.eq("manual_rating", rating)
 
   const from = (Math.max(1, page) - 1) * LEADS_PAGE_SIZE
   const { data, count, error } = await query

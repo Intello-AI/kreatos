@@ -35,3 +35,51 @@ export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
   won: "Ganado",
   lost: "Perdido",
 }
+
+/** Calificación manual que José pone a un lead. */
+export const MANUAL_RATINGS = ["good", "regular", "bad"] as const
+
+export type ManualRating = (typeof MANUAL_RATINGS)[number]
+
+export const MANUAL_RATING_LABELS: Record<ManualRating, string> = {
+  good: "Bueno",
+  regular: "Regular",
+  bad: "Malo",
+}
+
+/** Calidad de la web actual del negocio (la evalúa el pipeline). */
+export const WEBSITE_QUALITIES = [
+  "none",
+  "broken",
+  "outdated",
+  "weak",
+  "decent",
+  "unknown",
+] as const
+
+export type WebsiteQuality = (typeof WEBSITE_QUALITIES)[number]
+
+export const WEBSITE_QUALITY_LABELS: Record<WebsiteQuality, string> = {
+  none: "Sin web",
+  broken: "Rota",
+  outdated: "Vieja",
+  weak: "Floja",
+  decent: "Decente",
+  unknown: "Desconocida",
+}
+
+export function parseManualRating(
+  value: string | undefined
+): ManualRating | undefined {
+  return MANUAL_RATINGS.includes(value as ManualRating)
+    ? (value as ManualRating)
+    : undefined
+}
+
+export function parseWebsiteQuality(
+  value: string | undefined
+): WebsiteQuality | undefined {
+  return WEBSITE_QUALITIES.includes(value as WebsiteQuality)
+    ? (value as WebsiteQuality)
+    : undefined
+}
