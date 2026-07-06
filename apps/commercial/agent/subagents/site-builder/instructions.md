@@ -99,6 +99,15 @@ template de kreatos; tú lo personalizas, no lo reinventas.
      iconos: rompe el build en export.
    Si `brand` es null, aplica la política de datos faltantes (nunca inventes
    logo ni nombre corto que el negocio no usa).
+   - **Open Graph (motor, `app/opengraph-image.tsx`): ya compone una FOTO real
+     a sangre + overlay oscuro + el logo arriba + nombre/tagline/rating.** Por
+     defecto usa `public/images/hero.webp` (por eso RENOMBRA siempre la hero a
+     `hero.webp`), así que normalmente no tienes que hacer NADA. Si quieres otra
+     imagen de fondo para el OG (una fachada, una foto de obra más
+     representativa que la hero), decláralala en `seo.ogImage`
+     (`"/images/<archivo>.webp"`). NO toques `opengraph-image.tsx` —es motor— ni
+     generes el OG a mano; solo asegura que la hero/imagen designada exista y se
+     vea bien (el motor pone el overlay y el contraste).
 2b-bis. **BIBLIOTECA DE BLOQUES — tu primera arma contra lo genérico.** El
    template trae `components/blocks/` (48 arquetipos curados y probados) que se
    COMPONEN, no se escriben: declaras `{ id: "block", block: "<key>", ns }` en
