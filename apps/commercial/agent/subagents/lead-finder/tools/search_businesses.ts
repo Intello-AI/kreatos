@@ -8,6 +8,11 @@ import {
   MAX_LEADS_PER_RUN,
 } from "../lib/constants"
 import { fetchPlaceDetails, sleep, textSearchIds } from "../lib/places"
+import {
+  assessWebsite,
+  NO_WEBSITE,
+  type WebsiteVerdict,
+} from "../lib/website-quality"
 
 /**
  * Candidato a lead: negocio local encontrado en Google Maps, con o sin sitio
@@ -25,6 +30,16 @@ export interface CandidateLead {
   phone: string | null
   /** websiteUri de Places; null = sin sitio (sitio nuevo), con valor = candidato a rediseño. */
   website: string | null
+  /**
+   * Calidad del sitio, evaluada al vuelo (mejor lead → peor lead para vender):
+   * none (sin web) · broken · outdated · weak · decent · unknown. Los primeros
+   * cuatro son los objetivos comerciales fuertes.
+   */
+  websiteQuality: WebsiteVerdict
+  /** 0-100 (mayor = mejor sitio); null si no se pudo juzgar o no hay web. */
+  websiteScore: number | null
+  /** Señales que sustentan el veredicto (en español). */
+  websiteSignals: string[]
   rating: number | null
   reviewsCount: number | null
   mapsUri: string | null
@@ -75,6 +90,11 @@ export default defineTool({
       const website = details.websiteUri?.trim() || null
       if (website) withWebsite += 1
 
+      // Evalúa la calidad del sitio al vuelo: sin web = mejor lead; con web se
+      // fetchea y puntúa (responsive, https, año, builder…) para priorizar los
+      // feos/viejos, que son los que se venden.
+      const assessment = website ? await assessWebsite(website) : NO_WEBSITE
+
       leads.push({
         placeId: details.id,
         name: details.displayName?.text ?? null,
@@ -85,6 +105,9 @@ export default defineTool({
         address: details.formattedAddress ?? null,
         phone: details.nationalPhoneNumber ?? null,
         website,
+        websiteQuality: assessment.verdict,
+        websiteScore: assessment.score,
+        websiteSignals: assessment.signals,
         rating: details.rating ?? null,
         reviewsCount: details.userRatingCount ?? null,
         mapsUri: details.googleMapsUri ?? null,
@@ -94,11 +117,19 @@ export default defineTool({
       await sleep(DETAILS_REQUEST_DELAY_MS)
     }
 
+    // Conteo por veredicto: el orquestador y el agente ven de un vistazo cuántos
+    // leads "vendibles" (sin web / rota / vieja / floja) trae la corrida.
+    const byQuality = leads.reduce<Record<string, number>>((acc, l) => {
+      acc[l.websiteQuality] = (acc[l.websiteQuality] ?? 0) + 1
+      return acc
+    }, {})
+
     return {
       query: textQuery,
       candidatesFound: placeIds.length,
       alreadyInDatabase: known.size,
       withWebsite,
+      byQuality,
       candidates: leads,
     }
   },

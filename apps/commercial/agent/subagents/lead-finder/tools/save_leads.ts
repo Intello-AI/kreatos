@@ -13,6 +13,11 @@ const leadInputSchema = z.object({
   address: z.string().nullable(),
   phone: z.string().nullable(),
   website: z.string().nullable(),
+  websiteQuality: z
+    .enum(["none", "broken", "outdated", "weak", "decent", "unknown"])
+    .default("unknown"),
+  websiteScore: z.number().int().nullable().default(null),
+  websiteSignals: z.array(z.string()).default([]),
   rating: z.number().nullable(),
   reviewsCount: z.number().int().nullable(),
   mapsUri: z.string().nullable(),
@@ -42,6 +47,9 @@ export default defineTool({
       address: lead.address,
       phone: lead.phone,
       website: lead.website,
+      website_quality: lead.websiteQuality,
+      website_score: lead.websiteScore,
+      website_signals: lead.websiteSignals,
       rating: lead.rating,
       reviews_count: lead.reviewsCount,
       maps_uri: lead.mapsUri,

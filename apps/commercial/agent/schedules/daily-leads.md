@@ -14,28 +14,35 @@ Corrida diaria del pipeline comercial. Tres etapas, en orden, con topes duros
 de costo. Es una corrida de background: no produzcas resumen final largo — los
 resultados quedan en las tablas.
 
-Ciudad objetivo: **Torreón, Coahuila**.
+Cobertura: **todo México**. NO fijes Torreón. Cada corrida elige **2-3 ciudades
+de `MX_CITIES`** (la lista de ~40 zonas metro en lead-finder/lib/constants.ts),
+**rotando** para no repetir siempre las mismas — p. ej. arranca por una distinta
+cada día (CDMX, Guadalajara, Monterrey, Puebla, Tijuana, León, Querétaro… y las
+medianas). El objetivo es barrer el país con el tiempo, no clavarse en una zona.
 
 ## Etapa 1 — Leads nuevos
 
-Delega al subagente **lead-finder**, una categoría a la vez y en este orden:
+Delega al subagente **lead-finder**, **una ciudad + una categoría a la vez**
+(Places es city-scoped), recorriendo estas categorías:
 
 1. despachos contables
 2. constructoras
 3. empresas de logística y transporte
 4. distribuidores y mayoristas
 
-Para cada categoría pásale en el mensaje la categoría y la ciudad. lead-finder
-aplica sus criterios de calidad y guarda los calificados (tope global de 20
-leads guardados por corrida: si sus respuestas indican que ya se alcanzó,
-pasa a la etapa 2 sin delegar más categorías).
+Para cada delegación pásale la categoría y la ciudad elegida. lead-finder evalúa
+la CALIDAD del sitio de cada negocio y guarda los calificados con su
+`websiteQuality` (tope global de 20 leads guardados por corrida: si sus
+respuestas indican que ya se alcanzó, pasa a la etapa 2 sin delegar más).
 
 ## Etapa 2 — Propuestas para los mejores
 
 Delega al subagente **proposal**: que genere propuestas para los leads más
-recientes en status `new` que aún no tienen propuesta, priorizando calidad
-(rating alto, más reseñas, datos completos). **Máximo 5 propuestas por
-corrida** — pásale ese tope explícito en el mensaje.
+recientes en status `new` que aún no tienen propuesta, **priorizando los más
+vendibles**: primero `websiteQuality` none/broken/outdated/weak (sin web o web
+fea = venta clara), luego datos completos (teléfono, rating). Los `decent` van
+al final o se saltan. **Máximo 5 propuestas por corrida** — pásale ese tope
+explícito en el mensaje.
 
 ## Etapa 3 — Borradores de contacto
 

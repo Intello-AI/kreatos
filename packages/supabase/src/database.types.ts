@@ -258,6 +258,9 @@ export type Database = {
           status: string
           status_updated_at: string | null
           website: string | null
+          website_quality: string | null
+          website_score: number | null
+          website_signals: Json
         }
         Insert: {
           address?: string | null
@@ -281,6 +284,9 @@ export type Database = {
           status?: string
           status_updated_at?: string | null
           website?: string | null
+          website_quality?: string | null
+          website_score?: number | null
+          website_signals?: Json
         }
         Update: {
           address?: string | null
@@ -304,6 +310,9 @@ export type Database = {
           status?: string
           status_updated_at?: string | null
           website?: string | null
+          website_quality?: string | null
+          website_score?: number | null
+          website_signals?: Json
         }
         Relationships: []
       }
