@@ -57,7 +57,7 @@ sin preguntar ni pedir confirmación — José espera el botín, no un plan.
    1-2. Tope sano ~8-10 páginas (prioriza galería/portafolio/productos/
    nosotros/contacto); si el sitio es chico, todas. Junta los assets de todas
    antes de decidir. Anota los `documents` (brochure/catálogo PDF) en las notas
-   del lead: son material de venta que site-builder/site-manager pueden usar.
+   del lead: son material de venta que site-builder puede usar.
 3. Analiza las imágenes descargadas (`analyze_brand_image`) y promueve las
    buenas con `save_brand_profile` (logo/isotipo/fotos), como siempre.
    **Isotipo desde `icons`**: prefiere SVG o el PNG más grande

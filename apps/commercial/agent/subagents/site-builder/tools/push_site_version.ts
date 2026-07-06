@@ -65,7 +65,7 @@ export default defineTool({
 
     const escaped = commitMessage.replace(/"/g, '\\"')
     // Issues del review que se entregan pese al veredicto (overrideReview): se
-    // anotan tras el push para José/site-manager.
+    // anotan tras el push para José y el modo edit/publish.
     let openIssues: string[] = []
     // ¿Hay cambios sin commitear en el working tree?
     const dirty = await sandbox.run({
@@ -379,7 +379,7 @@ export default defineTool({
 
     const sha = await sandbox.run({ command: `cd site && git rev-parse HEAD` })
     // Entrega forzada con issues abiertos (overrideReview): queda en el historial
-    // del lead para que José/site-manager lo vean antes de publicar.
+    // del lead para que José lo vea antes de publicar.
     if (openIssues.length > 0) {
       try {
         await addActivity({

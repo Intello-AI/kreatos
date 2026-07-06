@@ -36,7 +36,7 @@ Lo que puede confundirse con un HECHO del negocio real:
 - Nombres de clientes REALES que no lo son (los rectángulos tipográficos
   usan monogramas/genéricos, no "CEMEX" si CEMEX no es cliente).
 
-## Convención de marcado (para que site-manager encuentre TODO rápido)
+## Convención de marcado (para que el modo edit encuentre TODO rápido)
 
 Tres marcadores, uno por superficie — el que completa el sitio no debe
 cazar placeholders a ojo:

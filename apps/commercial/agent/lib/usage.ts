@@ -14,7 +14,7 @@ import { getSupabaseClient } from "./supabase"
 
 const CONTEXT_RE = /\[Contexto:\s*(lead|site)\s+([0-9a-fA-F-]{36})\]/
 
-/** Modelo real del site-builder/site-manager (mismo toggle que agent.ts). */
+/** Modelo real del site-builder (mismo toggle que agent.ts). */
 export function siteBuilderModel(): string {
   const toggle: Record<string, string> = {
     gpt: "gpt-5.4",
