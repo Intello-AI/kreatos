@@ -213,6 +213,12 @@ export default defineTool({
       // El copy del demo vive en es.json, no solo en el config: un sitio
       // "maquillado" pasa el check del config y entrega el despacho contable
       // con el logo del cliente (pasó dos veces).
+      // ¿'es' es un locale configurado? Si NO (p. ej. sitio solo 'en'), el
+      // messages/es.json es el DEMO muerto del template (el motor no lo carga)
+      // — revisarlo por residuo rechazaría una entrega legítima. El default
+      // seguro es SÍ revisar (sitios sin locales explícitos = es).
+      const localesMatch = config.match(/locales\s*:\s*\[([^\]]*)\]/)
+      const esIsLocale = !localesMatch || /["']es["']/.test(localesMatch[1])
       const esJson =
         (await sandbox.readTextFile({ path: "site/messages/es.json" })) ?? ""
       const esLower = esJson.toLowerCase()
@@ -226,7 +232,7 @@ export default defineTool({
         "lopez y asociados",
         "ricardo lópez",
       ].filter((signal) => esLower.includes(signal))
-      if (copyResidue.length > 0) {
+      if (esIsLocale && copyResidue.length > 0) {
         throw new Error(
           `Push rechazado: messages/es.json aún contiene el COPY del demo contable ficticio (${copyResidue.join(", ")}). Parchar textos sueltos sobre el demo no es materializar: regenera es.json COMPLETO desde el spec con draft_surface (del demo solo sobrevive el namespace common adaptado).`,
         )

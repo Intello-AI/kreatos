@@ -209,7 +209,11 @@ export function LeadsTable({
                       </Button>
                     </>
                   ) : (
-                    <GenerateSiteDialog leadId={lead.id} leadName={lead.name} />
+                    <GenerateSiteDialog
+                      leadId={lead.id}
+                      leadName={lead.name}
+                      leadLanguage={lead.language ?? "es"}
+                    />
                   )}
                 </span>
               </TableCell>

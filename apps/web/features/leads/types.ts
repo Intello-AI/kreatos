@@ -48,6 +48,22 @@ export const MANUAL_RATING_LABELS: Record<ManualRating, string> = {
   bad: "Malo",
 }
 
+/**
+ * Idioma primario del cliente (columna `leads.language`). Es el locale DEFAULT
+ * del sitio generado (locales[0], sin prefijo en "/"): MX = "es"; clientes de
+ * US = "en". El resto son idiomas EXTRA que se marcan aparte al generar.
+ */
+export const LANGUAGES = ["es", "en", "pt", "fr"] as const
+
+export type Language = (typeof LANGUAGES)[number]
+
+export const LANGUAGE_LABELS: Record<Language, string> = {
+  es: "Español",
+  en: "English",
+  pt: "Português",
+  fr: "Français",
+}
+
 /** Calidad de la web actual del negocio (la evalúa el pipeline). */
 export const WEBSITE_QUALITIES = [
   "none",

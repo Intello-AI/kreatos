@@ -247,6 +247,7 @@ export type Database = {
           fetched_at: string
           google_types: string[] | null
           id: string
+          language: string
           manual_rating: string | null
           maps_uri: string | null
           name: string | null
@@ -276,6 +277,7 @@ export type Database = {
           fetched_at?: string
           google_types?: string[] | null
           id?: string
+          language?: string
           manual_rating?: string | null
           maps_uri?: string | null
           name?: string | null
@@ -305,6 +307,7 @@ export type Database = {
           fetched_at?: string
           google_types?: string[] | null
           id?: string
+          language?: string
           manual_rating?: string | null
           maps_uri?: string | null
           name?: string | null

@@ -5,6 +5,7 @@ import { PaletteIcon } from "@phosphor-icons/react"
 
 import { createSiteBrief } from "@/features/sites/actions"
 import { listAnalyzedReferences } from "@/features/references/actions"
+import { LANGUAGE_LABELS, LANGUAGES } from "@/features/leads/types"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -36,9 +37,12 @@ import { Textarea } from "@/components/ui/textarea"
 export function GenerateSiteDialog({
   leadId,
   leadName,
+  leadLanguage = "es",
 }: {
   leadId: string
   leadName: string | null
+  /** Idioma primario del cliente (columna del lead): preselecciona el default. */
+  leadLanguage?: string
 }) {
   const [open, setOpen] = useState(false)
   const [references, setReferences] = useState<
@@ -49,8 +53,10 @@ export function GenerateSiteDialog({
   const [contactForm, setContactForm] = useState(false)
   const [themeMode, setThemeMode] = useState<"light" | "dark" | "both">("both")
   const [whatsappFloat, setWhatsappFloat] = useState(false)
-  // Idiomas EXTRA sobre la base "es" (que siempre va). Al enviar se antepone
-  // "es" para formar el array de locales (locales[0] = default sin prefijo).
+  // Idioma DEFAULT del sitio (locales[0], vive en "/" sin prefijo). Se
+  // preselecciona con el idioma del cliente guardado en el lead; José lo puede
+  // cambiar aquí. Los idiomas EXTRA se marcan aparte (URL /<locale>).
+  const [defaultLocale, setDefaultLocale] = useState<string>(leadLanguage)
   const [extraLocales, setExtraLocales] = useState<string[]>([])
   const [error, setError] = useState<string>()
   const [pending, startTransition] = useTransition()
@@ -70,6 +76,12 @@ export function GenerateSiteDialog({
       on ? [...prev, code] : prev.filter((c) => c !== code),
     )
 
+  // Cambiar el default nunca lo deja también como "extra" (sería duplicado).
+  const onDefaultChange = (next: string) => {
+    setDefaultLocale(next)
+    setExtraLocales((prev) => prev.filter((c) => c !== next))
+  }
+
   const onSubmit = () => {
     setError(undefined)
     startTransition(async () => {
@@ -80,18 +92,15 @@ export function GenerateSiteDialog({
         contactForm,
         themeMode,
         whatsappFloat,
-        // "es" siempre primero (default sin prefijo); luego los extra elegidos.
-        locales: ["es", ...extraLocales],
+        // default primero (sin prefijo en "/"); luego los extra elegidos.
+        locales: [
+          defaultLocale,
+          ...extraLocales.filter((c) => c !== defaultLocale),
+        ],
       })
       if (result?.formError) setError(result.formError)
     })
   }
-
-  const ADDITIONAL_LOCALES: Array<{ code: string; label: string }> = [
-    { code: "en", label: "Inglés" },
-    { code: "pt", label: "Portugués" },
-    { code: "fr", label: "Francés" },
-  ]
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -180,26 +189,50 @@ export function GenerateSiteDialog({
               </p>
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="site-default-locale">Idioma principal</Label>
+              <Select value={defaultLocale} onValueChange={onDefaultChange}>
+                <SelectTrigger id="site-default-locale" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LANGUAGES.map((code) => (
+                    <SelectItem key={code} value={code}>
+                      {LANGUAGE_LABELS[code]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Es el idioma por defecto: vive en <code>/</code> sin prefijo.
+                Preseleccionado con el idioma del cliente guardado en el lead.
+              </p>
+            </div>
+
             <div className="space-y-1.5">
-              <Label>Idiomas</Label>
+              <Label>Idiomas adicionales</Label>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                <span className="text-sm text-muted-foreground">
-                  Español (base)
-                </span>
-                {ADDITIONAL_LOCALES.map(({ code, label }) => (
-                  <div key={code} className="flex items-center gap-2">
-                    <Checkbox
-                      id={`site-locale-${code}`}
-                      checked={extraLocales.includes(code)}
-                      onCheckedChange={(v) => toggleExtraLocale(code, v === true)}
-                    />
-                    <Label htmlFor={`site-locale-${code}`}>{label}</Label>
-                  </div>
-                ))}
+                {LANGUAGES.filter((code) => code !== defaultLocale).map(
+                  (code) => (
+                    <div key={code} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`site-locale-${code}`}
+                        checked={extraLocales.includes(code)}
+                        onCheckedChange={(v) =>
+                          toggleExtraLocale(code, v === true)
+                        }
+                      />
+                      <Label htmlFor={`site-locale-${code}`}>
+                        {LANGUAGE_LABELS[code]}
+                      </Label>
+                    </div>
+                  ),
+                )}
               </div>
               <p className="text-xs text-muted-foreground">
-                Español es la base; marca idiomas extra. El sitio genera cada uno
-                con URL propia (/en, …).
+                Cada extra genera su versión con URL propia (
+                <code>/{LANGUAGES.find((c) => c !== defaultLocale) ?? "en"}</code>
+                , …).
               </p>
             </div>
 

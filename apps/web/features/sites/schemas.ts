@@ -25,9 +25,10 @@ export const siteBriefSchema = z.object({
   whatsappFloat: z.boolean().default(false),
   /**
    * Idiomas del sitio (next-intl). Convención: `locales[0]` es el idioma por
-   * defecto y vive en "/" sin prefijo — SIEMPRE "es"; los demás son idiomas
-   * extra con URL propia (/en, /pt…). El art-director lo pasa a
-   * `site.config.ts` como `locales`.
+   * defecto y vive en "/" sin prefijo — lo elige José al generar (sale del
+   * idioma del cliente guardado en el lead: "es" para MX, "en" para US); los
+   * demás son idiomas extra con URL propia (/en, /es…). El art-director lo
+   * pasa a `site.config.ts` como `locales`.
    */
   locales: z.array(z.string().min(2)).min(1).default(["es"]),
 })

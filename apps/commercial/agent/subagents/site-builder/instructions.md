@@ -314,13 +314,20 @@ materializas:
    (los tres bloques). El transcriptor no decide colores.
    **`components/custom/` lo escribes TÚ siempre** con las
    herramientas del sandbox: ese código es diseño, no transcripción.
-   **Multilenguaje** (cuando el brief/spec pide 2+ idiomas): escribe `locales`
-   en `site.config.ts` (el PRIMERO es el default y vive en `/`; el resto en
-   `/<locale>/…`). Tras materializar `messages/es.json`, genera CADA locale
-   extra con el tool `translate_copy` (`{ targetLocale, targetLanguageName }`):
-   traduce el es.json conservando las MISMAS keys — si difieren, el build truena
-   con MISSING_MESSAGE. `pnpm validate-config` verifica la paridad de keys entre
-   locales. Sin idiomas extra: `locales: ["es"]` y no traduces nada (cero cambio).
+   **Idioma DEFAULT y multilenguaje.** El `locales` del brief manda: `locales[0]`
+   es el idioma por defecto (vive en `/` sin prefijo); el resto van en
+   `/<locale>/…`. **El default NO siempre es español** — un lead de US sale con
+   `locales: ["en"]` (o `["en","es"]`). Materializa PRIMERO el archivo del
+   default `messages/<locales[0]>.json` (tu fuente de verdad de copy, con TODOS
+   los namespaces incluido `common`), y luego genera CADA locale extra con
+   `translate_copy` (`{ sourceLocale: locales[0], targetLocale, targetLanguageName }`):
+   traduce conservando las MISMAS keys — si difieren, el build truena con
+   MISSING_MESSAGE. `pnpm validate-config` verifica la paridad de keys.
+   **OJO — el template trae `messages/es.json` del DEMO**: si `es` NO está en
+   `locales` (p. ej. sitio solo `en`), BÓRRALO (`rm -f messages/es.json`) —
+   el motor solo carga los locales de config, y ese demo en español haría que
+   el gate anti-demo del push rechace la entrega. Un solo idioma: `locales:
+   ["<default>"]` y no traduces nada.
    **Custom sections en volumen: escríbelas TÚ en LOTES** — varias
    secciones por comando de sandbox (un `cat > a.tsx <<'EOF' ... EOF`
    seguido de otro en el MISMO comando, 3-4 archivos por comando).

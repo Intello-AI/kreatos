@@ -19,11 +19,12 @@ import {
   LeadBrandTrigger,
 } from "@/features/leads/components/lead-brand-panel"
 import { LeadStatusSelect } from "@/features/leads/components/lead-status-select"
+import { LeadLanguageSelect } from "@/features/leads/components/lead-language-select"
 import { LeadRatingControl } from "@/features/leads/components/lead-rating-control"
 import { LeadBrandGenerateButton } from "@/features/leads/components/lead-brand-generate-button"
 import { LeadDetailRefresh } from "@/features/leads/components/lead-detail-refresh"
 import { getLeadDetail } from "@/features/leads/queries"
-import type { ManualRating } from "@/features/leads/types"
+import type { Language, ManualRating } from "@/features/leads/types"
 import { GenerateSiteDialog } from "@/features/sites/components/generate-site-dialog"
 import { formatDate } from "@/lib/dates"
 import { Badge } from "@/components/ui/badge"
@@ -121,6 +122,10 @@ export default async function LeadDetailPage({
                     </h1>
                   </Link>
                   <LeadStatusSelect leadId={lead.id} status={lead.status} />
+                  <LeadLanguageSelect
+                    leadId={lead.id}
+                    language={(lead.language as Language) ?? "es"}
+                  />
                   {/* En mobile el trigger del chat vive en la línea del
                       título; en desktop en el grupo de acciones. */}
                   <span className="ml-auto shrink-0 md:hidden">
@@ -152,7 +157,11 @@ export default async function LeadDetailPage({
                     </Link>
                   </Button>
                 ) : (
-                  <GenerateSiteDialog leadId={lead.id} leadName={lead.name} />
+                  <GenerateSiteDialog
+                    leadId={lead.id}
+                    leadName={lead.name}
+                    leadLanguage={(lead.language as Language) ?? "es"}
+                  />
                 )}
                 <span className="hidden md:inline-flex">
                   <LeadBrandTrigger label="Abrir o cerrar el chat de marca" />
