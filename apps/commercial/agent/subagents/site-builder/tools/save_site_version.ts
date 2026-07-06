@@ -23,7 +23,7 @@ const sectionRecord = repairedRecord("elemento de sections[]")
 const specSchema = z
   .object({
     version: z.number().int().min(1),
-    // "edit" = bump post-venta de site-manager (delta quirúrgico sobre un sitio
+    // "edit" = bump post-venta (modo edit, delta quirúrgico sobre un sitio
     // ya vendido): salta el gauntlet creativo de sitio-nuevo (ver execute).
     mode: z.enum(["new", "redesign", "edit"]),
     industry: z.string().min(1),
@@ -125,7 +125,7 @@ function asText(value: unknown): string {
 
 export default defineTool({
   description:
-    "Guarda una nueva versión del spec en site_versions (version_n incremental) y actualiza sites.current_version. Con mode 'new'/'redesign' valida pensamiento de diseño: exige design.concept (idea rectora), `why` por sección de contenido, design.references con takeaways cuando hay biblioteca, y rechaza esqueletos clonados de sitios recientes (orden+variants), páginas interiores de plantilla, specs que ignoran la ficha de marca y la convergencia preset+hero+acento dentro del giro. Con mode 'edit' (bump post-venta de site-manager sobre un sitio ya vendido) SALTA ese gauntlet creativo — es un delta quirúrgico, no un sitio nuevo — y solo persiste versión+changelog.",
+    "Guarda una nueva versión del spec en site_versions (version_n incremental) y actualiza sites.current_version. Con mode 'new'/'redesign' valida pensamiento de diseño: exige design.concept (idea rectora), `why` por sección de contenido, design.references con takeaways cuando hay biblioteca, y rechaza esqueletos clonados de sitios recientes (orden+variants), páginas interiores de plantilla, specs que ignoran la ficha de marca y la convergencia acento+hero dentro del giro. Con mode 'edit' (bump post-venta sobre un sitio ya vendido) SALTA ese gauntlet creativo — es un delta quirúrgico, no un sitio nuevo — y solo persiste versión+changelog.",
   inputSchema: z.object({
     siteId: z.string().uuid(),
     spec: specSchema.describe(
@@ -142,7 +142,7 @@ export default defineTool({
     const problems: string[] = []
     const site = await getSite(siteId)
 
-    // mode:"edit" (bump post-venta de site-manager) salta TODO el gauntlet de
+    // mode:"edit" (bump post-venta) salta TODO el gauntlet de
     // sitio-nuevo: concepto, `why` por sección, anti-clon, anti-convergencia,
     // multipágina. Una edición quirúrgica es un delta sobre un sitio que ya
     // pasó ese gauntlet; re-correrlo rechazaría cambios legítimos (p. ej. por

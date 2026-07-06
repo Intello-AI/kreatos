@@ -44,7 +44,7 @@ export default defineTool({
       .boolean()
       .default(false)
       .describe(
-        "Escape hatch del gate de review visual: solo tras 2+ rediseños REALES en los que review_screenshots siguió marcando approved:false SIN issues critical. Entrega el sitio pese al veredicto y lo anota. NUNCA lo uses para saltarte issues critical ni en el primer intento.",
+        "Escape hatch del gate de review visual: solo tras 2 rediseños REALES en los que review_screenshots siguió sin aprobar por CRITERIO subjetivo (approved:false o critical de axis 'aesthetic': contraste mejorable, estética). Entrega el sitio pese al veredicto y lo anota. NO salta criticals de axis 'structural' (algo ROTO: overflow, texto cortado, imagen faltante) — esos se corrigen siempre. Nunca en el primer intento.",
       ),
   }),
   async execute(
@@ -271,7 +271,12 @@ export default defineTool({
       let review: {
         approved?: boolean
         verdict?: string
-        issues?: Array<{ severity?: string; issue?: string; screen?: string }>
+        issues?: Array<{
+          severity?: string
+          axis?: string
+          issue?: string
+          screen?: string
+        }>
       } | null = null
       try {
         const txt = reviewRead.stdout.trim()
@@ -287,32 +292,46 @@ export default defineTool({
       const issues = Array.isArray(review.issues) ? review.issues : []
       const criticals = issues.filter((i) => i?.severity === "critical")
       const majors = issues.filter((i) => i?.severity === "major")
-      // El GATE es por DEFAULT: sin overrideReview, un critical o un
-      // approved:false rechaza el push y fuerza a corregir. overrideReview:true
-      // es el escape del humano tras intentos reales — el PREVIEW es una maqueta
-      // interna que José juzga y que site-manager vuelve a gatear antes de
-      // publicar, así que aquí SÍ puede entregar con issues abiertos (quedan
-      // anotados abajo). El reviewer de visión no es determinista: sin este
-      // escape, un critical subjetivo distinto por pasada dejaba el sitio
-      // inentregable para siempre (pasó con Almex: 3 pasadas, critical nuevo
-      // cada vez).
+      // El critical se separa por AXIS: "structural" = algo ROTO objetivo
+      // (overflow, texto cortado, imagen faltante) — bloqueo DURO que ni
+      // overrideReview salta. "aesthetic" = criterio subjetivo (contraste
+      // mejorable, estética) — NO bloquea de forma absoluta: cuenta como el
+      // gate de calidad (approved:false), overridable tras pasadas reales. Un
+      // critical sin axis se trata como structural (fail-safe). Esto mata el
+      // loop que dejaba el sitio inentregable por un critical subjetivo
+      // distinto por pasada (Almex: 3 pasadas, critical nuevo cada vez; el dark
+      // de un sitio light-only).
+      const structuralCriticals = criticals.filter(
+        (i) => (i?.axis ?? "structural") === "structural",
+      )
       if (!overrideReview) {
-        if (criticals.length > 0) {
+        if (structuralCriticals.length > 0) {
           throw new Error(
-            `Push rechazado: el review visual encontró ${criticals.length} issue(s) CRITICAL:\n- ${criticals
+            `Push rechazado: el review encontró ${structuralCriticals.length} issue(s) CRITICAL ESTRUCTURAL (algo ROTO, no estético):\n- ${structuralCriticals
               .map((i) => `${i.screen ?? "?"}: ${i.issue ?? ""}`)
-              .join("\n- ")}\nCorrígelos, re-corre \`pnpm qa\` + \`review_screenshots\`, y vuelve a pushear. Si YA hiciste 2+ pasadas reales y el reviewer sigue marcando criticals subjetivos (contraste/estética, no algo roto de verdad), entrega con overrideReview:true — el preview es maqueta y tú/site-manager lo gatean después.`,
+              .join("\n- ")}\nCorrígelos (overflow, texto cortado, imagen faltante), re-corre \`pnpm qa\` + \`review_screenshots\`, y vuelve a pushear. Esto NO se overridea — está roto de verdad.`,
           )
         }
         if (review.approved === false) {
+          const aesthetic = [
+            ...criticals.filter((i) => i?.axis === "aesthetic"),
+            ...majors,
+          ]
           throw new Error(
-            `Push rechazado: el review visual NO aprobó el sitio (${review.verdict ?? "sin veredicto"}). ${majors.length} problema(s) major:\n- ${majors
+            `Push rechazado: el review visual NO aprobó el sitio (${review.verdict ?? "sin veredicto"}). ${aesthetic.length} problema(s) de diseño:\n- ${aesthetic
               .map((i) => `${i.screen ?? "?"}: ${i.issue ?? ""}`)
-              .join("\n- ")}\nRecompón (rompe la monotonía, sube la jerarquía, mete una custom) y re-corre el flujo. Si YA hiciste 2+ rediseños reales y el review sigue sin aprobar por criterio (no por algo roto), pushea con overrideReview:true — queda anotado que se entregó sin aprobación.`,
+              .join("\n- ")}\nRecompón (rompe la monotonía, sube la jerarquía, mete una custom) y re-corre el flujo. Si YA hiciste 2 rediseños reales y el review sigue sin aprobar por CRITERIO (no por algo roto), pushea con overrideReview:true — queda anotado.`,
           )
         }
+      } else if (structuralCriticals.length > 0) {
+        // overrideReview NO salta lo estructuralmente roto: se rechaza igual.
+        throw new Error(
+          `overrideReview NO salta criticals ESTRUCTURALES (algo roto de verdad):\n- ${structuralCriticals
+            .map((i) => `${i.screen ?? "?"}: ${i.issue ?? ""}`)
+            .join("\n- ")}\nCorrige eso primero; el override es solo para veredictos subjetivos.`,
+        )
       } else if (criticals.length > 0 || review.approved === false) {
-        // Entrega forzada: deja constancia visible para José/site-manager.
+        // Entrega forzada con issues estéticos/subjetivos: deja constancia.
         openIssues = [...criticals, ...majors]
           .map((i) => `[${i.severity}] ${i.screen ?? "?"}: ${i.issue ?? ""}`)
           .slice(0, 12)

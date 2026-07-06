@@ -6,7 +6,7 @@ import { getSupabaseClient } from "../lib/supabase"
 /** Aprobación del preview, dictada por el humano en el chat. */
 export default defineTool({
   description:
-    "Marca el sitio de un lead como 'approved' (el humano revisó el preview y lo aprobó). SOLO cuando el humano lo dice explícitamente ('apruébalo', 'me gusta, apruébalo') — NUNCA por iniciativa propia. Aprobar NO publica: publicar a producción es de site-manager (el ÚNICO con la tool publish_site) y requiere un pedido explícito aparte del humano.",
+    "Marca el sitio de un lead como 'approved' (el humano revisó el preview y lo aprobó). SOLO cuando el humano lo dice explícitamente ('apruébalo', 'me gusta, apruébalo') — NUNCA por iniciativa propia. Aprobar NO publica: publicar a producción (modo publish de site-builder, con la tool publish_site) requiere un pedido explícito aparte del humano.",
   inputSchema: z.object({
     query: z.string().min(2).describe("Nombre (parcial) del negocio."),
   }),
@@ -48,7 +48,7 @@ export default defineTool({
     return {
       slug: site.slug,
       status: "approved",
-      hint: "Aprobado. Publicar a producción (merge a main) es de site-manager y requiere que el humano lo pida explícitamente — NUNCA delegues la publicación a site-builder (no tiene la tool).",
+      hint: "Aprobado. Publicar a producción (merge a main) lo hace site-builder en modo publish (tool publish_site, con aprobación humana) y requiere que el humano lo pida explícitamente — no publiques por iniciativa propia.",
     }
   },
 })

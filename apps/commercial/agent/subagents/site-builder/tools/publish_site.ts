@@ -3,14 +3,14 @@ import { always } from "eve/tools/approval"
 import { z } from "zod"
 
 import { addActivity } from "../../../lib/leads"
-import { getSiteVersion } from "../../site-builder/lib/sites"
-import { getGithubEnv, getRepoFileText, mergeBranchToMain } from "../../site-builder/lib/github"
-import { getSite, setSiteStatus, updateSite } from "../../site-builder/lib/sites"
+import { getSiteVersion } from "../lib/sites"
+import { getGithubEnv, getRepoFileText, mergeBranchToMain } from "../lib/github"
+import { getSite, setSiteStatus, updateSite } from "../lib/sites"
 import {
   getDeploymentBuildLog,
   getLatestDeployment,
   getPreferredUrl,
-} from "../../site-builder/lib/vercel"
+} from "../lib/vercel"
 
 const POLL_INTERVAL_MS = 10_000
 const TIMEOUT_MS = 6 * 60_000
@@ -52,7 +52,7 @@ export default defineTool({
     const version = await getSiteVersion(siteId, versionN)
     if (!version?.qa_report) {
       throw new Error(
-        `Publicación rechazada: v${versionN} no tiene qa-report guardado — no hay prueba de que se construyó y pasó QA. Materializa/repara esa versión con site-builder hasta dejar un preview READY con QA antes de publicar.`,
+        `Publicación rechazada: v${versionN} no tiene qa-report guardado — no hay prueba de que se construyó y pasó QA. Materializa/repara esa versión (modo build/edit) hasta dejar un preview READY con QA antes de publicar.`,
       )
     }
     {
@@ -61,7 +61,7 @@ export default defineTool({
       })
       if (lastDeployment?.state === "ERROR") {
         throw new Error(
-          `Publicación rechazada: el último deployment del proyecto está en ERROR — publicar mergearía una rama que no compila. Corrige el build (site-builder) y deja un preview READY antes de publicar.`,
+          `Publicación rechazada: el último deployment del proyecto está en ERROR — publicar mergearía una rama que no compila. Corrige el build (modo build/edit) y deja un preview READY antes de publicar.`,
         )
       }
     }
@@ -141,7 +141,7 @@ export default defineTool({
           leadId: site.lead_id,
           type: "site_published",
           note: `v${versionN} publicada: ${deployUrl}`,
-          actor: "site-manager",
+          actor: "site-builder",
         })
         return {
           state: "READY" as const,

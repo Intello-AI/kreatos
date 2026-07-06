@@ -1,7 +1,7 @@
 ---
 description: Estrategia de imágenes — un treatment por sitio, queries específicas, qué stock está prohibido. Úsalo al definir images en el spec.
 ---
-<!-- ESPEJO: copia idéntica en art-director/, site-builder/ y site-manager/skills/image-style.md. Si editas una, edita las TRES. -->
+<!-- ESPEJO: copia idéntica en art-director/ y site-builder/skills/image-style.md. Si editas una, edita la otra. -->
 
 # Imágenes
 

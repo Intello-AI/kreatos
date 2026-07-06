@@ -100,9 +100,9 @@ async function validate(
 
 export default defineTool({
   description:
-    "Escribe una superficie MECÁNICA del sitio en el sandbox (messages/es.json, app/theme.css, app/fonts.ts) transcribiendo el spec con un modelo barato. Tú decides el contenido en el spec; este tool solo lo materializa. Puedes llamarlo varias veces en el mismo turno (superficies en paralelo). NO incluye site.config.ts: ese objeto exige TODOS los campos del schema (address/geo/hours/maps/...), así que ya lo tienes que armar completo — escríbelo TÚ directo con las herramientas del sandbox (el transcriptor barato solo lo degradaba). NUNCA lo uses para components/custom/ — ese código lo escribes tú.",
+    "Escribe una superficie MECÁNICA del sitio en el sandbox SIN el guard read-before-write (escribe por shell). Cuatro superficies: 'es-json'/'theme-css'/'fonts' se TRANSCRIBEN con un modelo barato (tú decides el contenido en el spec, el tool lo materializa); 'site-config' se escribe PASS-THROUGH (verbatim, sin modelo) — le pasas el objeto SiteConfig completo ya armado por ti (el schema exige todos los campos) y el tool solo lo deposita. Úsalo para las 4 superficies del template en vez de write_file (que exige read_file primero). Puedes llamarlo varias veces en el mismo turno. NUNCA para components/custom/ — ese código lo escribes tú.",
   inputSchema: z.object({
-    surface: z.enum(["es-json", "theme-css", "fonts"]),
+    surface: z.enum(["es-json", "theme-css", "fonts", "site-config"]),
     path: z
       .string()
       .regex(/^[\w./-]+$/)
@@ -126,6 +126,28 @@ export default defineTool({
       )
     }
     const sandbox = await ctx.getSandbox()
+
+    // site-config: PASS-THROUGH literal, SIN modelo. El transcriptor barato
+    // degradaba el objeto (por eso se excluía antes); en pass-through el tool
+    // solo escribe lo que le das por el mismo path sin-guard. Validación mínima
+    // de firma (el objeto lo armaste tú completo).
+    if (surface === "site-config") {
+      if (
+        !content.includes("SiteConfig") ||
+        !content.includes("export default config")
+      ) {
+        throw new Error(
+          'site-config pass-through: el content debe ser el archivo completo — `import type { SiteConfig } from "@/lib/config"` + `const config: SiteConfig = {…}` + `export default config`.',
+        )
+      }
+      await sandbox.writeTextFile({ path: `site/${path}`, content })
+      return {
+        path: `site/${path}`,
+        bytes: content.length,
+        model: "pass-through",
+        hint: "Escrito verbatim (sin guard). Verifica con `pnpm validate-config`/`pnpm build`; si algo falla, corrige con un replace de python o vuelve a llamar draft_surface — NO uses write_file sobre esta superficie (ya existe → dispara el guard).",
+      }
+    }
 
     // El archivo actual del template es el contrato de estructura: el
     // transcriptor lo respeta y solo sustituye valores. null = archivo nuevo.
@@ -175,7 +197,7 @@ Devuelve ÚNICAMENTE el contenido completo y final del archivo. Sin markdown fen
       path: `site/${path}`,
       bytes: result.length,
       model: modelUsed,
-      hint: "Verifica con `pnpm validate-config`/`pnpm build` como siempre; si algo salió mal, corrige el archivo directamente en vez de re-transcribir.",
+      hint: "Verifica con `pnpm validate-config`/`pnpm build`; si algo salió mal, corrige con un replace de python (un paso) o vuelve a llamar draft_surface con el content corregido — NO uses write_file sobre esta superficie (ya existe → dispara el guard read-before-write).",
     }
   },
 })

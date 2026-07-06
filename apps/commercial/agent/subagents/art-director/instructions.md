@@ -86,9 +86,10 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
      ahí es donde el "por qué se ve caro" de la referencia se materializa a la
      medida de este negocio.
    - **`analysis.tokens`**: punto de partida del theme (varíalo, anti-clon).
-   - Si traen `screenshotUrl`, pásalas por `view_reference_screenshots` con la
-     pregunta de composición concreta (hero, ritmo, interiores) — ver vale más
-     que releer.
+   - Si traen `screenshotUrl`, pásalas por `view_reference_screenshots`
+     BATCHEANDO todas tus preguntas de composición en UNA llamada (hero, ritmo,
+     interiores — el campo `questions[]`, no una llamada por pregunta) — ver
+     vale más que releer.
    Registra en `design.references[].takeaways` DECISIONES concretas ("robo la
    jerarquía por opacidad de texto para la firma"; "el ritmo 2:1 entre secciones";
    "asimetría 60/40 en el hero") — nunca "usar el mismo layout". Dos referencias

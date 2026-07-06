@@ -17,7 +17,7 @@ const gptModel = MODEL_TOGGLE[process.env.SITE_BUILDER_MODEL ?? ""]
 
 export default defineAgent({
   description:
-    "Materializa el sitio web de un lead: toma el spec vigente (compuesto por art-director), genera el código en su sandbox a partir del template de kreatos, pasa QA con revisión visual y despliega un PREVIEW en Vercel. Delegar aquí 'materializa/genera/itera el sitio del site <uuid>'. NO publica a producción (eso es de site-manager).",
+    "Materializa, itera y PUBLICA el sitio web de un lead — el ciclo de vida completo en tres modos: (build) toma el spec vigente de art-director y genera el código en su sandbox desde el template, pasa QA visual y despliega un PREVIEW; (edit) aplica cambios post-venta sobre sitios ya construidos partiendo del CÓDIGO REAL del repo (no del spec: el humano pudo editar a mano) y completa placeholders del demo con material real; (publish) el ÚNICO que publica a producción (merge a main) cuando el humano lo pide sobre un sitio aprobado. Delegar aquí: 'materializa/genera/itera el sitio del site <uuid>', 'cámbiale/mejora X al sitio', 'publica el sitio X'.",
   // Sonnet 5: sobrado para materializar specs con el andamiaje actual
   // (skills + referencias + ficha + guards + review visual). La familia
   // gpt-5.4 es el contendiente — comparar previews del mismo giro.

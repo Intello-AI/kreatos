@@ -243,7 +243,7 @@ export async function publishSite(siteId: string): Promise<SiteActionState> {
 
   return sendFollowUp(
     siteId,
-    `El humano aprobó y pidió publicar el site ${siteId}. Delega a site-manager: publicar la versión v${site.current_version ?? 1} a producción.`,
+    `El humano aprobó y pidió publicar el site ${siteId}. Delega a site-builder (modo publish): publicar la versión v${site.current_version ?? 1} a producción.`,
   )
 }
 
@@ -251,7 +251,7 @@ export async function publishSite(siteId: string): Promise<SiteActionState> {
  * Promueve una versión-rama concreta a producción. Sirve cuando hay varias
  * versiones en preview a la vez (p. ej. dos direcciones de diseño): el humano
  * elige cuál rama sube. Delega el merge + cambio de current_version al agente
- * (site-manager), igual que publishSite pero con la versión elegida a mano.
+ * (site-builder, modo publish), igual que publishSite pero con la versión elegida a mano.
  */
 export async function publishSiteVersion(
   siteId: string,

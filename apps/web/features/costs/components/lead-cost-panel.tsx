@@ -17,7 +17,9 @@ const AGENT_LABELS: Record<string, string> = {
   "lead-finder": "Búsqueda de leads",
   "brand-curator": "Curador de marca",
   "art-director": "Dirección de arte",
-  "site-builder": "Construcción del sitio",
+  "site-builder": "Sitio (build · edit · publish)",
+  // Key histórica: el costo de publicación de sitios anteriores al merge
+  // builder+manager quedó atribuido a "site-manager"; se conserva el label.
   "site-manager": "Publicación",
   proposal: "Propuesta",
   outreach: "Contacto",

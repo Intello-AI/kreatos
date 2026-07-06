@@ -11,22 +11,27 @@ import { z } from "zod"
 
 const REVIEW_PROMPT = `Eres un director de arte senior revisando la ENTREGA de un sitio corporativo que se vende por cientos de dólares. Te paso screenshots reales de los modos que el sitio REALMENTE ofrece al visitante: si solo hay capturas light, el sitio es light-only (sin toggle) y el dark NO existe para el visitante — NO lo pidas ni lo penalices; juzga solo lo que te paso. Sé exigente: "correcto pero mediocre" NO se aprueba. El pecado capital que MÁS debes cazar: que se vea a PLANTILLA — el mismo sitio con otro color.
 
-Revisa en este orden:
-1. **Roto (critical)**: texto desbordado o cortado, elementos encimados, imágenes deformadas/faltantes (alt icons, cuadros vacíos, media pantalla vacía junto al hero), overflow horizontal en mobile, **contraste ilegible** (texto muted casi invisible sobre su fondo, texto sobre fondo de lightness similar — míralo de verdad: si tienes que esforzarte para leer un título o label, es critical), y SOLO si te paso capturas de dark mode: colores sin invertir o parches claros.
-2. **Mal diseño (major)**:
-   - **MONOTONÍA / PLANTILLA (el más importante)**: si 3+ secciones comparten el MISMO esqueleto (eyebrow en mayúsculas + título display + grid/lista con bordes), el sitio se ve templated aunque el copy cambie. Cuéntalas: si la página es una repetición del mismo bloque con distinto texto, es major SIEMPRE — nómbralo "monotonía de layout" y di cuántas secciones se repiten. Un sitio de $500 tiene ritmo: secciones con densidades, composiciones y pesos DISTINTOS, no la misma tarjeta 8 veces.
-   - jerarquía plana (nada domina el viewport), spacing inconsistente, hero débil (título genérico + botones default), secciones que parecen relleno, logo mal escalado, tipografía sin carácter, acento usado por todos lados o por ninguno.
-   OJO placeholders: este sitio es un DEMO de venta — un placeholder DISEÑADO (banda de logos con rectángulos tipográficos elegantes, portafolio de stock con el treatment del sitio) es CORRECTO y no se reporta; un placeholder descuidado (caja punteada con "LOGO", texto de relleno visible, imagen sin treatment que grita stock) sí es major.
-3. **Pulible (minor)**: microdetalles de alineación, un espaciado mejorable, una imagen que podría ser mejor.
+Cada issue lleva un **axis**: **"structural"** = algo ROTO, objetivo, verificable (lo bloquea el push); **"aesthetic"** = criterio de diseño, subjetivo (mejora la calidad pero NO bloquea de forma dura — se re-gatea con el humano). Clasifica bien: el axis decide si frenas la entrega o solo la anotas.
 
-Verifica contra el CONCEPTO del sitio que te doy: ¿los screenshots se ven como ESE concepto específico, o como cualquier plantilla corporativa? Si dos negocios distintos con este sistema saldrían casi iguales, es que falta dirección de arte — dilo sin rodeos.
+Revisa en este orden:
+1. **Roto — critical + axis:"structural"** (SOLO cosas objetivamente rotas): texto desbordado o cortado, elementos encimados, imágenes deformadas o FALTANTES (icono roto, cuadro vacío donde debía ir una imagen que no cargó), overflow horizontal en mobile, texto **literalmente ilegible** (mismo color que su fondo, invisible — no "podría tener más contraste", sino que NO se puede leer), y SOLO si te paso capturas dark: colores sin invertir. NADA subjetivo entra aquí.
+   - OJO: **el espacio negativo deliberado NO es "media pantalla vacía"**. Un hero split/editorial 60/40 con un lado respirando es DISEÑO correcto, no un hueco — solo repórtalo si es claramente una imagen que no cargó o una columna que debía tener contenido y quedó en blanco.
+2. **Mal diseño — major + axis:"aesthetic"** (subjetivo, sube calidad, no bloquea duro):
+   - **MONOTONÍA / PLANTILLA (el más importante)**: si 3+ secciones comparten el MISMO esqueleto (eyebrow mayúsculas + título display + grid/lista con bordes), se ve templated aunque cambie el copy. Cuéntalas; nómbralo "monotonía de layout" y di cuántas se repiten. Un sitio de $500 tiene ritmo: densidades, composiciones y pesos DISTINTOS.
+   - jerarquía plana, spacing inconsistente, hero débil, secciones de relleno, logo mal escalado, tipografía sin carácter, acento por todos lados o por ninguno, **contraste mejorable pero legible** (muted un poco bajo — molesta, no rompe).
+   OJO placeholders: este sitio es un DEMO de venta — un placeholder DISEÑADO (banda de logos con rectángulos tipográficos, portafolio de stock con treatment) es CORRECTO y no se reporta; uno descuidado (caja punteada "LOGO", relleno visible, stock sin treatment) sí es major.
+3. **Pulible — minor + axis:"aesthetic"**: microdetalles de alineación, espaciado mejorable.
+
+Verifica contra el CONCEPTO del sitio que te doy: ¿se ve como ESE concepto, o como cualquier plantilla corporativa? Si dos negocios distintos saldrían casi iguales, falta dirección de arte — dilo sin rodeos.
+
+Si te paso los issues de una pasada PREVIA: re-márcalos SOLO si SIGUEN presentes en estos screenshots. Un critical NUEVO que no estaba antes debe ser "structural" (algo que se rompió), nunca un matiz estético que antes no viste. Sé reproducible: ante los mismos pixeles, el mismo veredicto — no inventes criticals distintos en cada revisión.
 
 Responde SOLO JSON válido (sin markdown):
 {
-  "approved": true/false,           // false si hay algún critical o 2+ major
+  "approved": true/false,           // false si hay critical structural o 2+ major
   "verdict": "una frase honesta de director de arte",
   "issues": [
-    { "severity": "critical|major|minor", "screen": "nombre del archivo", "issue": "qué está mal, concreto", "fix": "instrucción accionable para corregirlo (archivo/sección si lo puedes inferir)" }
+    { "severity": "critical|major|minor", "axis": "structural|aesthetic", "screen": "nombre del archivo", "issue": "qué está mal, concreto", "fix": "instrucción accionable (archivo/sección si lo puedes inferir)" }
   ],
   "worthTheMoney": "¿un cliente pagaría cientos de dólares por esto tal cual? sí/no y por qué en una frase"
 }`
@@ -55,6 +60,39 @@ export default defineTool({
   }),
   async execute({ concept, referenceScreenshotUrl, maxImages }, ctx) {
     const sandbox = await ctx.getSandbox()
+
+    // Anti-wander: lee el veredicto PREVIO (si existe) para (a) pasarle al
+    // reviewer los issues ya señalados —que re-marque solo lo que SIGUE, no
+    // invente un critical distinto cada pasada (el loop de Almex)— y (b) llevar
+    // un contador de pasadas.
+    let priorPass = 0
+    let priorIssuesBlock = ""
+    {
+      const prev = await sandbox.run({
+        command: `cat site/.qa/review.json 2>/dev/null || echo ""`,
+      })
+      const txt = prev.stdout.trim()
+      if (txt) {
+        try {
+          const prior = JSON.parse(txt) as {
+            pass?: number
+            issues?: Array<Record<string, unknown>>
+          }
+          priorPass = typeof prior.pass === "number" ? prior.pass : 0
+          const arr = Array.isArray(prior.issues) ? prior.issues : []
+          if (arr.length > 0) {
+            priorIssuesBlock = `\n\nISSUES DE LA PASADA PREVIA (el equipo dice haberlos corregido — re-márcalos SOLO si SIGUEN presentes en estos screenshots; un critical NUEVO debe ser structural):\n${arr
+              .map(
+                (i) =>
+                  `- [${i.severity ?? "?"}/${i.axis ?? "?"}] ${i.screen ?? "?"}: ${i.issue ?? ""}`,
+              )
+              .join("\n")}`
+          }
+        } catch {
+          // prior ilegible: se trata como pasada limpia.
+        }
+      }
+    }
 
     const list = await sandbox.run({
       command: `ls site/.qa/screenshots/*.png 2>/dev/null | head -20`,
@@ -117,7 +155,7 @@ export default defineTool({
           content: [
             {
               type: "text",
-              text: `${REVIEW_PROMPT}\n\nCONCEPTO del sitio:\n${concept}\n\nScreenshots en orden: ${images.map((i) => i.name).join(", ")}${
+              text: `${REVIEW_PROMPT}\n\nCONCEPTO del sitio:\n${concept}\n\nScreenshots en orden: ${images.map((i) => i.name).join(", ")}${priorIssuesBlock}${
                 referenceImage
                   ? "\n\nLa ÚLTIMA imagen es la REFERENCIA GUÍA elegida por el humano: evalúa si el sitio logró una dirección de arte del mismo nivel (composición, jerarquía, ritmo) SIN copiarla — pareceres de calidad, no de semejanza. Añade un campo \"referenceComparison\" al JSON con tu veredicto en 1-2 frases."
                   : ""
@@ -156,8 +194,13 @@ export default defineTool({
     }
     try {
       const review = JSON.parse(raw) as Record<string, unknown>
-      await persist(review)
-      return { screensReviewed: images.map((i) => i.name), review }
+      // pass: contador determinista de pasadas de review sobre este sitio —
+      // el gate/instrucciones lo usan para el techo de 2 rediseños.
+      await persist({ ...review, pass: priorPass + 1 })
+      return {
+        screensReviewed: images.map((i) => i.name),
+        review: { ...review, pass: priorPass + 1 },
+      }
     } catch {
       // JSON ilegible: guardar un veredicto no-aprobado para que el gate exija
       // re-correr el review en vez de dejar pasar por ausencia de archivo.
@@ -165,6 +208,7 @@ export default defineTool({
         approved: false,
         verdict: "El review no devolvió JSON válido; re-córrelo.",
         issues: [],
+        pass: priorPass + 1,
       })
       return {
         screensReviewed: images.map((i) => i.name),
