@@ -96,6 +96,11 @@ export default defineTool({
               // del template y dejamos que icon.png mande (build verde, favicon
               // correcto del cliente).
               `rm -f site/app/favicon.ico`,
+              // El template trae app/icon.svg (monograma placeholder del demo);
+              // con un icon.png real es basura duplicada (Next serviría ambos).
+              // Se borra aquí para que el agente no tenga que limpiarlo a mano
+              // cada corrida.
+              `rm -f site/app/icon.svg`,
             ].join(" && "),
           })
           if (result.exitCode === 0) {
