@@ -32,8 +32,8 @@ const specSchema = z
       "design",
       z
         .object({
-          preset: z.string().min(1),
-          variation_notes: z.string().min(10),
+          // Ya NO hay presets: el theme se diseña a la medida. La paleta es
+          // la fuente de verdad; el radius lo decide el registro del negocio.
           palette: repairedRecord("design.palette"),
           fonts: repairedRecord("design.fonts"),
         })
@@ -129,7 +129,7 @@ export default defineTool({
   inputSchema: z.object({
     siteId: z.string().uuid(),
     spec: specSchema.describe(
-      "Spec completo de la versión (contrato brief→código). Debe incluir design.concept (idea rectora), design.variation_notes, design.references[{slug, takeaways}] y `why` en cada sección de contenido.",
+      "Spec completo de la versión (contrato brief→código). Debe incluir design.concept (idea rectora), design.palette (light+dark a la medida), design.radius, design.fonts{display,body}, design.references[{slug, takeaways}] y `why` en cada sección de contenido.",
     ),
     changelog: z
       .string()
@@ -350,7 +350,10 @@ export default defineTool({
       }
     }
 
-    // ——— Anti-convergencia dentro del giro: preset + hero + acento ———
+    // ——— Anti-convergencia dentro del giro: acento + hero ———
+    // Sin presets, la firma visual de entrada es la paleta (su acento) + el
+    // hero. Dos sitios del giro con el MISMO acento y el MISMO hero se ven
+    // gemelos aunque el resto difiera.
     const palette = (design["palette"] ?? {}) as Record<string, unknown>
     const dark = (palette["dark"] ?? palette["light"] ?? {}) as Record<
       string,
@@ -363,15 +366,14 @@ export default defineTool({
       industry: spec.industry,
       excludeSiteId: siteId,
     })
-    const clash = siblings.find(
-      (s) =>
-        s.preset === design["preset"] &&
-        s.heroVariant === heroVariant &&
-        s.accent === accent,
-    )
+    const clash = accent
+      ? siblings.find(
+          (s) => s.accent === accent && s.heroVariant === heroVariant,
+        )
+      : undefined
     if (clash) {
       problems.push(
-        `otro sitio del giro "${spec.industry}" ya usa preset=${clash.preset} + hero=${clash.heroVariant} + acento=${clash.accent}. Cambia al menos uno (normalmente el acento: varía el hue ±15-30°).`,
+        `otro sitio del giro "${spec.industry}" ya usa hero=${clash.heroVariant} + acento=${clash.accent}. Cambia al menos uno (normalmente el acento: varía el hue ±15-30°, siempre anclado a la marca).`,
       )
     }
     // El HEADER también debe variar entre sitios del giro: mismo hero + mismo

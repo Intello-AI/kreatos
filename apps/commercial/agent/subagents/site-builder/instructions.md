@@ -58,9 +58,10 @@ template de kreatos; tú lo personalizas, no lo reinventas.
    concepto y el inventario, aplica los skills `art-direction`,
    `anti-generic-design`, `taste`, `typography`, `copywriting-es`,
    `section-patterns`, `image-style` y `seo-local` para componer el **spec
-   completo** (paleta final light/dark, fuentes, secciones con copy
-   definitivo, imágenes con alt, SEO). El preset es paleta de emergencia y
-   piso de velocidad — NUNCA receta de composición. Si `lead.website`
+   completo** (paleta final light/dark, `radius`, fuentes, secciones con copy
+   definitivo, imágenes con alt, SEO). No hay presets: el theme se DISEÑA a la
+   medida (paleta desde la marca, radius según el registro, par tipográfico
+   propio) — ver skill `art-direction`. Si `lead.website`
    existe, es un rediseño: aplica también el skill `redesign`.
    **Skills senior de diseño (razonamiento, opcionales):** `taste-skill`
    (anti-slop: design read + diales VARIANCE/MOTION/DENSITY) y `ui-ux-pro-max`
@@ -107,16 +108,19 @@ template de kreatos; tú lo personalizas, no lo reinventas.
    compones tú (sin art-director), prefiere bloques sobre secciones de motor
    para el CONTENIDO, alternando arquetipos vecinos, sin repetir un bloque >2
    veces.
-2c. **Secciones custom — el momento FIRMA (1-2 por sitio, OBLIGATORIO).** El
+2c. **Secciones custom — CUSTOM-FIRST: tu default es CREAR, no reutilizar.** El
    template permite escribir componentes de sección desde cero en
    `components/custom/` (registrados en `components/custom/registry.ts`,
-   declarados en config como `{ id: "custom", component, ns }`). Cada sitio
-   lleva 1-2 custom hechas a la medida de ESTE negocio — el gesto memorable que
-   ningún otro sitio tiene (`save_site_version` rechaza la home sin al menos
-   una). En el flujo normal el spec del art-director ya las declara: TÚ escribes
+   declarados en config como `{ id: "custom", component, ns }`). PREFIERE
+   SIEMPRE una custom a la medida de ESTE negocio antes que un bloque de la
+   biblioteca; un bloque solo cuando encaja perfecto y no harías uno mejor.
+   Tienes LIBERTAD total: crea cuantas mejoren el sitio — sin techo — en la
+   HOME **y en CADA página interior** (una ruta interior merece su propia firma,
+   no se rellena con bloques repetidos). El punto es que se vea BIEN y ÚNICO.
+   En el flujo normal el spec del art-director ya las declara: TÚ escribes
    su .tsx (con su layout del spec, robando composición de las referencias).
-   No son "último recurso": son lo que hace único al sitio; los bloques son el
-   reparto de apoyo.
+   Piso duro: `save_site_version` rechaza la home sin al menos una custom — pero
+   eso es el MÍNIMO, no la meta.
    **Sin tope numérico**: hero y toda
    sección de contenido pueden ser custom cuando la dirección de arte lo
    pida — dos sitios distintos NO deben compartir los mismos layouts; las
@@ -192,11 +196,10 @@ template de kreatos; tú lo personalizas, no lo reinventas.
      "industry": "construccion",
      "business": { "name": "...", "shortName": "...", "logo": "...", "icon": "..." },
      "design": {
-       "preset": "cantera",
        "concept": "idea rectora en 2-3 frases (≥60 caracteres)",
-       "variation_notes": "cómo varías el preset (≥10 caracteres)",
-       "palette": { "light": { "...": "hex" }, "dark": { "...": "hex" } },
-       "fonts": { "pair": "archivo-inter" },
+       "palette": { "light": { "background": "#hex", "foreground": "#hex", "primary": "#hex", "muted-foreground": "#hex", "border": "#hex", "accent": "#hex" }, "dark": { "...": "#hex" } },
+       "radius": "0 | 0.125rem | 0.375rem | 0.5rem | 0.75rem — lo decide el registro: serio/editorial → recto (0–0.125rem); casual/de servicio → redondeado (0.5rem+)",
+       "fonts": { "display": "Fraunces", "body": "Albert Sans" },
        "imageTreatment": "duotone-accent",
        "references": [{ "slug": "<slug>", "takeaways": "qué robas y qué no" }]
      },
@@ -233,7 +236,16 @@ materializas:
    mecánico:** TRES superficies (`messages/es.json`, `app/theme.css`,
    `app/fonts.ts`) las materializas con `draft_surface` — pásale en `content`
    la porción LITERAL del spec (copy exacto, tokens exactos, estructura
-   completa): lo que no le pases no existirá. **`site.config.ts` lo escribes
+   completa): lo que no le pases no existirá.
+   **⚠️ El sandbox EXIGE `read_file` antes de sobrescribir con `write_file` un
+   archivo que YA existe** (guard anti-clobber — te devuelve "You must read file
+   X before overwriting it"). Por eso las superficies del template que YA
+   existen en el clone (theme.css, fonts.ts, es.json, site.config.ts) NUNCA se
+   tocan con `write_file`: van por `draft_surface` (escribe por shell, sin ese
+   requisito) o por `cat > … <<'EOF'` (config). `write_file` directo es SOLO
+   para archivos NUEVOS — tus custom en `components/custom/`, que no existen aún
+   → sin guard. Si por lo que sea DEBES `write_file` un archivo existente,
+   léelo con `read_file` primero. **`site.config.ts` lo escribes
    TÚ directo** (`cat > site.config.ts <<'EOF' … EOF`): el schema del template
    exige TODOS los campos (address/geo/hours/maps/business/seo/design/
    sections), así que ya tienes que armar el objeto completo — draft_surface
@@ -245,9 +257,12 @@ materializas:
    número uno (el cliente recibe "Su contabilidad al día" con su logo) — el
    push lo rechaza. Tu `content` de es-json cubre TODOS los namespaces del
    sitio (home completa + cada página), no solo los que cambian. Puedes llamarlo para varias superficies en el mismo turno
-   (corren en paralelo). Para theme.css dale los valores finales ya
-   variados (preset copiado + tu variación) — el transcriptor no decide
-   colores. **`components/custom/` lo escribes TÚ siempre** con las
+   (corren en paralelo). Para theme.css dale los valores finales a la medida
+   (paleta light+dark en hex, radius, overlay y og-* — tú los diseñas desde la
+   marca; convierte la paleta a oklch para los bloques de UI y deja og-* en
+   hex). NO hay preset que copiar — respeta la anatomía de `themes/README.md`
+   (los tres bloques). El transcriptor no decide colores.
+   **`components/custom/` lo escribes TÚ siempre** con las
    herramientas del sandbox: ese código es diseño, no transcripción.
    **Multilenguaje** (cuando el brief/spec pide 2+ idiomas): escribe `locales`
    en `site.config.ts` (el PRIMERO es el default y vive en `/`; el resto en

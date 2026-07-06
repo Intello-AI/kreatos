@@ -1,13 +1,19 @@
 ---
-description: Pares tipográficos curados y reglas de uso. Consúltalo al elegir fonts en el spec.
+description: Cómo elegir el par tipográfico a la medida y reglas de uso. Consúltalo al elegir fonts en el spec.
 ---
 
 # Tipografía
 
 Máximo **2 familias** por sitio: una display con carácter + una sans de trabajo.
-El template define los pares en `app/fonts.ts`; en el spec eliges `fontPair` por id.
+El par se elige **a la medida** del negocio y va en el spec como
+`design.fonts: { display, body }` — CUALQUIER familia de `next/font/google`,
+no una lista cerrada. site-builder reescribe `app/fonts.ts` con esas dos.
 
-## Pares curados
+## Pares sugeridos (punto de partida, no catálogo cerrado)
+
+Buenas combinaciones por carácter — arráncate de una y ajústala, o compón la
+tuya; lo importante es que encaje con el registro del negocio, no repetir el
+mismo par entre sitios del giro.
 
 | id | Display | Body | Cuándo |
 |---|---|---|---|

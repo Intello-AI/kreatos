@@ -12,7 +12,7 @@ imágenes. Estas reglas viven en ESE terreno. Complementan (no sustituyen)
 
 Antes de componer el spec, declara en una línea tu lectura del brief:
 "Lo leo como: <tipo de negocio> para <audiencia>, con lenguaje <vibra>,
-apoyado en el preset <X> con <variación>". La audiencia elige la estética,
+con un theme a la medida (paleta desde la marca, radius por registro)". La audiencia elige la estética,
 no tu gusto. Un despacho fiscal que atiende corporativos ≠ una constructora
 residencial. Si el brief trae referencias o colores de marca, son material de
 partida obligatorio, no sugerencia.
@@ -20,11 +20,11 @@ partida obligatorio, no sugerencia.
 ## Tipografía
 
 - Nunca el mismo par tipográfico que el sitio anterior del mismo giro (la
-  anti-convergencia valida preset+hero+acento; tú extiende la variación al
+  anti-convergencia llavea en acento+hero (+navbar); tú extiende la variación al
   par de fuentes cuando haya empate).
 - Serif como display solo si el giro lo justifica de verdad (editorial,
   heritage, legal premium) y puedes decir por qué EN el spec
-  (variation_notes). "Se ve premium" no es razón.
+  (design.concept). "Se ve premium" no es razón.
 - Énfasis dentro de un headline: itálica o bold de la MISMA familia. Nunca
   inyectes una palabra serif en un headline sans para "darle interés".
 
@@ -114,7 +114,7 @@ El motor del template trae la capa de animación; tú la diriges desde
 
 Repasa y marca cada uno; si uno falla, corrige antes de guardar:
 
-1. Lectura de diseño declarada y reflejada en variation_notes.
+1. Lectura de diseño declarada y reflejada en design.concept.
 2. Cero `—`/`–` en es.json (búscalo literal).
 3. Un solo acento, idéntico en light y dark.
 4. Paleta ≠ beige+latón+espresso salvo justificación de marca explícita.
@@ -125,5 +125,5 @@ Repasa y marca cada uno; si uno falla, corrige antes de guardar:
 9. Citas ≤3 líneas con atribución completa.
 10. Ninguna página interior de relleno; copy interior ≠ copy de la home.
 11. Par tipográfico y paleta distintos al último sitio del mismo giro.
-12. `design.motion` elegido con razón escrita en variation_notes; si es
+12. `design.motion` elegido con razón escrita en design.concept; si es
     `expressive`, el hero y los reveals realmente lo entregan.

@@ -25,8 +25,8 @@ coherencia. Cuando usa FOTOS REALES del cliente, el treatment las ARRUINA.
 - **Caso mixto (fotos reales + algo de stock): treatment `none` para todo el
   sitio.** Más vale un stock crudo bien elegido que una foto real tiñada.
   Nunca sacrifiques las fotos reales por unificar el stock.
-- Registra en el spec (`design.variation_notes` o el changelog) qué fotos son
-  reales del cliente para que site-builder no las trate.
+- Registra en el changelog qué fotos son reales del cliente para que
+  site-builder no las trate.
 - Preferir **detalle, textura y lugar** sobre personas: manos sobre planos,
   estructura de acero a contraluz, estantería de almacén, documentos y sello,
   camión en carretera al amanecer.

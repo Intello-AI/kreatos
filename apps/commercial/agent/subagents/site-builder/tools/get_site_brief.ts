@@ -3,7 +3,6 @@ import { z } from "zod"
 
 import { getSupabaseClient } from "../../../lib/supabase"
 import {
-  getDesignPresets,
   getDesignReferences,
   getLatestVersion,
   getSiblingSpecs,
@@ -12,7 +11,7 @@ import {
 
 export default defineTool({
   description:
-    "Punto de partida de toda corrida: devuelve el site (brief del dashboard), el lead completo, el spec de la última versión si existe, los presets de diseño disponibles, referencias curadas del giro y un resumen de sitios previos del mismo giro (para la regla anti-convergencia).",
+    "Punto de partida de toda corrida: devuelve el site (brief del dashboard), el lead completo, el spec de la última versión si existe, referencias curadas del giro y un resumen de sitios previos del mismo giro (para la regla anti-convergencia). El theme se diseña a la medida (no hay presets).",
   inputSchema: z.object({
     siteId: z.string().uuid().describe("id de la fila en `sites`."),
     industry: z
@@ -56,9 +55,8 @@ export default defineTool({
       .filter(Boolean)
       .map((p) => `${supabaseUrl}/storage/v1/object/public/brand-assets/${p}`)
 
-    const [latestVersion, presets, references, siblings] = await Promise.all([
+    const [latestVersion, references, siblings] = await Promise.all([
       getLatestVersion(siteId),
-      getDesignPresets(),
       industry
         ? getDesignReferences({ industry, limit: 3 })
         : Promise.resolve([]),
@@ -83,7 +81,6 @@ export default defineTool({
       brand: brand ? { ...brand, logoUrl, iconUrl, imageUrls } : null,
       latestSpec: latestVersion?.spec ?? null,
       latestVersionN: latestVersion?.version_n ?? null,
-      presets,
       // Con screenshotUrl/screenshotMobileUrl: pásalas a
       // view_reference_screenshots para VER la referencia (no solo su CSS).
       designReferences: references.map((ref) => ({

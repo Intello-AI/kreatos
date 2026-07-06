@@ -1,5 +1,5 @@
 ---
-description: Proceso de dirección de arte para componer el spec — preset, referencias, variación obligatoria. Úsalo al inicio de toda fase spec.
+description: Proceso de dirección de arte para componer el spec — theme a la medida (paleta/radius/fuentes), referencias, anti-convergencia. Úsalo al inicio de toda fase spec.
 ---
 
 # Dirección de arte
@@ -8,17 +8,19 @@ Orden de trabajo al componer un spec:
 
 1. **Lee el brief y `lead.site_instructions`.** Si José pidió algo concreto
    (colores, tono, referencia), eso manda sobre los defaults.
-2. **El theme se DERIVA, no se elige de un catálogo.** Jerarquía estricta:
+2. **El theme se DISEÑA a la medida — no hay catálogo ni temas prefabricados.** Jerarquía
+   estricta para la paleta:
    1. **Colores de la ficha de marca** (`brand.colors`): si existen, son la
-      base innegociable de la paleta — el cliente ya tiene identidad.
+      base innegociable — el cliente ya tiene identidad.
    2. **Tokens de una referencia** (`analysis.tokens` de la referencia que
       elegiste como guía): el sistema de contraste/neutros de esa referencia,
       armonizado con los colores de marca.
-   3. **Preset** (`design_presets`): SOLO como fallback estructural cuando no
-      hay ni marca ni referencias con tokens — y aun así, variado.
-   En los casos 1-2, el preset que copies de `themes/` es solo el esqueleto
-   del archivo (estructura de vars): REESCRIBE sus valores con la paleta
-   derivada. Dos sitios del mismo giro con referencias distintas deben salir
+   3. Sin marca ni referencias con tokens: **componla desde el carácter del
+      giro** (no de una lista prefabricada). Escribe la paleta completa
+      (light+dark, cada token) tú.
+   No hay ningún tema prefabricado que copiar: la
+   estructura del `app/theme.css` (los tres bloques) es fija y la aporta el
+   template; los VALORES los pones tú. Dos sitios del mismo giro deben salir
    con themes visiblemente distintos — así se mata el "todas se parecen".
 3. **Las referencias son tu fuente PRIMARIA de inspiración** — José las curó
    a mano; ignorarlas es diseñar de memoria. Toma 2–3 de `designReferences`
@@ -33,15 +35,20 @@ Orden de trabajo al componer un spec:
    gigante", "jerarquía por opacidad de texto") en `design.references` del
    spec. Prohibido el takeaway "usar el mismo layout"; las referencias
    inspiran decisiones, no se copian.
-4. **Varía el preset — siempre.** El preset es punto de partida, nunca uniforme:
-   - Ajusta el hue del acento ±15–30° (o cámbialo si la marca del negocio lo pide).
-   - Elige la variante de hero entre las permitidas por el preset según el negocio.
-   - Decide el treatment de imagen del sitio (uno solo).
-   Registra qué variaste y por qué en `design.variation_notes` (mínimo una frase
-   con sustancia; `save_site_version` la exige).
+4. **Compón el theme completo — cada sitio único:**
+   - **Paleta**: light+dark, todos los tokens, anclada a la marca (arriba).
+   - **`radius`**: lo decide el REGISTRO del negocio — serio/institucional/
+     editorial → recto (`0`–`0.125rem`); cercano/casual/de servicio →
+     redondeado (`0.5rem`+). Un solo radius gobierna todo el sitio.
+   - **`fonts`** (`display` + `body`): el par tipográfico a la medida del
+     carácter — cualquier familia de `next/font/google`, sin repetir el de
+     sitios previos del giro si puedes evitarlo.
+   - **Hero** e **imageTreatment** (uno solo) según el negocio.
+   Todo entra al spec; site-builder lo materializa. No partes de ningún
+   tema base: diseñas el theme de cero.
 5. **Regla anti-convergencia**: `siblingSites` (de `get_site_brief`) te muestra
-   preset+hero+acento de sitios previos del giro. Si tu combinación exacta ya
-   existe, cambia al menos una de las tres — normalmente el acento.
+   acento+hero+navbar de sitios previos del giro. Si tu acento+hero ya existe,
+   cambia al menos uno — normalmente el acento (varía el hue ±15–30°).
 
 La creatividad vive en esta fase. Cuando el spec está guardado, el build es
 transformación mecánica: no tomes decisiones de diseño nuevas dentro del sandbox.

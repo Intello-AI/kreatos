@@ -5,7 +5,6 @@ import { getSupabaseClient } from "../../../lib/supabase"
 export type SiteRow = Tables<"sites">
 export type SiteVersionRow = Tables<"site_versions">
 export type DesignReferenceRow = Tables<"design_references">
-export type DesignPresetRow = Tables<"design_presets">
 
 export type SiteStatus =
   | "brief"
@@ -255,16 +254,6 @@ export async function getDesignReferences(input: {
   return data ?? []
 }
 
-export async function getDesignPresets(): Promise<DesignPresetRow[]> {
-  const supabase = getSupabaseClient()
-  const { data, error } = await supabase
-    .from("design_presets")
-    .select("*")
-    .eq("active", true)
-  if (error) throw new Error(`Lectura de design_presets falló: ${error.message}`)
-  return data ?? []
-}
-
 /**
  * Firma estructural de la home (id:variant por sección, sin navbar/footer/
  * contact que siempre existen) de los sitios más recientes — una por sitio,
@@ -324,7 +313,6 @@ export async function getSiblingSpecs(input: {
   limit?: number
 }): Promise<
   Array<{
-    preset?: string
     heroVariant?: string
     navbarVariant?: string
     accent?: string
@@ -350,7 +338,6 @@ export async function getSiblingSpecs(input: {
       const palette = (design["palette"] ?? {}) as Record<string, unknown>
       const dark = (palette["dark"] ?? {}) as Record<string, unknown>
       return {
-        preset: design["preset"] as string | undefined,
         heroVariant: hero?.["variant"] as string | undefined,
         navbarVariant: navbar?.["variant"] as string | undefined,
         accent: dark["accent"] as string | undefined,

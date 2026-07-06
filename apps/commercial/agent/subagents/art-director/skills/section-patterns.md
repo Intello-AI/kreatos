@@ -82,19 +82,19 @@ fallaste — el gate `save_site_version` rechaza la convergencia.
 
 ## Recetas base (andamio — DIVERGE de ellas)
 
-- **Despacho contable/legal** (obsidiana): hero `editorial` → trust-bar →
+- **Despacho contable/legal**: hero `editorial` → trust-bar →
   services `numbered-list` (5–6) → about `plain` → testimonials → faq (5, fiscal/
   legal real) → cta-band → contact.
-- **Constructora** (cantera): hero `full-bleed` (foto de obra + duotone) →
+- **Constructora**: hero `full-bleed` (foto de obra + duotone) →
   trust-bar (m², años, proyectos) → services `asym-grid` → portfolio `rows` →
   process (4–5 pasos) → testimonials → cta-band → contact.
-- **Logística/transporte** (ruta): hero `split-image` o `stat-led` → trust-bar →
+- **Logística/transporte**: hero `split-image` o `stat-led` → trust-bar →
   services → coverage (zonas/rutas — obligatoria en este giro) → process →
   testimonials → faq → contact.
-- **Distribuidor/mayorista** (bodega): hero `split-image` → trust-bar →
+- **Distribuidor/mayorista**: hero `split-image` → trust-bar →
   services `bordered-table` (líneas de producto tipo catálogo) → about →
   coverage (zonas de reparto) → faq → cta-band → contact.
-- **Consultoría/premium** (norte): hero `stat-led` asimétrico → services
+- **Consultoría/premium**: hero `stat-led` asimétrico → services
   `numbered-list` → about `portrait` o `timeline` → testimonials → cta-band →
   contact. Pocas secciones, mucho aire.
 

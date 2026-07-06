@@ -12,8 +12,8 @@ analiza el sitio actual (fetch del HTML desde el sandbox con `curl` si hace falt
 - **Logo**: `<link rel="icon">`, `og:image`, o el `<img>` del header. Referencia
   su URL en el spec (`redesign.keep.logoPath`).
 - **Hues de marca**: 1–2 colores dominantes del logo/CSS. Son **input** de la
-  paleta — refínalos hacia el preset (el sitio viejo suele tener el hue correcto
-  mal ejecutado), no los copies tal cual.
+  paleta a la medida — refínalos al componerla (el sitio viejo suele tener el hue
+  correcto mal ejecutado), no los copies tal cual.
 - **Hechos reales**: años en el mercado, certificaciones, marcas que distribuye,
   clientes, sucursales, servicios que hoy lista. Van a `redesign.keep.facts` y
   alimentan el copy.
