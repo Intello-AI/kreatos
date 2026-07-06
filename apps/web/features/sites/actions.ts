@@ -91,6 +91,7 @@ export async function createSiteBrief(
           ? `Instrucciones del brief: ${parsed.data.instructions}`
           : "",
         `Config del brief: tema=${parsed.data.themeMode}, WhatsApp flotante=${parsed.data.whatsappFloat ? "sí" : "no"}, formulario de contacto=${parsed.data.contactForm ? "sí" : "no"}.`,
+        `Idiomas del sitio: ${parsed.data.locales.join(", ")} (el primero es el default en "/").`,
       ]
         .filter(Boolean)
         .join(" "),

@@ -167,6 +167,12 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
   - `brief.themeMode`: `"light"` → `design.defaultMode="light"` + `flags.themeToggle=false`; `"dark"` → `defaultMode="dark"` + `themeToggle=false`; `"both"` → `flags.themeToggle=true` (el `defaultMode` lo eliges tú según el preset).
   - `brief.whatsappFloat` → `flags.whatsappFloat`, pero SOLO `true` si el negocio tiene WhatsApp en la ficha de marca; si no lo tiene, ponlo `false` y anótalo en el changelog.
   - `brief.contactForm` → `flags.contactForm`.
+  - `brief.locales` → el spec DEBE cargarlos tal cual para que site-builder
+    escriba `locales: <brief.locales>` en `site.config.ts` (`locales[0]` es el
+    default en "/"; SIEMPRE "es"). Pon `flags.multiLang = true` si hay 2+.
+    Si hay idiomas extra, ANOTA en el changelog que el sitio es multilenguaje y
+    que site-builder debe generar `messages/<locale>.json` de cada extra con el
+    tool `translate_copy` (mismas keys que `es.json`, o el build truena).
 - Los colores de la ficha de marca son la base innegociable de la paleta.
 - Dos sitios del mismo giro nunca comparten preset+hero+acento (el tool lo
   valida) ni par tipográfico si puedes evitarlo.

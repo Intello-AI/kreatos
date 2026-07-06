@@ -49,6 +49,9 @@ export function GenerateSiteDialog({
   const [contactForm, setContactForm] = useState(false)
   const [themeMode, setThemeMode] = useState<"light" | "dark" | "both">("both")
   const [whatsappFloat, setWhatsappFloat] = useState(false)
+  // Idiomas EXTRA sobre la base "es" (que siempre va). Al enviar se antepone
+  // "es" para formar el array de locales (locales[0] = default sin prefijo).
+  const [extraLocales, setExtraLocales] = useState<string[]>([])
   const [error, setError] = useState<string>()
   const [pending, startTransition] = useTransition()
   const [loadingRefs, startLoadingRefs] = useTransition()
@@ -62,6 +65,11 @@ export function GenerateSiteDialog({
     }
   }
 
+  const toggleExtraLocale = (code: string, on: boolean) =>
+    setExtraLocales((prev) =>
+      on ? [...prev, code] : prev.filter((c) => c !== code),
+    )
+
   const onSubmit = () => {
     setError(undefined)
     startTransition(async () => {
@@ -72,10 +80,18 @@ export function GenerateSiteDialog({
         contactForm,
         themeMode,
         whatsappFloat,
+        // "es" siempre primero (default sin prefijo); luego los extra elegidos.
+        locales: ["es", ...extraLocales],
       })
       if (result?.formError) setError(result.formError)
     })
   }
+
+  const ADDITIONAL_LOCALES: Array<{ code: string; label: string }> = [
+    { code: "en", label: "Inglés" },
+    { code: "pt", label: "Portugués" },
+    { code: "fr", label: "Francés" },
+  ]
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -161,6 +177,29 @@ export function GenerateSiteDialog({
               </Select>
               <p className="text-xs text-muted-foreground">
                 Claro/Oscuro fija el modo; Ambos muestra un botón para cambiar.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Idiomas</Label>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                <span className="text-sm text-muted-foreground">
+                  Español (base)
+                </span>
+                {ADDITIONAL_LOCALES.map(({ code, label }) => (
+                  <div key={code} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`site-locale-${code}`}
+                      checked={extraLocales.includes(code)}
+                      onCheckedChange={(v) => toggleExtraLocale(code, v === true)}
+                    />
+                    <Label htmlFor={`site-locale-${code}`}>{label}</Label>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Español es la base; marca idiomas extra. El sitio genera cada uno
+                con URL propia (/en, …).
               </p>
             </div>
 

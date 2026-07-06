@@ -23,6 +23,13 @@ export const siteBriefSchema = z.object({
   themeMode: z.enum(["light", "dark", "both"]).default("both"),
   /** Botón flotante de WhatsApp. Solo aplica si el negocio tiene WhatsApp. */
   whatsappFloat: z.boolean().default(false),
+  /**
+   * Idiomas del sitio (next-intl). Convención: `locales[0]` es el idioma por
+   * defecto y vive en "/" sin prefijo — SIEMPRE "es"; los demás son idiomas
+   * extra con URL propia (/en, /pt…). El art-director lo pasa a
+   * `site.config.ts` como `locales`.
+   */
+  locales: z.array(z.string().min(2)).min(1).default(["es"]),
 })
 
 export type SiteBriefInput = z.infer<typeof siteBriefSchema>
