@@ -78,7 +78,7 @@ export function LeadsFilters({ cities }: { cities: string[] }) {
   const hasSite = searchParams.get("hasSite") === "1"
 
   return (
-    <div className="flex flex-wrap items-center gap-2 justify-between">
+    <div className="flex flex-wrap items-center justify-between gap-2">
       <Input
         value={search}
         onChange={(event) => setSearch(event.target.value)}
@@ -91,7 +91,7 @@ export function LeadsFilters({ cities }: { cities: string[] }) {
         <Button
           type="button"
           variant={hasBrand ? "secondary" : "outline"}
-          size="sm"
+
           aria-pressed={hasBrand}
           onClick={() => toggleFlag("hasBrand")}
         >
@@ -100,7 +100,7 @@ export function LeadsFilters({ cities }: { cities: string[] }) {
         <Button
           type="button"
           variant={hasSite ? "secondary" : "outline"}
-          size="sm"
+
           aria-pressed={hasSite}
           onClick={() => toggleFlag("hasSite")}
         >
