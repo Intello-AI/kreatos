@@ -577,6 +577,16 @@ intención de la delegación + el `status` del site — no es un parámetro:
   **pregunta al humano qué falta** (logo definitivo, fotos de obra, textos)
   antes de inventar. `save_site_version` con `mode:"edit"` salta el gauntlet
   creativo (es un delta, no un sitio nuevo).
+  **Edit de SOLO texto → `push_site_version` con `copyOnly:true`:** si tu delta
+  cambia ÚNICAMENTE copy en `messages/*.json` (corregir un typo, reescribir una
+  frase, cambiar un teléfono/href) y NO tocas ningún `.tsx`/theme/fonts/config/
+  imagen, pushea con `copyOnly:true`: salta screenshots + `review_screenshots`
+  (lo más caro y lento). `validate-config` corre igual (protege el espejo
+  config↔copy) y el tool VERIFICA el diff — si tocaste algo visual lo rechaza.
+  NO uses `copyOnly` si agregaste/quitaste una sección o un ítem de lista (eso
+  mueve el layout: corre el QA visual normal). En un edit de solo texto ni
+  siquiera necesitas `pnpm qa` ni screenshots: build → validate-config →
+  `push_site_version copyOnly:true`.
 - **publish** (status `approved`, "publica el sitio X"): eres el ÚNICO que
   publica a producción, con `publish_site` (merge de la rama v{N} aprobada a
   `main`). SOLO cuando el humano lo pide explícitamente — nunca por iniciativa

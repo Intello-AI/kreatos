@@ -24,6 +24,14 @@ const EDITABLE_PATHS: RegExp[] = [
   /^pnpm-lock\.yaml$/,
 ]
 
+/**
+ * Superficies que NO alteran el render: solo texto/manifiestos. Un edit que
+ * toca EXCLUSIVAMENTE estas puede saltar el QA visual (copyOnly) — el pixel
+ * no cambia de forma/estructura, solo el contenido de las cadenas. Cualquier
+ * .tsx/theme/fonts/config/imagen queda FUERA: eso sí mueve el layout.
+ */
+const COPY_SAFE_PATHS: RegExp[] = [/^messages\/.*\.json$/, /^DEMO\.md$/i, /^CHANGELOG/i]
+
 export default defineTool({
   description:
     "Commit y push del contenido de /workspace/site a la rama v{N} del repo del cliente (NUNCA a main — publicar a main es acción humana). El push FINAL va después de que `pnpm build` y `pnpm qa` pasaron; con checkpoint=true puedes pushear WIP en hitos intermedios para que un run futuro retome donde te quedaste.",
@@ -46,9 +54,15 @@ export default defineTool({
       .describe(
         "Escape hatch del gate de review visual: solo tras 2 rediseños REALES en los que review_screenshots siguió sin aprobar por CRITERIO subjetivo (approved:false o critical de axis 'aesthetic': contraste mejorable, estética). Entrega el sitio pese al veredicto y lo anota. NO salta criticals de axis 'structural' (algo ROTO: overflow, texto cortado, imagen faltante) — esos se corrigen siempre. Nunca en el primer intento.",
       ),
+    copyOnly: z
+      .boolean()
+      .default(false)
+      .describe(
+        "Edit de SOLO texto (corregir un typo, reescribir una frase, cambiar un teléfono/href de contacto): salta el QA visual (screenshots + review_screenshots), lo más caro del flujo. El tool VERIFICA el claim — el diff vs main debe tocar EXCLUSIVAMENTE messages/*.json (o DEMO.md/CHANGELOG); si tocaste cualquier .tsx/theme/fonts/config/imagen, se rechaza y exige el review normal. validate-config SIEMPRE corre (mantiene el espejo config<->copy). Úsalo SOLO en modo edit y SOLO para cambios que no mueven el layout: NO para agregar/quitar secciones o ítems de lista (eso cambia el render → review normal).",
+      ),
   }),
   async execute(
-    { siteId, versionN, commitMessage, checkpoint, overrideReview },
+    { siteId, versionN, commitMessage, checkpoint, overrideReview, copyOnly },
     ctx,
   ) {
     const site = await getSite(siteId)
@@ -62,6 +76,30 @@ export default defineTool({
     }
     const branch = `v${versionN}`
     const sandbox = await ctx.getSandbox()
+
+    // Archivos que difieren de origin/main (working tree + nuevos sin
+    // trackear), excluyendo `.agent/` (tooling del sandbox, no del sitio). Lo
+    // usa el check de copyOnly para verificar que un edit "de solo texto" no
+    // tocó ninguna superficie visual.
+    const changedVsMain = async (): Promise<string[]> => {
+      const changed = await sandbox.run({
+        command: `cd site && git fetch -q origin main 2>/dev/null; git diff origin/main --name-only 2>/dev/null; git status --porcelain`,
+      })
+      return changed.stdout
+        .split("\n")
+        .flatMap((line) => {
+          const isPorcelain = /^[A-Z?! ]{2} /.test(line)
+          if (isPorcelain) {
+            if (!line.startsWith("??")) return []
+            const p = line.slice(3).trim()
+            return p ? [p.includes(" -> ") ? p.split(" -> ")[1] : p] : []
+          }
+          const p = line.trim()
+          return p ? [p] : []
+        })
+        .filter(Boolean)
+        .filter((p) => !p.startsWith(".agent/"))
+    }
 
     const escaped = commitMessage.replace(/"/g, '\\"')
     // Issues del review que se entregan pese al veredicto (overrideReview): se
@@ -244,6 +282,26 @@ export default defineTool({
             : `Push rechazado: \`pnpm validate-config\` falló — corrígelo ANTES de pushear (es el mismo check que corre \`pnpm qa\`, pero en segundos y sin navegador):\n${out}`,
         )
       }
+      // copyOnly: edit de SOLO texto. Verifica que el diff vs main toque
+      // EXCLUSIVAMENTE copy (messages/*.json, DEMO.md, CHANGELOG); si algo
+      // visual cambió, el claim se rechaza y se exige el review normal.
+      // Verificado → se saltan el qa-report y el review (lo caro): un cambio
+      // de solo texto no altera la forma del render. validate-config ya corrió
+      // arriba y mantiene el espejo config<->copy.
+      if (copyOnly) {
+        const nonCopy = (await changedVsMain()).filter(
+          (p) => !COPY_SAFE_PATHS.some((re) => re.test(p)),
+        )
+        if (nonCopy.length > 0) {
+          throw new Error(
+            `copyOnly rechazado: el diff vs main toca ${nonCopy.length} archivo(s) que SÍ afectan el render (${nonCopy.slice(0, 8).join(", ")}). copyOnly es solo para cambios de TEXTO en messages/*.json — corre \`pnpm qa\` + \`review_screenshots\` y vuelve a pushear SIN copyOnly.`,
+          )
+        }
+      }
+      // Pasos 2 y 3 (qa-report + review visual) SOLO cuando NO es copyOnly:
+      // un cambio de solo texto no puede alterar la forma del render, así que
+      // no hay nada nuevo que capturar ni juzgar con visión.
+      if (!copyOnly) {
       // 2. qa-report guardado para esta versión: prueba de que el QA visual
       //    corrió al menos una vez. El reporte PUEDE anotar screenshots
       //    saltados (navegador no disponible) — eso se admite; lo que no se
@@ -336,6 +394,7 @@ export default defineTool({
           .map((i) => `[${i.severity}] ${i.screen ?? "?"}: ${i.issue ?? ""}`)
           .slice(0, 12)
       }
+      } // fin if (!copyOnly): fin de los gates de qa-report + review visual
     }
 
     // El REMOTO es la fuente de verdad: si la rama avanzó desde que este run
