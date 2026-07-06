@@ -21,6 +21,7 @@ import {
 import { LeadStatusSelect } from "@/features/leads/components/lead-status-select"
 import { LeadRatingControl } from "@/features/leads/components/lead-rating-control"
 import { LeadBrandGenerateButton } from "@/features/leads/components/lead-brand-generate-button"
+import { LeadDetailRefresh } from "@/features/leads/components/lead-detail-refresh"
 import { getLeadDetail } from "@/features/leads/queries"
 import type { ManualRating } from "@/features/leads/types"
 import { GenerateSiteDialog } from "@/features/sites/components/generate-site-dialog"
@@ -95,6 +96,7 @@ export default async function LeadDetailPage({
 
   return (
     <LeadBrandProvider>
+      <LeadDetailRefresh leadId={id} />
       <main className="flex min-h-[calc(100vh-48px)] w-full items-stretch">
         <div className="min-w-0 flex-1">
           <div className="mx-auto w-full max-w-4xl space-y-6 p-4 py-6">
