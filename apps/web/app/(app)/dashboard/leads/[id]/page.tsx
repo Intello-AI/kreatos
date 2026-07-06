@@ -288,7 +288,7 @@ export default async function LeadDetailPage({
                           <img
                             src={brandAssetUrl(brand.logo_path)}
                             alt="Logo"
-                            className="max-h-9 w-auto"
+                            className="h-8 w-auto max-w-[240px] object-contain"
                           />
                         </span>
                       ) : (
