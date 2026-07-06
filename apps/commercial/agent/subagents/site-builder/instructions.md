@@ -139,7 +139,18 @@ template de kreatos; tú lo personalizas, no lo reinventas.
    y UNIFORME** (`aspect-[4/5]`, `aspect-[4/3]`… el MISMO para todas las de esa
    galería) — el object-cover recorta; NUNCA dejes que el tamaño de origen
    mande el alto (queda disparejo). Masonry es la única excepción (aspect
-   variado a propósito). Las
+   variado a propósito). **Texto SOBRE imagen = color claro, SIEMPRE.**
+   Cualquier custom que ponga copy encima de una foto u overlay (hero
+   full-bleed, banda con `--hero-overlay`, tarjeta con imagen de fondo) DEBE
+   fijar texto claro en la superficie: `text-primary-foreground` en el
+   contenedor (eyebrow/subtítulo bajan opacidad con `/75`, `/80`), y el botón
+   primario se INVIERTE (`bg-primary-foreground text-primary`) para no
+   fundirse con el overlay. NUNCA dejes el texto caer al `foreground`/
+   `muted-foreground` del tema: en light son oscuros y desaparecen sobre la
+   foto (el titular queda invisible — el bug de contraste #1). Espeja el patrón
+   de los bloques del motor `banner-image`/`cta-bg-image`/`image-fullbleed-caption`;
+   el reviewer marca texto ilegible sobre imagen como **structural** (bloquea
+   el push). Las
    referencias analizadas (`designReferences[].analysis`) son tu catálogo de
    patrones — decláralas en el spec (sección con descripción del layout)
    ANTES de la fase build. Si una referencia trae
