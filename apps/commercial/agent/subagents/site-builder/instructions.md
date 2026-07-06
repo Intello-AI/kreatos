@@ -249,6 +249,13 @@ materializas:
    variados (preset copiado + tu variación) — el transcriptor no decide
    colores. **`components/custom/` lo escribes TÚ siempre** con las
    herramientas del sandbox: ese código es diseño, no transcripción.
+   **Multilenguaje** (cuando el brief/spec pide 2+ idiomas): escribe `locales`
+   en `site.config.ts` (el PRIMERO es el default y vive en `/`; el resto en
+   `/<locale>/…`). Tras materializar `messages/es.json`, genera CADA locale
+   extra con el tool `translate_copy` (`{ targetLocale, targetLanguageName }`):
+   traduce el es.json conservando las MISMAS keys — si difieren, el build truena
+   con MISSING_MESSAGE. `pnpm validate-config` verifica la paridad de keys entre
+   locales. Sin idiomas extra: `locales: ["es"]` y no traduces nada (cero cambio).
    **Custom sections en volumen: escríbelas TÚ en LOTES** — varias
    secciones por comando de sandbox (un `cat > a.tsx <<'EOF' ... EOF`
    seguido de otro en el MISMO comando, 3-4 archivos por comando).
