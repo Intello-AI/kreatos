@@ -29,6 +29,17 @@ const PanelContext = createContext<{
   open: boolean
   toggle: () => void
   isMobile: boolean
+  /**
+   * Abre el panel y, si se pasa `message`, lo deja en cola para que el chat
+   * montado adentro lo AUTO-ENVÍE (p. ej. el botón "Generar marca" manda la
+   * URL del sitio + la instrucción sin que el humano pique el chat). `null`
+   * solo abre.
+   */
+  openWith: (message?: string | null) => void
+  /** Mensaje encolado por `openWith` pendiente de enviar (o null). */
+  queuedMessage: string | null
+  /** El chat lo llama tras enviar el mensaje encolado. */
+  clearQueued: () => void
 } | null>(null)
 
 export function useActivityPanel() {
@@ -50,10 +61,22 @@ export function ActivityPanelProvider({
   // Desktop nace abierto (el panel es parte del detalle); mobile cerrado.
   const [open, setOpen] = useState(true)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [queuedMessage, setQueuedMessage] = useState<string | null>(null)
 
-  const value = isMobile
-    ? { open: mobileOpen, toggle: () => setMobileOpen((v) => !v), isMobile }
-    : { open, toggle: () => setOpen((v) => !v), isMobile }
+  const setPanelOpen = isMobile ? setMobileOpen : setOpen
+  const openWith = (message?: string | null) => {
+    if (message) setQueuedMessage(message)
+    setPanelOpen(true)
+  }
+
+  const value = {
+    open: isMobile ? mobileOpen : open,
+    toggle: () => setPanelOpen((v) => !v),
+    isMobile,
+    openWith,
+    queuedMessage,
+    clearQueued: () => setQueuedMessage(null),
+  }
 
   return <PanelContext.Provider value={value}>{children}</PanelContext.Provider>
 }

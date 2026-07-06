@@ -20,6 +20,7 @@ import {
 } from "@/features/leads/components/lead-brand-panel"
 import { LeadStatusSelect } from "@/features/leads/components/lead-status-select"
 import { LeadRatingControl } from "@/features/leads/components/lead-rating-control"
+import { LeadBrandGenerateButton } from "@/features/leads/components/lead-brand-generate-button"
 import { getLeadDetail } from "@/features/leads/queries"
 import type { ManualRating } from "@/features/leads/types"
 import { GenerateSiteDialog } from "@/features/sites/components/generate-site-dialog"
@@ -245,10 +246,17 @@ export default async function LeadDetailPage({
                     </EmptyMedia>
                     <EmptyTitle>Sin ficha de marca</EmptyTitle>
                     <EmptyDescription>
-                      Abre el chat de marca y pásale el logo, fotos o la página
-                      web del negocio — el curador arma la ficha.
+                      {lead.website
+                        ? "El curador puede arrancar solo desde el sitio actual del negocio; también puedes pasarle logo o fotos por el chat."
+                        : "Abre el chat de marca y pásale el logo, fotos o la página web del negocio — el curador arma la ficha."}
                     </EmptyDescription>
                   </EmptyHeader>
+                  <LeadBrandGenerateButton
+                    website={lead.website}
+                    label={
+                      lead.website ? "Generar marca desde su sitio" : "Generar marca"
+                    }
+                  />
                 </Empty>
               ) : (
                 <div className="space-y-4">

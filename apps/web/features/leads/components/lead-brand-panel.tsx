@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 
 import {
@@ -36,7 +36,7 @@ export function LeadBrandAside({
   leadId: string
   initialRunIds: string[]
 }) {
-  const { toggle } = useActivityPanel()
+  const { toggle, queuedMessage, clearQueued } = useActivityPanel()
   const router = useRouter()
   const [runIds, setRunIds] = useState(initialRunIds)
 
@@ -95,6 +95,16 @@ export function LeadBrandAside({
     }),
     [leadId, router]
   )
+
+  // Auto-envío del mensaje que encoló el botón "Generar marca" (URL + instrucción):
+  // se manda UNA vez y se limpia la cola. El ref evita doble envío (StrictMode).
+  const sentRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!queuedMessage || sentRef.current === queuedMessage) return
+    sentRef.current = queuedMessage
+    void handlers.send(queuedMessage)
+    clearQueued()
+  }, [queuedMessage, handlers, clearQueued])
 
   return (
     <ActivityPanelAside title="Marca del lead">
