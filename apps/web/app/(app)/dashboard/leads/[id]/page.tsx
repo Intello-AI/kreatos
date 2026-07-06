@@ -60,8 +60,11 @@ function MetaRow({
   )
 }
 
-function brandAssetUrl(path: string): string {
-  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/brand-assets/${path}`
+function brandAssetUrl(path: string, version?: string | null): string {
+  // El logo/icon viven en un path fijo (logo.png) que el curador sobrescribe;
+  // sella la URL con updated_at para que el navegador no sirva la copia vieja.
+  const v = version ? `?v=${new Date(version).getTime()}` : ""
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/brand-assets/${path}${v}`
 }
 
 export default async function LeadDetailPage({
@@ -288,7 +291,7 @@ export default async function LeadDetailPage({
                         <span className="inline-flex h-12 items-center rounded border bg-muted/30 px-3 py-1">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
-                            src={brandAssetUrl(brand.logo_path)}
+                            src={brandAssetUrl(brand.logo_path, brand.updated_at)}
                             alt="Logo"
                             className="h-8 w-auto max-w-[240px] object-contain"
                           />
@@ -302,7 +305,7 @@ export default async function LeadDetailPage({
                         <span className="inline-flex size-12 items-center justify-center rounded border bg-muted/30 p-1.5">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
-                            src={brandAssetUrl(brand.icon_path)}
+                            src={brandAssetUrl(brand.icon_path, brand.updated_at)}
                             alt="Isotipo"
                             className="max-h-full w-auto"
                           />

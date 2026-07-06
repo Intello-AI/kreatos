@@ -22,6 +22,7 @@ export type Lead = Omit<Tables<"leads">, "status"> & {
     short_name: string | null
     logo_path: string | null
     colors: string[] | null
+    updated_at: string | null
   } | null
 }
 

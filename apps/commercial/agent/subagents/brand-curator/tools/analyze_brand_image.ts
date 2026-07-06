@@ -9,12 +9,15 @@ const PROMPT = `Eres un director de arte. Analiza esta imagen de la marca de un 
   "isLogoCandidate": true/false,
   "logoScore": 1-5,
   "logoNotes": "por qué sirve o no como logo (fondo, resolución, vectorial vs foto)",
+  "isPlaceholder": true/false,
+  "placeholderNote": "si isPlaceholder=true, de qué marca/herramienta es (p. ej. 'logo de Canva', 'favicon default de WordPress/Wix/GoDaddy', 'ícono genérico de navegador')",
   "dominantColors": ["#hex en orden de dominancia, máx 6"],
   "tokens": { "background": "#hex", "foreground": "#hex", "primary": "#hex", "muted-foreground": "#hex", "border": "#hex" },
   "siteImageUse": "hero | about | portfolio | none — y por qué en 3-5 palabras",
   "quality": "nítida/borrosa, resolución aparente, observaciones"
 }
-En "tokens" traduce la paleta al rol funcional (el color protagonista de la marca → primary). Si la imagen es un screenshot de un sitio/red social de la marca, extrae la paleta REAL visible.`
+En "tokens" traduce la paleta al rol funcional (el color protagonista de la marca → primary). Si la imagen es un screenshot de un sitio/red social de la marca, extrae la paleta REAL visible.
+CRÍTICO — isPlaceholder: los favicons scrapeados de un sitio a veces NO son la marca del negocio sino el logo de la herramienta con que lo hicieron o un ícono default: la "C" de Canva, el logo de Wix/Squarespace/WordPress/GoDaddy, el ícono genérico de "documento/mundo" del navegador. Si reconoces la imagen como uno de esos (o como un ícono genérico sin relación con el negocio), marca isPlaceholder=true, isLogoCandidate=false, logoScore=1. NUNCA promuevas un placeholder como logo ni isotipo.`
 
 export default defineTool({
   description:

@@ -77,7 +77,9 @@ function LeadBrandCell({
     return <span className="text-xs text-muted-foreground">—</span>
   }
   const logoUrl = brand.logo_path
-    ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/brand-assets/${brand.logo_path}`
+    ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/brand-assets/${brand.logo_path}` +
+      // Sella con updated_at: el logo vive en un path fijo que se sobrescribe.
+      (brand.updated_at ? `?v=${new Date(brand.updated_at).getTime()}` : "")
     : null
   return (
     <span className="flex items-center gap-1.5">

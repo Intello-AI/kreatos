@@ -48,8 +48,8 @@ export async function getLeads({
     ? "sites!inner(id, status, status_updated_at)"
     : "sites(id, status, status_updated_at)"
   const brandEmbed = hasBrand
-    ? "lead_brand!inner(short_name, logo_path, colors)"
-    : "lead_brand(short_name, logo_path, colors)"
+    ? "lead_brand!inner(short_name, logo_path, colors, updated_at)"
+    : "lead_brand(short_name, logo_path, colors, updated_at)"
 
   let query = supabase
     .from("leads")

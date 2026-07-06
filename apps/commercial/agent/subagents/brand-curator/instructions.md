@@ -62,9 +62,13 @@ sin preguntar ni pedir confirmación — José espera el botín, no un plan.
    buenas con `save_brand_profile` (logo/isotipo/fotos), como siempre.
    **Isotipo desde `icons`**: prefiere SVG o el PNG más grande
    (apple-touch-icon 180px o manifest 192/512px); el `.ico` chiquito solo
-   como último recurso. `theme-color` y la paleta que confirmes por visión
-   van a `colors`; `og:site_name`/title alimentan `shortName` si José no
-   lo dictó.
+   como último recurso. **VETA cada favicon con `analyze_brand_image` ANTES de
+   promoverlo**: los sitios hechos con Canva/Wix/GoDaddy suelen servir el logo
+   de la HERRAMIENTA (la "C" de Canva) o un favicon genérico como icono — si
+   `isPlaceholder=true`, NO lo promuevas a isotipo (déjalo vacío y anótalo en
+   las notas); un isotipo equivocado es peor que ninguno. `theme-color` y la
+   paleta que confirmes por visión van a `colors`; `og:site_name`/title
+   alimentan `shortName` si José no lo dictó.
 4. **Alimenta el lead** con `update_lead_info`: email/teléfono/website
    verificados que el lead no tenía, y en `appendNotes` lo relevante con su
    fuente ("email de contacto tomado de /contacto de susitio.com").

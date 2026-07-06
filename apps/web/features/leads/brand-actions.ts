@@ -30,6 +30,10 @@ export interface LeadBrandData {
   voice: BrandVoice | null
   images: string[]
   eve_run_ids: string[]
+  /** Sella la URL de los assets (`?v=`): logo/icon viven en un path fijo
+   *  (logo.png) que el curador SOBRESCRIBE; sin esto el navegador sirve la
+   *  versión vieja cacheada tras actualizar el logo. */
+  updated_at: string | null
 }
 
 /** Carga la ficha de marca de un lead (o null si no existe). */
@@ -56,6 +60,7 @@ export async function getLeadBrand(
     voice: (data.voice as LeadBrandData["voice"]) ?? null,
     images: (data.images as string[]) ?? [],
     eve_run_ids: data.eve_run_ids ?? [],
+    updated_at: data.updated_at ?? null,
   }
 }
 
