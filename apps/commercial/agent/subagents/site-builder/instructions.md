@@ -265,13 +265,18 @@ materializas:
    must read file X…"). Usar la herramienta correcta de la tabla evita ese
    round-trip perdido por completo.
 
-   **División del trabajo — tú diseñas, el transcriptor escribe lo
-   mecánico:** las TRES superficies de `draft_surface` (`messages/es.json`,
-   `app/theme.css`, `app/fonts.ts`) — pásale en `content` la porción LITERAL
-   del spec (copy exacto, tokens exactos, estructura completa): lo que no le
-   pases no existirá. **`site.config.ts` va por `draft_surface` surface
-   `"site-config"`** (pass-through: lo escribe VERBATIM, sin modelo — tú armas
-   el objeto completo, el tool solo lo deposita sin el guard read-before-write).
+   **División del trabajo:** `draft_surface` escribe las 4 superficies del
+   template sin el guard read-before-write. **`messages/es.json` y
+   `site.config.ts` son PASS-THROUGH (verbatim, SIN modelo)**: les pasas el
+   archivo COMPLETO ya armado por ti y el tool solo lo deposita — para es.json,
+   el JSON ENTERO con `common` + TODOS los namespaces que tu `site.config.ts`
+   usa (los `ns` de cada sección/página deben existir EXACTOS en el es.json, o
+   validate-config truena de espejo). NO hay un modelo que "arregle" tu JSON:
+   escríbelo perfecto tú (compónlo con python y verifica que parsea antes de
+   pasarlo). **`app/theme.css` y `app/fonts.ts`** sí se transcriben con un
+   modelo barato: dale los valores finales (paleta oklch, par tipográfico) —
+   contenido, no prosa. `site.config.ts` sigue el contrato: `import type
+   { SiteConfig } from "@/lib/config"`
    El schema exige TODOS los campos (address/geo/hours/maps/business/seo/design/
    sections), así que arma el objeto completo y sigue el contrato:
    `import type { SiteConfig } from "@/lib/config"`

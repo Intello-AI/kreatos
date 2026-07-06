@@ -100,7 +100,7 @@ async function validate(
 
 export default defineTool({
   description:
-    "Escribe una superficie MECÁNICA del sitio en el sandbox SIN el guard read-before-write (escribe por shell). Cuatro superficies: 'es-json'/'theme-css'/'fonts' se TRANSCRIBEN con un modelo barato (tú decides el contenido en el spec, el tool lo materializa); 'site-config' se escribe PASS-THROUGH (verbatim, sin modelo) — le pasas el objeto SiteConfig completo ya armado por ti (el schema exige todos los campos) y el tool solo lo deposita. Úsalo para las 4 superficies del template en vez de write_file (que exige read_file primero). Puedes llamarlo varias veces en el mismo turno. NUNCA para components/custom/ — ese código lo escribes tú.",
+    "Escribe una superficie MECÁNICA del sitio en el sandbox SIN el guard read-before-write (escribe por shell). Cuatro superficies: 'es-json' y 'site-config' se escriben PASS-THROUGH (verbatim, sin modelo) — les pasas el archivo COMPLETO ya armado por ti (el es.json entero con TODOS los namespaces incluido 'common'; el objeto SiteConfig completo) y el tool solo lo deposita; 'theme-css'/'fonts' se TRANSCRIBEN con un modelo barato (dale los valores finales). Úsalo para las 4 superficies del template en vez de write_file (que exige read_file primero). Puedes llamarlo varias veces en el mismo turno. NUNCA para components/custom/ — ese código lo escribes tú.",
   inputSchema: z.object({
     surface: z.enum(["es-json", "theme-css", "fonts", "site-config"]),
     path: z
@@ -127,18 +127,49 @@ export default defineTool({
     }
     const sandbox = await ctx.getSandbox()
 
-    // site-config: PASS-THROUGH literal, SIN modelo. El transcriptor barato
-    // degradaba el objeto (por eso se excluía antes); en pass-through el tool
-    // solo escribe lo que le das por el mismo path sin-guard. Validación mínima
-    // de firma (el objeto lo armaste tú completo).
-    if (surface === "site-config") {
-      if (
-        !content.includes("SiteConfig") ||
-        !content.includes("export default config")
-      ) {
-        throw new Error(
-          'site-config pass-through: el content debe ser el archivo completo — `import type { SiteConfig } from "@/lib/config"` + `const config: SiteConfig = {…}` + `export default config`.',
+    // PASS-THROUGH (sin modelo): superficies que el agente compone COMPLETAS.
+    // El transcriptor barato solo agregaba riesgo — con es.json re-metía las
+    // keys del DEMO base y renombraba los namespaces del contenido (causó 17
+    // errores de espejo en el run de LEDIV: config apuntaba a home-hero/
+    // navbar-main y el es.json quedó con hero/navbar del demo). Como el agente
+    // ya arma el JSON/objeto completo, se escribe VERBATIM.
+    if (surface === "site-config" || surface === "es-json") {
+      if (surface === "site-config") {
+        if (
+          !content.includes("SiteConfig") ||
+          !content.includes("export default config")
+        ) {
+          throw new Error(
+            'site-config pass-through: el content debe ser el archivo completo — `import type { SiteConfig } from "@/lib/config"` + `const config: SiteConfig = {…}` + `export default config`.',
+          )
+        }
+      } else {
+        // es-json: JSON válido + tiene "common" (el motor lo exige) + sin demo.
+        let parsed: unknown
+        try {
+          parsed = JSON.parse(content)
+        } catch (e) {
+          throw new Error(
+            `es-json pass-through: JSON inválido — ${e instanceof Error ? e.message.slice(0, 200) : e}. Pásame el messages/es.json COMPLETO y bien formado (el objeto entero, tú lo compusiste).`,
+          )
+        }
+        if (
+          !parsed ||
+          typeof parsed !== "object" ||
+          !("common" in (parsed as Record<string, unknown>))
+        ) {
+          throw new Error(
+            'es-json pass-through: falta el namespace "common" (el motor lo necesita: skipToContent, openMenu, whatsappLabel, googleRating…). Inclúyelo COMPLETO en tu content, con TODOS los namespaces del sitio.',
+          )
+        }
+        const demo = ["lópez y asociados", "lopez y asociados", "ricardo lópez"].find(
+          (s) => content.toLowerCase().includes(s),
         )
+        if (demo) {
+          throw new Error(
+            `es-json pass-through: aún contiene copy del DEMO ficticio ("${demo}"). El es.json NACE de tu contenido, jamás del archivo base — recompón el JSON con el copy real del cliente.`,
+          )
+        }
       }
       await sandbox.writeTextFile({ path: `site/${path}`, content })
       return {
