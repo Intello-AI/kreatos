@@ -15,6 +15,14 @@ export const siteBriefSchema = z.object({
     .optional()
     .or(z.literal("")),
   contactForm: z.boolean(),
+  /**
+   * Modo de tema del sitio. `light` = solo claro, `dark` = solo oscuro,
+   * `both` = ambos con botón para cambiar (themeToggle). El art-director lo
+   * traduce a design.defaultMode + flags.themeToggle.
+   */
+  themeMode: z.enum(["light", "dark", "both"]).default("both"),
+  /** Botón flotante de WhatsApp. Solo aplica si el negocio tiene WhatsApp. */
+  whatsappFloat: z.boolean().default(false),
 })
 
 export type SiteBriefInput = z.infer<typeof siteBriefSchema>

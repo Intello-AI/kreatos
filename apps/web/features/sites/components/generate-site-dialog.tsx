@@ -47,6 +47,8 @@ export function GenerateSiteDialog({
   const [referenceSlug, setReferenceSlug] = useState<string>("auto")
   const [instructions, setInstructions] = useState("")
   const [contactForm, setContactForm] = useState(false)
+  const [themeMode, setThemeMode] = useState<"light" | "dark" | "both">("both")
+  const [whatsappFloat, setWhatsappFloat] = useState(false)
   const [error, setError] = useState<string>()
   const [pending, startTransition] = useTransition()
   const [loadingRefs, startLoadingRefs] = useTransition()
@@ -68,6 +70,8 @@ export function GenerateSiteDialog({
         referenceSlug: referenceSlug === "auto" ? "" : referenceSlug,
         instructions,
         contactForm,
+        themeMode,
+        whatsappFloat,
       })
       if (result?.formError) setError(result.formError)
     })
@@ -135,15 +139,57 @@ export function GenerateSiteDialog({
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="site-contact-form"
-              checked={contactForm}
-              onCheckedChange={(v) => setContactForm(v === true)}
-            />
-            <Label htmlFor="site-contact-form">
-              Incluir formulario de contacto (Resend)
-            </Label>
+          <div className="space-y-3 border-t pt-4">
+            <p className="text-sm font-medium">Configuración</p>
+
+            <div className="space-y-2">
+              <Label htmlFor="site-theme-mode">Tema</Label>
+              <Select
+                value={themeMode}
+                onValueChange={(v) =>
+                  setThemeMode(v as "light" | "dark" | "both")
+                }
+              >
+                <SelectTrigger id="site-theme-mode" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="light">Claro</SelectItem>
+                  <SelectItem value="dark">Oscuro</SelectItem>
+                  <SelectItem value="both">Ambos (con selector)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Claro/Oscuro fija el modo; Ambos muestra un botón para cambiar.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="site-whatsapp-float"
+                  checked={whatsappFloat}
+                  onCheckedChange={(v) => setWhatsappFloat(v === true)}
+                />
+                <Label htmlFor="site-whatsapp-float">
+                  Botón flotante de WhatsApp
+                </Label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Requiere WhatsApp en la ficha del negocio.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="site-contact-form"
+                checked={contactForm}
+                onCheckedChange={(v) => setContactForm(v === true)}
+              />
+              <Label htmlFor="site-contact-form">
+                Incluir formulario de contacto (Resend)
+              </Label>
+            </div>
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}

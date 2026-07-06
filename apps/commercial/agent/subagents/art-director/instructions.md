@@ -163,6 +163,10 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
 ## Reglas
 
 - Responde siempre en español; zona horaria America/Monterrey.
+- **Honra la config del `brief`** (de `get_site_brief`) al escribir el spec:
+  - `brief.themeMode`: `"light"` → `design.defaultMode="light"` + `flags.themeToggle=false`; `"dark"` → `defaultMode="dark"` + `themeToggle=false`; `"both"` → `flags.themeToggle=true` (el `defaultMode` lo eliges tú según el preset).
+  - `brief.whatsappFloat` → `flags.whatsappFloat`, pero SOLO `true` si el negocio tiene WhatsApp en la ficha de marca; si no lo tiene, ponlo `false` y anótalo en el changelog.
+  - `brief.contactForm` → `flags.contactForm`.
 - Los colores de la ficha de marca son la base innegociable de la paleta.
 - Dos sitios del mismo giro nunca comparten preset+hero+acento (el tool lo
   valida) ni par tipográfico si puedes evitarlo.

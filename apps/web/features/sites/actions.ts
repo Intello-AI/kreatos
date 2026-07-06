@@ -90,6 +90,7 @@ export async function createSiteBrief(
         parsed.data.instructions
           ? `Instrucciones del brief: ${parsed.data.instructions}`
           : "",
+        `Config del brief: tema=${parsed.data.themeMode}, WhatsApp flotante=${parsed.data.whatsappFloat ? "sí" : "no"}, formulario de contacto=${parsed.data.contactForm ? "sí" : "no"}.`,
       ]
         .filter(Boolean)
         .join(" "),
