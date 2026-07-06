@@ -57,8 +57,14 @@ export default defineTool({
     // el director (home desktop light+dark+mobile + 2-3 interiores clave) sin
     // pagar 8-10 fullpages. Subir solo si un sitio tiene muchas páginas densas.
     maxImages: z.number().int().min(1).max(10).default(6),
+    routes: z
+      .array(z.string())
+      .optional()
+      .describe(
+        "En una RE-review tras un fix puntual: rutas afectadas (p. ej. ['/servicios']). Limita la visión a esas + home (siempre incluida para el juicio de monotonía) → no re-manda rutas intactas. OMITE en la primera review (juzga TODO).",
+      ),
   }),
-  async execute({ concept, referenceScreenshotUrl, maxImages }, ctx) {
+  async execute({ concept, referenceScreenshotUrl, maxImages, routes }, ctx) {
     const sandbox = await ctx.getSandbox()
 
     // Anti-wander: lee el veredicto PREVIO (si existe) para (a) pasarle al
@@ -97,15 +103,35 @@ export default defineTool({
     const list = await sandbox.run({
       command: `ls site/.qa/screenshots/*.png 2>/dev/null | head -20`,
     })
-    const files = list.stdout
+    const allFiles = list.stdout
       .split("\n")
       .map((f) => f.trim())
       .filter(Boolean)
-    if (files.length === 0) {
+    if (allFiles.length === 0) {
       throw new Error(
         "No hay screenshots en site/.qa/screenshots/ — corre `pnpm qa` primero (revisa que el paso screenshots no haya fallado en .qa/qa-report.json).",
       )
     }
+
+    // Scoping opcional: en una re-review, solo las rutas tocadas + home
+    // (siempre, para el juicio de monotonía). El slug de "/" es "home", el de
+    // "/servicios" es "servicios" (así nombra screenshots.ts). Sin `routes`,
+    // se juzga todo.
+    const routeSlugs =
+      routes && routes.length > 0
+        ? routes.map((r) => (r === "/" ? "home" : r.replace(/\//g, "")))
+        : null
+    const scoped = routeSlugs
+      ? allFiles.filter((f) => {
+          const base = f.split("/").pop() ?? ""
+          return (
+            base.startsWith("home") ||
+            routeSlugs.some((s) => base.startsWith(s))
+          )
+        })
+      : allFiles
+    // Si el scope quedó vacío (rutas que no matchean ningún png), juzga todo.
+    const files = scoped.length > 0 ? scoped : allFiles
 
     // Prioridad: home primero (desktop-light, dark, mobile), luego interiores.
     const ordered = [...files].sort((a, b) => {

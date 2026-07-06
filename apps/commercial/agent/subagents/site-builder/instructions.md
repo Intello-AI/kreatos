@@ -437,6 +437,9 @@ materializas:
      `pnpm qa --skip-build --skip-screenshots` para reconsolidar. Solo si el
      cambio fue GLOBAL (theme.css/fonts.ts/navbar/footer) re-capturas home + 1
      interior. Recapturar las 7 rutas por un fix de una sección es tiempo tirado.
+     En la RE-review, pásale a `review_screenshots` el input `routes` con las
+     rutas que tocaste (p. ej. `["/servicios"]`) — juzga solo esas + home, sin
+     re-mandar a visión las rutas intactas. En la PRIMERA review, omite `routes`.
    - **No hagas `checkpoint:true` justo antes del push final**: el push final
      entrega el HEAD de la rama (con o sin cambios sin commitear), así que un
      checkpoint previo no rompe nada — pero tampoco hace falta. Corrige, corre
