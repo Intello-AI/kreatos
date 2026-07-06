@@ -116,10 +116,26 @@ export default defineTool({
 
     // ——— Fotos aprobadas → webp optimizado ———
     const images = ((brand.images as string[] | null) ?? []).filter(Boolean)
+    let ogMade = false
     for (const [i, path] of images.entries()) {
       const tmp = `/tmp/brand-src-${i}.${extOf(path)}`
       const dest = `site/public/images/brand-${i + 1}.webp`
       if (!(await fetchToSandbox(publicUrl(path), tmp))) continue
+      // La PRIMERA foto de marca descargada alimenta el Open Graph: un JPEG
+      // 1200x630 (cover) en public/images/og.jpg. Es OBLIGATORIO que sea JPEG,
+      // NO webp: Satori (@vercel/og) NO decodifica webp en <img> y un webp
+      // tumba el prerender del OG con "u2 is not iterable" → rompe el build
+      // ENTERO. app/opengraph-image detecta og.jpg solo, sin que el agente
+      // haga nada (las fotos del sitio siguen siendo webp; el og.jpg es aparte).
+      if (!ogMade) {
+        const og = await sandbox.run({
+          command: `ffmpeg -y -i "${tmp}" -vf "scale=1200:630:force_original_aspect_ratio=increase,crop=1200:630" -q:v 3 site/public/images/og.jpg 2>/dev/null; test -f site/public/images/og.jpg`,
+        })
+        if (og.exitCode === 0) {
+          ogMade = true
+          downloaded.push("site/public/images/og.jpg")
+        }
+      }
       const opt = await sandbox.run({
         command: `ffmpeg -y -i "${tmp}" -vf "scale='min(1600,iw)':-2" -quality 80 "${dest}" 2>/dev/null || cp "${tmp}" "site/public/images/brand-${i + 1}.${extOf(path)}"`,
       })
