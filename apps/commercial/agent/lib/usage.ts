@@ -1,5 +1,6 @@
 import { defineHook } from "eve/hooks"
 
+import { notifyTaskEmail } from "./email"
 import { getSupabaseClient } from "./supabase"
 
 /**
@@ -19,6 +20,7 @@ export function siteBuilderModel(): string {
   const toggle: Record<string, string> = {
     gpt: "gpt-5.4",
     "gpt-mini": "gpt-5.4-mini",
+    qwen: "qwen3.7-plus",
   }
   return toggle[process.env.SITE_BUILDER_MODEL ?? ""] ?? "claude-sonnet-5"
 }
@@ -80,7 +82,7 @@ async function recordCompletion(
 
   const { data: task } = await supabase
     .from("agent_notifications")
-    .select("id, user_id, root_session_id")
+    .select("id, user_id, root_session_id, title")
     .eq("level", "task")
     .eq("status", "running")
     .eq("subject_type", subjectType)
@@ -109,6 +111,12 @@ async function recordCompletion(
         href,
       })
     }
+    // Correo al usuario que la inició (Capa 3, solo tareas raíz). Best-effort.
+    void notifyTaskEmail(task?.user_id ?? ctxRow?.user_id ?? null, {
+      title: task?.title ?? terminal.title,
+      status,
+      href,
+    })
     return
   }
 
