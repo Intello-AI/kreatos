@@ -23,6 +23,7 @@ const SURFACE_RULES: Record<string, string> = {
   "theme-css": `El archivo es app/theme.css del template (tokens shadcn + Tailwind v4).
 - Mantén la estructura del archivo base: :root { ... } y .dark { ... } con las MISMAS variables, más el bloque @theme inline si el base lo tiene.
 - Usa EXACTAMENTE los valores de color/radius que dicta el spec — cero colores inventados.
+- NUNCA agregues @import. Las fuentes se cargan con next/font en app/fonts.ts y theme.css SOLO las consume vía var(--font-display-face)/var(--font-body-face); el único archivo que hace @import es globals.css. Un @import a ./fonts.css (o a lo que sea) rompe el build.
 - CSS válido, sin comentarios de proceso.`,
   fonts: `El archivo es app/fonts.ts del template (next/font).
 - TypeScript válido con la MISMA forma de exports que el archivo base.
@@ -91,11 +92,16 @@ async function validate(
       // typescript no disponible en este runtime: lo validará pnpm build
     }
   }
-  if (
-    surface === "theme-css" &&
-    (!content.includes(":root") || !content.includes(".dark"))
-  ) {
-    return "el CSS no tiene los bloques :root y .dark"
+  if (surface === "theme-css") {
+    if (!content.includes(":root") || !content.includes(".dark")) {
+      return "el CSS no tiene los bloques :root y .dark"
+    }
+    // El transcriptor barato (nano) alucina `@import "./fonts.css"` — un archivo
+    // que no existe (las fuentes van por next/font en app/fonts.ts). Rechazarlo
+    // aquí reencauza al fallback en vez de romper el build con Can't resolve.
+    if (/@import/.test(content)) {
+      return 'theme.css no debe llevar ningún @import — las fuentes van por next/font en app/fonts.ts y el único @import vive en globals.css; quítalo (rompe el build: Can\'t resolve ./fonts.css)'
+    }
   }
   return null
 }
@@ -119,8 +125,16 @@ export default defineTool({
       ),
   }),
   async execute({ surface, path, content }, ctx) {
+    // Acepta absolutas que caen bajo el root del clone (el modelo a veces pega
+    // la ruta completa /workspace/site/...): normalízalas a relativas.
+    for (const rootPrefix of ["/workspace/site/", "/workspace/", "site/"]) {
+      if (path.startsWith(rootPrefix)) {
+        path = path.slice(rootPrefix.length)
+        break
+      }
+    }
     if (path.includes("..") || path.startsWith("/")) {
-      throw new Error("Ruta inválida: debe ser relativa al repo, sin '..'.")
+      throw new Error("Ruta inválida: debe caer bajo /workspace/site, sin '..'.")
     }
     if (path.includes("components/custom")) {
       throw new Error(

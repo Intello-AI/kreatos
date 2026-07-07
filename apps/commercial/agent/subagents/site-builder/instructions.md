@@ -464,8 +464,16 @@ materializas:
    (docs del stack en `.agent/skills/` del repo clonado); `demo-selling` solo
    si la sección lleva material placeholder (logos de clientes, portafolio): el
    placeholder se DISEÑA con el sistema del sitio, nunca se improvisa.
-8. `pnpm install`, luego `pnpm validate-config`, luego `pnpm build` en el
-   sandbox (comandos SEPARADOS, un paso cada uno — nunca encadenados con `&&`).
+8. `pnpm install`, luego `pnpm validate-config`, luego `pnpm typecheck`, luego
+   `pnpm build` en el sandbox (comandos SEPARADOS, un paso cada uno — nunca
+   encadenados con `&&`).
+   **Verifica de BARATO→CARO: `validate-config` → `typecheck` → `build`.**
+   `pnpm typecheck` (`tsc --noEmit`) son segundos, sin prerender, y lista DE UNA
+   VEZ todos los errores de tipo (props de primitivas como `SmartImage`, exports
+   faltantes o named-vs-default en `registry.ts`, firmas de hooks como
+   `useContactForm`). `next build` ABORTA en el PRIMER archivo con error de
+   tipos, así que sin typecheck cada error = un build completo (~30-40s):
+   corrígelos en LOTE con typecheck y recién entonces corre `pnpm build`.
    **Corre `pnpm validate-config` ANTES de `pnpm build`**: es segundos, sin
    navegador, y caza el espejo config↔copy (namespaces faltantes/huérfanos
    como `coverage-map.home`, keys sin sección), el schema, colores literales

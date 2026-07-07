@@ -45,8 +45,16 @@ export default defineTool({
       ),
   }),
   async execute({ path, oldString, newString, replaceAll }, ctx) {
+    // Acepta absolutas que caen bajo el root del clone (el modelo a veces pega
+    // la ruta completa /workspace/site/...): normalízalas a relativas.
+    for (const rootPrefix of ["/workspace/site/", "/workspace/", "site/"]) {
+      if (path.startsWith(rootPrefix)) {
+        path = path.slice(rootPrefix.length)
+        break
+      }
+    }
     if (path.includes("..") || path.startsWith("/")) {
-      throw new Error("Ruta inválida: debe ser relativa al repo, sin '..'.")
+      throw new Error("Ruta inválida: debe caer bajo /workspace/site, sin '..'.")
     }
     if (oldString === newString) {
       throw new Error(
