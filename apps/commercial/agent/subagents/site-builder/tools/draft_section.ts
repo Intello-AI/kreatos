@@ -56,13 +56,39 @@ const SECTION_RULES = `REGLAS DURAS (cúmplelas TODAS, son verificables):
 - Enlaces internos con \`Link\` de "@/i18n/navigation" (no next/link). Datos del
   negocio desde \`config\` de "@/site.config" cuando apliquen.`
 
-const PRIMITIVES = `CONTRATO DE PRIMITIVES (respeta estas firmas):
-- <Section className? innerClassName? bleed? flush? as?>{children}</Section>
-  · className → va al <section> exterior (fondo/borde/id). · flush → sin padding
-  vertical (heros con min-h). · bleed → el hijo controla el ancho (mosaico a sangre).
-- <Reveal className? delay?>{children}</Reveal>  (delay en s para escalonar).
-- <SmartImage src alt className priority? />  (className lleva el aspecto; sin fill/width/height).
-- useContactForm(\`\${ns}.form\`) + <MapEmbed/> de "@/components/shared/*" para contacto.`
+const PRIMITIVES = `CONTRATOS DEL TEMPLATE (firmas EXACTAS — NO las inventes; son la causa #1 de errores de build).
+
+IMPORTS (exactos):
+- import config from "@/site.config"   ← export DEFAULT. NUNCA \`import { config }\`.
+- import { Link } from "@/i18n/navigation"   ← export NOMBRADO. NUNCA \`import Link from\`. (enlaces internos)
+- import { Section } from "@/components/shared/section"
+- import { Reveal } from "@/components/shared/reveal"
+- import { SmartImage } from "@/components/shared/smart-image"
+- import { MapEmbed } from "@/components/shared/map-embed"
+- import { useContactForm } from "@/components/shared/use-contact-form"
+- inputs: import { Input } from "@/components/ui/input"; import { Textarea } from "@/components/ui/textarea".
+  NO EXISTE "@/components/ui/field" ni FieldGroup/Field/FieldLabel — usa <label> normal.
+
+PRIMITIVES:
+- <Section className? innerClassName? bleed? flush? as?>{children}</Section> — className al <section>
+  exterior (fondo/borde/id); flush = sin padding vertical (heros con min-h); bleed = el hijo controla el ancho.
+- <Reveal className? delay?>{children}</Reveal> — delay en segundos para escalonar.
+- <SmartImage src alt className priority? /> — className lleva el aspecto; NUNCA fill/width/height.
+- <MapEmbed business={config.business} title={t("mapTitle")} className="h-full w-full" /> — requiere las 3 props.
+
+FORMULARIO — useContactForm (API REAL, NO inventes handleSubmit/success/error):
+  const form = useContactForm(\`\${ns}.form\`)
+  <form onSubmit={form.onSubmit} noValidate>
+    <Input {...form.register("name")} aria-invalid={Boolean(form.errors.name)} />
+    {form.errors.name ? <p className="text-sm text-destructive">{form.errors.name.message}</p> : null}
+  El submit YA viene envuelto: pásale form.onSubmit directo. Campos: name/phone/email/message. <button type="submit">.
+
+SHAPE DE CONFIG (TODO cuelga de config.business):
+- config.business.name / .shortName / .phone / .whatsapp (dígitos) / .email? / .category
+- config.business.address.{street,colonia,city,state,zip} · config.business.hours[0].{days,open,close}
+- config.business.maps.{uri,placeId,rating,reviewsCount} · config.business.social?.{facebook,linkedin,instagram}
+- NO existe config.shortName (es config.business.shortName), config.contact, ni config.social como array.
+- WhatsApp href: \`https://wa.me/\${config.business.whatsapp}\`.`
 
 function stripFences(text: string): string {
   const trimmed = text.trim()
@@ -102,6 +128,23 @@ async function validate(
   // SmartImage mal usado.
   if (/<SmartImage[^>]*\b(?:fill|width|height)=/.test(source)) {
     return "SmartImage con prop fill/width/height (ya hace fill por dentro): pásale solo className con el aspecto"
+  }
+  // Contratos del template que los modelos baratos fallan seguido (caza al
+  // draft, no en build → ahorra ciclos de build-repair).
+  if (/import\s*\{\s*config\s*\}\s*from\s*["']@\/site\.config["']/.test(source)) {
+    return 'config es export DEFAULT: usa `import config from "@/site.config"`, no `import { config }`'
+  }
+  if (/@\/components\/ui\/field\b/.test(source)) {
+    return "no existe @/components/ui/field (ni FieldGroup/Field/FieldLabel): usa <label> normal + Input/Textarea de @/components/ui/*"
+  }
+  if (/import\s+Link\s+from\s*["']@\/i18n\/navigation["']/.test(source)) {
+    return 'Link es export NOMBRADO: usa `import { Link } from "@/i18n/navigation"`'
+  }
+  if (/\bform\.(handleSubmit|success|error)\b/.test(source)) {
+    return "API de useContactForm: `<form onSubmit={form.onSubmit}>` y errores en `form.errors.<campo>.message`; NO existen form.handleSubmit / form.success / form.error"
+  }
+  if (/\bconfig\.(shortName|contact|social)\b/.test(source)) {
+    return "shape de config incorrecto: los datos cuelgan de config.business (config.business.shortName, .phone, .social…), NO de config directo"
   }
   // Sintaxis TS/TSX real (atrapa roto aquí, no en el build).
   try {
