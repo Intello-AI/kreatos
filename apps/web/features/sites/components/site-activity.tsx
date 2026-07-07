@@ -252,6 +252,20 @@ function ToolIcon({
   return <Icon className={className} />
 }
 
+// Modelo interno que usa cada tool (espeja lib/tool-models.ts del agente). Solo
+// las tools que llaman a un modelo por dentro llevan badge; el resto (bash,
+// edit_file, build_check, assemble_registry, compose_spec…) corren código puro y
+// no muestran nada. Si cambias un override por env (TOOL_MODEL_*), actualízalo aquí.
+// Las strings llevan el keyword de proveedor para que ModelBadge elija el logo.
+const TOOL_MODEL: Record<string, string> = {
+  draft_section: "qwen3.7-plus",
+  translate_copy: "qwen3.7-plus",
+  draft_surface: "gpt-5-nano",
+  view_reference_screenshots: "gpt-5-mini",
+  capture_screenshots: "gpt-5-mini",
+  review_screenshots: "claude-sonnet-5",
+}
+
 /**
  * Detecta el formato de respuesta-a-pregunta que genera answerSiteInput
  * («pregunta»: respuesta) para renderizarlo como cita estilo WhatsApp.
@@ -1622,8 +1636,14 @@ function DiffBlock({ diff }: { diff: NonNullable<ActivityItem["diff"]> }) {
  * shimmer mientras corre, rojo si falló. Click expande el input completo.
  */
 function ActionRow({ item }: { item: ActivityItem }) {
-  const expandable = Boolean(item.inputJson || item.outputJson || item.diff)
+  const expandable = Boolean(
+    item.inputJson || item.outputJson || item.diff || item.detail
+  )
   const running = !item.done
+  // Modelo interno de la tool (draft_section→qwen, review→sonnet…), o el del
+  // orquestador (item.model) si la tool corre código puro.
+  const model =
+    (item.toolName ? TOOL_MODEL[item.toolName] : undefined) ?? item.model
   return (
     <Collapsible>
       <CollapsibleTrigger
@@ -1644,30 +1664,28 @@ function ActionRow({ item }: { item: ActivityItem }) {
           )}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="flex items-baseline gap-1.5">
-            {running && !item.failed ? (
-              <Shimmer className="truncate text-xs font-medium">
-                {item.label}
-              </Shimmer>
-            ) : (
-              <span
-                className={cn(
-                  "truncate text-xs font-medium",
-                  item.failed ? "text-destructive" : "text-foreground"
-                )}
-              >
-                {item.label}
-              </span>
-            )}
-            {item.detail && (
-              <span className="min-w-0 truncate font-mono text-[11px] text-muted-foreground">
-                ({item.detail})
-              </span>
-            )}
-          </span>
+          {/* Solo el nombre de la tool en el row colapsado; el detalle/args
+              (item.detail) vive ahora en el bloque Input al expandir. */}
+          {running && !item.failed ? (
+            <Shimmer className="block truncate text-xs font-medium">
+              {item.label}
+            </Shimmer>
+          ) : (
+            <span
+              className={cn(
+                "block truncate text-xs font-medium",
+                item.failed ? "text-destructive" : "text-foreground"
+              )}
+            >
+              {item.label}
+            </span>
+          )}
         </span>
-        <span className="flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground/70 tabular-nums">
+        <span className="flex shrink-0 items-center gap-1.5 text-[10px] text-muted-foreground/70 tabular-nums">
           {formatTime(item.at)}
+          {/* Modelo que usa la tool (solo las que llaman a un modelo por dentro),
+              pegado al chevron del colapsable. */}
+          <ModelBadge model={model} />
           {/* Siempre ocupa espacio (aunque no sea expandible) para que las
               horas de todas las filas queden alineadas. */}
           <CaretRightIcon
@@ -1684,6 +1702,13 @@ function ActionRow({ item }: { item: ActivityItem }) {
         <CollapsibleContent>
           <div className="mt-1 ml-5 space-y-1.5">
             {item.diff && <DiffBlock diff={item.diff} />}
+            {/* Detalle/args del row colapsado: ahora solo al expandir. Si hay
+                inputJson estructurado, ese lo cubre; si no, se muestra aquí. */}
+            {!item.inputJson && item.detail && (
+              <pre className="overflow-x-auto border bg-background p-2 font-mono text-[10px] leading-relaxed text-muted-foreground">
+                {item.detail}
+              </pre>
+            )}
             {item.inputJson && (
               <div>
                 <p className="mb-0.5 text-[10px] font-medium tracking-wide text-muted-foreground/70 uppercase">
