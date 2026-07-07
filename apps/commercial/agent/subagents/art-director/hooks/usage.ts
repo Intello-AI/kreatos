@@ -1,3 +1,3 @@
-import { makeUsageHook } from "../../../lib/usage"
+import { artDirectorModel, makeUsageHook } from "../../../lib/usage"
 
-export default makeUsageHook("art-director", "gpt-5.1")
+export default makeUsageHook("art-director", artDirectorModel())

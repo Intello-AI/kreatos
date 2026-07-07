@@ -23,6 +23,15 @@ export function siteBuilderModel(): string {
   return toggle[process.env.SITE_BUILDER_MODEL ?? ""] ?? "claude-sonnet-5"
 }
 
+/**
+ * Modelo real del art-director (mismo toggle que su agent.ts). El default pasó
+ * a claude-sonnet-5 (art-director = cerebro de composición); el hook de usage
+ * debe reflejarlo o la tabla de costo lo pinta con el modelo viejo.
+ */
+export function artDirectorModel(): string {
+  return process.env.ART_DIRECTOR_MODEL === "gpt" ? "gpt-5.4" : "claude-sonnet-5"
+}
+
 export function makeUsageHook(agent: string, model: string) {
   return defineHook({
     events: {
