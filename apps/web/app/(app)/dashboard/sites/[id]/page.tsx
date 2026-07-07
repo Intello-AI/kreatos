@@ -130,7 +130,7 @@ export default async function SiteDetailPage({
                       {site.leads?.name ?? site.slug}
                     </h1>
                   </Link>
-                  <SiteStatusBadge status={site.status} statusUpdatedAt={site.status_updated_at} />
+                  <SiteStatusBadge status={site.status} statusUpdatedAt={site.status_updated_at} lastActivityAt={site.lastActivityAt} />
                   {/* En mobile el trigger del chat vive en la línea del
                       título; en desktop en el grupo de acciones. */}
                   {runIds.length > 0 && (
@@ -194,7 +194,7 @@ export default async function SiteDetailPage({
               <div className="grid flex-1 grid-cols-1 content-start divide-y md:grid-cols-2 md:gap-4 md:divide-y-0">
                 <MetaRow label="Creado">{formatDate(site.created_at)}</MetaRow>
                 <MetaRow label="Estado">
-                  <SiteStatusBadge status={site.status} statusUpdatedAt={site.status_updated_at} />
+                  <SiteStatusBadge status={site.status} statusUpdatedAt={site.status_updated_at} lastActivityAt={site.lastActivityAt} />
                 </MetaRow>
                 {site.published_at && (
                   <MetaRow label="Publicado">

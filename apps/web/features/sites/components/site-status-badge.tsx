@@ -29,7 +29,7 @@ const STATUS_DOT_CLASS: Record<SiteStatus, string> = {
 // (lastActivityAt = max token_usage.created_at), NO desde que entró a
 // "generating": un build vivo pero largo sigue emitiendo steps. Umbral con
 // margen para esperas de deploy (await_preview_deployment no emite steps).
-const STALE_GENERATING_MS = 25 * 60 * 1000
+const STALE_GENERATING_MS = 35 * 60 * 1000
 
 // Helper a nivel módulo (NO en el cuerpo del componente): Date.now() dentro del
 // render marca el componente como impuro (regla react-compiler). Aquí es una
@@ -68,7 +68,7 @@ export function SiteStatusBadge({
       className={cn("gap-1.5", badgeClass)}
       title={
         stalled
-          ? "Sin actividad del agente en más de 25 min: el run probablemente se detuvo. Vuelve a pedir que genere el sitio."
+          ? "Sin actividad del agente en más de 35 min: el run probablemente se detuvo. Vuelve a pedir que genere el sitio."
           : undefined
       }
     >

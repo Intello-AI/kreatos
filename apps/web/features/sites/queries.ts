@@ -61,7 +61,7 @@ export async function getSites(): Promise<{
 
 /** Un sitio con lead y todas sus versiones. Server-only. */
 export async function getSiteDetail(siteId: string): Promise<{
-  site: SiteWithLead | null
+  site: (SiteWithLead & { lastActivityAt?: string | null }) | null
   versions: SiteVersion[]
   error: string | null
 }> {
@@ -84,8 +84,24 @@ export async function getSiteDetail(siteId: string): Promise<{
   if (versionsRes.error)
     return { site: null, versions: [], error: versionsRes.error.message }
 
+  const site =
+    (siteRes.data as (SiteWithLead & { lastActivityAt?: string | null }) | null) ??
+    null
+
+  // Último latido real del agente (mismo origen que la lista): sin esto el
+  // badge del detalle cae a status_updated_at y marca "Detenido" cualquier
+  // generación de +25 min AUNQUE esté trabajando. Solo importa en generating.
+  if (site && site.status === "generating") {
+    const { data: ping } = await supabase
+      .from("site_activity_ping")
+      .select("last_activity_at")
+      .eq("site_id", siteId)
+      .maybeSingle()
+    site.lastActivityAt = ping?.last_activity_at ?? null
+  }
+
   return {
-    site: (siteRes.data as SiteWithLead | null) ?? null,
+    site,
     versions: versionsRes.data ?? [],
     error: null,
   }
