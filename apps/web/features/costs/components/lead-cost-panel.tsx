@@ -2,7 +2,7 @@ import { CaretRightIcon, CoinsIcon } from "@phosphor-icons/react/ssr"
 
 import type { CostStage, LeadCost, ToolCostStat } from "@/features/costs/queries"
 import { formatTokens, formatUsd } from "@/lib/format"
-import { ClaudeAI, OpenAI } from "@/components/icons"
+import { ClaudeAI, OpenAI, Qwen } from "@/components/icons"
 
 /** Etiqueta legible por agente (las stages guardan el nombre técnico). */
 const AGENT_LABELS: Record<string, string> = {
@@ -22,16 +22,14 @@ function agentLabel(agent: string): string {
   return AGENT_LABELS[agent] ?? agent
 }
 
-/** Icono del proveedor del modelo: Claude (Anthropic) vs OpenAI (todo lo gpt/o). */
+/** Icono del proveedor: Claude (Anthropic) · Qwen (Alibaba) · OpenAI (gpt/o). */
 function ProviderIcon({ model }: { model: string }) {
-  const isClaude = model.toLowerCase().startsWith("claude")
-  const Logo = isClaude ? ClaudeAI : OpenAI
-  return (
-    <Logo
-      aria-label={isClaude ? "Anthropic" : "OpenAI"}
-      className="size-3.5 shrink-0"
-    />
-  )
+  const m = model.toLowerCase()
+  const isClaude = m.startsWith("claude")
+  const isQwen = m.startsWith("qwen")
+  const Logo = isClaude ? ClaudeAI : isQwen ? Qwen : OpenAI
+  const label = isClaude ? "Anthropic" : isQwen ? "Qwen (Alibaba)" : "OpenAI"
+  return <Logo aria-label={label} className="size-3.5 shrink-0" />
 }
 
 interface AgentGroup {

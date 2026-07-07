@@ -30,7 +30,7 @@ import { toast } from "sonner"
 
 import { answerSiteInput, sendSiteMessage } from "@/features/sites/actions"
 import { Shimmer } from "@/components/ai-elements/shimmer"
-import { ClaudeAI, Icon, OpenAI } from "@/components/icons"
+import { ClaudeAI, Icon, OpenAI, Qwen } from "@/components/icons"
 import { formatTime as formatTimeInUserTz } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import {
@@ -378,11 +378,14 @@ function ModelBadge({ model }: { model?: string }) {
   if (!model) return null
   const short = model.split("/").pop() ?? model
   const isClaude = /claude/i.test(model)
+  const isQwen = /qwen/i.test(model)
   const isOpenAI = /gpt|openai|o\d/i.test(model)
   return (
     <span className="flex items-center gap-1 text-[10px] font-normal text-muted-foreground/70">
       {isClaude ? (
         <ClaudeAI className="size-3 shrink-0" />
+      ) : isQwen ? (
+        <Qwen className="size-3 shrink-0" />
       ) : isOpenAI ? (
         <OpenAI className="size-3 shrink-0 fill-current" />
       ) : null}
