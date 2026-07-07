@@ -92,6 +92,25 @@ export default defineTool({
       )
     }
 
+    // Guard ANTI-DEMO: si site.config.ts sigue con el negocio del template
+    // (Despacho López y Asociados), NO materializaste — el build saldría verde
+    // pero seria el SITIO EQUIVOCADO (el reviewer lo rechaza igual, tras gastar
+    // todo el QA). Es el fallo del resume que trata el demo como "casi listo" y
+    // solo tunea el hero. Falla temprano y barato, forzando re-materializar.
+    const cfg = await sandbox.readTextFile({ path: "site/site.config.ts" })
+    if (cfg && /l[óo]pez y asociados/i.test(cfg)) {
+      return {
+        ok: false,
+        rung: "demo",
+        errors: [
+          'site.config.ts todavía es el DEMO del template ("Despacho López y Asociados"): el sitio NO está materializado.',
+        ],
+        files: ["site.config.ts", "messages/es.json", "components/custom/"],
+        hint:
+          "NO estás materializado: el repo trae el DEMO del template, no tu cliente (clonaste el template pelón y no reescribiste sus superficies). RE-MATERIALIZA COMPLETO desde el spec (.agent/spec.json / latestSpec): reescribe site.config.ts, messages/es.json, TODAS las custom sections y su registry con el contenido REAL del cliente, BORRANDO el demo — NUNCA parches el demo con replaces de nombre (dejaría el NAP/rating/social del despacho ficticio con otro nombre encima). Tunear el hero del demo NO es materializar. Luego re-llama build_check.",
+      }
+    }
+
     // install solo si hace falta (barato: evita re-instalar en cada llamada).
     if (!skipInstall) {
       const hasModules = await sandbox.run({
