@@ -1,0 +1,241 @@
+import { openai } from "@ai-sdk/openai"
+import { generateText } from "ai"
+import { defineTool } from "eve/tools"
+import { z } from "zod"
+
+import { recordToolUsage } from "../../../lib/tool-usage"
+
+/**
+ * Escribe UNA sección custom (`components/custom/<key>.tsx`) con un modelo
+ * capaz-pero-barato (gpt-5-mini), a partir del ARQUETIPO + el brief de diseño
+ * que le dictas. Es la Palanca 2: desacopla la escritura de secciones del
+ * modelo del site-builder y del fan-out de copias.
+ *
+ * Por qué un tool y no el fan-out de `agent`:
+ *  - El fan-out son COPIAS del site-builder → corren SU modelo. Con un modelo
+ *    barato/poco obediente (qwen) una copia a veces no devuelve el archivo
+ *    (task-mode roto) o improvisa. Este tool SIEMPRE deposita un .tsx válido o
+ *    lanza claro — nada de huecos silenciosos.
+ *  - El costo de un build vive en el bulk de secciones. Aquí ese bulk corre en
+ *    gpt-5-mini pase lo que pase el orquestador; el orquestador solo dicta el
+ *    arquetipo y el brief (pocos tokens) → puede ser un modelo obediente barato.
+ *
+ * NO decide diseño de la nada: el ARQUETIPO y el contenido los fijas TÚ (con
+ * taste + anti-generic cargados). El tool transcribe ese criterio a código que
+ * respeta el contrato del template. draft_surface es para las 4 superficies
+ * mecánicas; ESTO es para el código de diseño de cada sección.
+ */
+
+// Reglas del fan-out EMBEBIDAS verbatim (el modelo del tool NO hereda skills).
+const SECTION_RULES = `REGLAS DURAS (cúmplelas TODAS, son verificables):
+- El componente recibe props \`{ ns: string }\` y NADA más.
+- Copy 100% vía next-intl con ese ns: \`const t = useTranslations(ns)\` (o
+  getTranslations); arrays con \`t.raw("x") as Tipo[]\`. CERO texto hardcodeado
+  visible (todo sale de t("...")). Labels comunes: useTranslations("common").
+- Envuelve el cuerpo en <Section> de "@/components/shared/section" (hornea
+  py-(--section-gap) + el contenedor max-w-6xl px-6 lg:px-8). PROHIBIDO py-16/20/24
+  o max-w-* propios. Fondo/borde/id de ancla van en el className del <Section>.
+  Excepción: un HERO que fija su alto con min-h usa <Section flush>.
+- SOLO tokens semánticos del theme: bg-primary, text-foreground, border-border,
+  bg-accent, text-muted-foreground, bg-card, bg-background, text-primary-foreground…
+  CERO hex / rgb() / oklch() / bg-blue-500 en className. El acento con avaricia
+  (CTAs y datos clave), NUNCA como fondo de una sección entera.
+- Motion con <Reveal> de "@/components/shared/reveal" (entradas). Una sola
+  coreografía sutil, no fade-in idéntico en cada hijo.
+- Imágenes con <SmartImage> de "@/components/shared/smart-image": pásale
+  className con el aspecto (aspect-[4/3], min-h-[85vh]…). NUNCA props fill/width/
+  height (ya hace fill por dentro) ni <img> ni next/image directo.
+- Server component por default. "use client" SOLO si hay estado/efectos reales
+  (p. ej. el formulario con useContactForm) — y entonces es la primera línea.
+- Jerarquía de headings: h2/h3 en secciones; h1 SOLO en hero o page-intro.
+- Texto claro SOBRE imagen: text-primary-foreground (u overlay oscuro). Nunca
+  texto oscuro ilegible sobre foto.
+- Prohibido: emojis, lorem/placeholder/TODO, grid de 3 cards idénticas
+  icono+título+párrafo para servicios, claims vacíos ("empresa líder"), guiones
+  largos (—) o cortos (–) en el texto JSX (usa dos puntos, punto o paréntesis).
+- Enlaces internos con \`Link\` de "@/i18n/navigation" (no next/link). Datos del
+  negocio desde \`config\` de "@/site.config" cuando apliquen.`
+
+const PRIMITIVES = `CONTRATO DE PRIMITIVES (respeta estas firmas):
+- <Section className? innerClassName? bleed? flush? as?>{children}</Section>
+  · className → va al <section> exterior (fondo/borde/id). · flush → sin padding
+  vertical (heros con min-h). · bleed → el hijo controla el ancho (mosaico a sangre).
+- <Reveal className? delay?>{children}</Reveal>  (delay en s para escalonar).
+- <SmartImage src alt className priority? />  (className lleva el aspecto; sin fill/width/height).
+- useContactForm(\`\${ns}.form\`) + <MapEmbed/> de "@/components/shared/*" para contacto.`
+
+function stripFences(text: string): string {
+  const trimmed = text.trim()
+  const match = /^```[a-z]*\n([\s\S]*?)\n```$/.exec(trimmed)
+  return match ? match[1] : trimmed
+}
+
+/** Valida el .tsx generado; devuelve el problema o null. */
+async function validate(
+  source: string,
+  opts: { isSlot: boolean; ns: string },
+): Promise<string | null> {
+  if (!source.trim()) return "salida vacía"
+  // Export de componente en PascalCase (assemble_registry lo necesita).
+  if (
+    !/export\s+(?:default\s+)?function\s+[A-Z]/.test(source) &&
+    !/export\s+const\s+[A-Z][A-Za-z0-9_]*\s*[:=]/.test(source)
+  ) {
+    return "no exporta un componente nombrado en PascalCase (export function Xxx / export const Xxx)"
+  }
+  // Copy vía next-intl.
+  if (!/from\s+["']next-intl["']/.test(source)) {
+    return "no importa next-intl — el copy DEBE salir de useTranslations(ns), nada hardcodeado"
+  }
+  // Tokens: sin hex de color ni rgb()/oklch() en el archivo.
+  const hex = source.match(/#[0-9a-fA-F]{3,8}\b/)
+  if (hex) return `color literal ${hex[0]} — usa SOLO tokens semánticos del theme`
+  if (/\b(?:rgb|rgba|hsl|oklch)\(/.test(source)) {
+    return "color literal rgb/hsl/oklch — usa SOLO tokens semánticos del theme"
+  }
+  // Sin guiones largos/cortos.
+  if (/[—–]/.test(source)) return "contiene guion largo (—) o corto (–): reemplázalo"
+  // <Section> salvo header/footer (que emite contenido interior del slot).
+  if (!opts.isSlot && !/<Section[\s>]/.test(source)) {
+    return "no envuelve el cuerpo en <Section> (ritmo/contenedor del template)"
+  }
+  // SmartImage mal usado.
+  if (/<SmartImage[^>]*\b(?:fill|width|height)=/.test(source)) {
+    return "SmartImage con prop fill/width/height (ya hace fill por dentro): pásale solo className con el aspecto"
+  }
+  // Sintaxis TS/TSX real (atrapa roto aquí, no en el build).
+  try {
+    const ts = await import("typescript")
+    const { diagnostics } = ts.transpileModule(source, {
+      reportDiagnostics: true,
+      compilerOptions: {
+        target: ts.ScriptTarget.ESNext,
+        module: ts.ModuleKind.ESNext,
+        jsx: ts.JsxEmit.Preserve,
+      },
+    })
+    const syntaxError = diagnostics?.find(
+      (d) => d.category === ts.DiagnosticCategory.Error,
+    )
+    if (syntaxError) {
+      return `error de sintaxis TSX: ${ts
+        .flattenDiagnosticMessageText(syntaxError.messageText, " ")
+        .slice(0, 200)}`
+    }
+  } catch {
+    // typescript no disponible: lo cazará build_check
+  }
+  return null
+}
+
+export default defineTool({
+  description:
+    "Escribe UNA sección custom (components/custom/<key>.tsx) con gpt-5-mini a partir del ARQUETIPO y el brief de diseño que le dictas. Úsalo en el paso 7 para materializar cada sección en vez del fan-out de `agent` (que corre el modelo del site-builder y a veces no devuelve el archivo): este tool SIEMPRE deposita un .tsx válido o lanza claro. TÚ decides diseño (arquetipo + layout + qué contenido, con taste/anti-generic cargados); el tool lo transcribe respetando el contrato del template (Section, tokens semánticos, Reveal, SmartImage, next-intl). Llama uno por sección (puedes emitir varias llamadas en el mismo turno). Después ensambla con assemble_registry. NO es para las 4 superficies mecánicas (usa draft_surface) ni para parches puntuales (usa edit_file).",
+  inputSchema: z.object({
+    path: z
+      .string()
+      .regex(/^[\w./-]+$/)
+      .describe(
+        "Ruta de la custom, p. ej. 'components/custom/hero-expediente.tsx' (kebab-case, por FUNCIÓN, sin nombre del cliente).",
+      ),
+    component: z
+      .string()
+      .regex(/^[A-Z][A-Za-z0-9_]*$/)
+      .describe(
+        "Nombre del componente exportado en PascalCase, p. ej. 'HeroExpediente'. Debe casar con el archivo.",
+      ),
+    ns: z
+      .string()
+      .describe(
+        "Namespace de next-intl de esta sección (igual que en site.config.ts), p. ej. 'hero-expediente' o 'pages.servicios.grupos'.",
+      ),
+    archetype: z
+      .string()
+      .describe(
+        "Arquetipo estructural: hero (masthead/split/foto-a-sangre/stat-led), stat-wall, services-ledger, feature-zigzag, bento/mosaico, timeline, band-fullbleed, contacto-split… Uno, y dilo explícito.",
+      ),
+    brief: z
+      .string()
+      .min(40)
+      .describe(
+        "El diseño CONCRETO de ESTA sección: layout exacto, qué muestra cada parte, qué keys de copy usa del ns (t('title'), t.raw('items')…), qué imágenes (rutas en /images/…) y su encuadre, jerarquía, gestos. Cuanto más concreto, mejor sale. El tool no inventa contenido: lo que no esté aquí no existe.",
+      ),
+    isSlot: z
+      .boolean()
+      .optional()
+      .describe(
+        "true para header/footer (slot): emiten el contenido INTERIOR, el motor los envuelve en <header>/<footer> y NO usan <Section>. Por defecto false.",
+      ),
+    useClient: z
+      .boolean()
+      .optional()
+      .describe(
+        'true si la sección necesita "use client" (estado real: menú móvil, useContactForm). Por defecto server component.',
+      ),
+  }),
+  async execute({ path, component, ns, archetype, brief, isSlot, useClient }, ctx) {
+    for (const rootPrefix of ["/workspace/site/", "/workspace/", "site/"]) {
+      if (path.startsWith(rootPrefix)) {
+        path = path.slice(rootPrefix.length)
+        break
+      }
+    }
+    if (path.includes("..") || path.startsWith("/")) {
+      throw new Error("Ruta inválida: debe caer bajo /workspace/site, sin '..'.")
+    }
+    if (!path.includes("components/custom")) {
+      throw new Error(
+        "draft_section solo escribe en components/custom/. Para las superficies mecánicas usa draft_surface.",
+      )
+    }
+
+    const prompt = `Eres un ingeniero de front-end senior escribiendo UNA sección de un sitio Next.js (App Router, RSC, Tailwind v4, shadcn) hecho a la medida de una agencia. Materializas el criterio de diseño que se te dicta — sin improvisar contenido ni layout genérico.
+
+${SECTION_RULES}
+
+${PRIMITIVES}
+
+ARCHIVO A ESCRIBIR: components/custom/${path.split("/").pop()}
+- Export: ${useClient ? '"use client" en la PRIMERA línea, luego ' : ""}\`export function ${component}({ ns }: { ns: string })\`.
+- Namespace de copy (ns): "${ns}".
+- Arquetipo estructural: ${archetype}.
+${isSlot ? "- Es SLOT (header/footer): emite el contenido INTERIOR, NO uses <Section> ni <header>/<footer> (los pone el motor)." : ""}
+
+BRIEF DE DISEÑO DE ESTA SECCIÓN (única fuente del contenido y el layout):
+${brief}
+
+Devuelve ÚNICAMENTE el contenido completo y final del archivo .tsx. Sin markdown fences, sin explicación, sin comentarios de proceso.`
+
+    let modelUsed = "gpt-5-mini"
+    const first = await generateText({ model: openai("gpt-5-mini"), prompt })
+    await recordToolUsage(ctx, "site-builder", "gpt-5-mini", first.usage)
+    let result = stripFences(first.text)
+    let problem = await validate(result, { isSlot: !!isSlot, ns })
+    if (problem) {
+      // Reintento informándole el defecto (mismo modelo: es capaz, solo resbaló).
+      const retry = await generateText({
+        model: openai("gpt-5-mini"),
+        prompt: `${prompt}\n\nOJO: un intento anterior falló la validación por: ${problem}. Corrígelo sin romper lo demás.`,
+      })
+      await recordToolUsage(ctx, "site-builder", "gpt-5-mini", retry.usage)
+      result = stripFences(retry.text)
+      problem = await validate(result, { isSlot: !!isSlot, ns })
+      if (problem) {
+        throw new Error(
+          `La sección generada no validó ni con reintento (${problem}). Escríbela tú directo con las herramientas del sandbox (write_file) aplicando taste + anti-generic.`,
+        )
+      }
+    }
+
+    const sandbox = await ctx.getSandbox()
+    await sandbox.writeTextFile({ path: `site/${path}`, content: result })
+    return {
+      path: `site/${path}`,
+      component,
+      ns,
+      bytes: result.length,
+      model: modelUsed,
+      hint: "Sección escrita y validada (sintaxis, tokens, next-intl). Cuando tengas todas, corre assemble_registry (determinista) y luego build_check. Correcciones puntuales tras QA/build: edit_file, no re-generes la sección entera.",
+    }
+  },
+})
