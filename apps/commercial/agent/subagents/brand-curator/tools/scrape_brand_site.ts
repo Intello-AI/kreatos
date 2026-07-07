@@ -26,7 +26,10 @@ export default defineTool({
   inputSchema: z.object({
     leadId: z.string().uuid(),
     url: z.string().url(),
-    maxImages: z.number().int().min(0).max(40).default(20),
+    // "Sin límite" en la práctica: el filtro por tamaño (>12KB) ya bota íconos y
+    // tracking pixels, así que un cap alto trae TODOS los assets reales de una
+    // página normal. El tope evita runaway en una galería patológica.
+    maxImages: z.number().int().min(0).max(200).default(60),
   }),
   async execute({ leadId, url, maxImages }) {
     // Soft-result: una página que responde 403/500/login NO debe tumbar el
@@ -92,6 +95,33 @@ export default defineTool({
           html,
         )?.[1] ?? null,
     }
+
+    // ——— Tipografía de marca: las fuentes REALES que declara el sitio ———
+    // Google Fonts (?family=Space+Grotesk:wght@400) es la señal más limpia; se
+    // suma @font-face/font-family, filtrando genéricas del sistema y defaults
+    // de IA. site-builder puede honrar el par tipográfico real de la marca.
+    const fonts = Array.from(
+      new Set([
+        ...Array.from(
+          html.matchAll(/fonts\.googleapis\.com\/css2?\?([^"'<> ]+)/gi),
+        ).flatMap((m) =>
+          Array.from(m[1].matchAll(/family=([^:&]+)/gi)).map((f) =>
+            decodeURIComponent(f[1].replace(/\+/g, " ")).trim(),
+          ),
+        ),
+        ...Array.from(html.matchAll(/font-family\s*:\s*([^;}"'<>]+)/gi)).map((m) =>
+          m[1].split(",")[0].replace(/["']/g, "").trim(),
+        ),
+      ]),
+    )
+      .filter(
+        (f) =>
+          f.length > 1 &&
+          !/^(inherit|initial|unset|revert|sans-serif|serif|monospace|cursive|fantasy|system-ui|-apple-system|blinkmacsystemfont|ui-|var\(|arial|helvetica|times|roboto|inter|segoe|tahoma|verdana|georgia|courier)/i.test(
+            f,
+          ),
+      )
+      .slice(0, 12)
 
     // ——— Iconos del <head>: favicon, apple-touch-icon, mask-icon, manifest ———
     const iconCandidates = new Map<string, string>() // url → rel
@@ -331,6 +361,7 @@ export default defineTool({
     return {
       ok: true as const,
       meta: headMeta,
+      fonts,
       icons,
       documents,
       sitemapUrls,
@@ -346,6 +377,9 @@ export default defineTool({
           : null,
         headMeta.themeColor
           ? `theme-color declarado por el sitio: ${headMeta.themeColor} — candidato directo a color de marca.`
+          : null,
+        fonts.length > 0
+          ? `fonts: tipografía real del sitio (${fonts.slice(0, 4).join(", ")}${fonts.length > 4 ? "…" : ""}) — anótala en las notas del lead (update_lead_info) como referencia del par tipográfico de la marca.`
           : null,
         stored.length > 0
           ? "Analiza las imágenes descargadas con analyze_brand_image y decide cuáles promover; guarda contactos con update_lead_info."

@@ -24,6 +24,7 @@ export type ToolTask =
   | "translate" // translate_copy
   | "vision-extract" // view_reference/capture: LEER una imagen
   | "vision-judge" // review_screenshots: JUZGAR el diseño (gate) — no abaratar
+  | "brand-vision" // analyze_brand_image: VE el logo/paleta del lead (extracción)
 
 const DEFAULTS: Record<ToolTask, string> = {
   transcribe: "openai:gpt-5-nano",
@@ -31,6 +32,7 @@ const DEFAULTS: Record<ToolTask, string> = {
   translate: "alibaba:qwen3.7-plus",
   "vision-extract": "openai:gpt-5-mini",
   "vision-judge": "anthropic:claude-sonnet-5",
+  "brand-vision": "openai:gpt-5-mini",
 }
 
 const ENV_VAR: Record<ToolTask, string> = {
@@ -39,6 +41,7 @@ const ENV_VAR: Record<ToolTask, string> = {
   translate: "TOOL_MODEL_TRANSLATE",
   "vision-extract": "TOOL_MODEL_VISION_EXTRACT",
   "vision-judge": "TOOL_MODEL_VISION_JUDGE",
+  "brand-vision": "TOOL_MODEL_BRAND_VISION",
 }
 
 function spec(task: ToolTask): string {

@@ -1,8 +1,9 @@
 import { openai } from "@ai-sdk/openai"
-import { generateText } from "ai"
+import { generateText, type LanguageModel } from "ai"
 import { defineTool } from "eve/tools"
 import { z } from "zod"
 
+import { toolModel, toolModelLabel } from "../../../lib/tool-models"
 import { recordToolUsage } from "../../../lib/tool-usage"
 
 const PROMPT = `Eres un director de arte. Analiza esta imagen de la marca de un negocio local y responde SOLO un JSON válido (sin markdown) con esta forma:
@@ -24,15 +25,12 @@ En "tokens" traduce la paleta al rol funcional (el color protagonista de la marc
 personName/role: SOLO si la imagen es un retrato con una banda/etiqueta de texto legible (nombre y/o cargo); si es una foto de equipo, un banner o no hay texto, deja ambos en null. NUNCA inventes un nombre.
 CRÍTICO — isPlaceholder: los favicons scrapeados de un sitio a veces NO son la marca del negocio sino el logo de la herramienta con que lo hicieron o un ícono default: la "C" de Canva, el logo de Wix/Squarespace/WordPress/GoDaddy, el ícono genérico de "documento/mundo" del navegador. Si reconoces la imagen como uno de esos (o como un ícono genérico sin relación con el negocio), marca isPlaceholder=true, isLogoCandidate=false, logoScore=1. NUNCA promuevas un placeholder como logo ni isotipo.`
 
-// Ruteo de costo: gpt-5-mini hace el análisis (visión input domina y es ~5x
-// más barato que 5.1); se dispara por cada imagen del inbox (3-8 por lead).
-// Solo la decisión SENSIBLE a world-knowledge — PROMOVER algo como logo — se
-// escala a 5.1: reconocer la "C" de Canva / favicon de Wix como placeholder es
-// justo lo que el modelo grande hace mejor, así que 5.1 revisa antes de
-// bendecir un logo, y todo lo demás (paleta, fotos que no son logo) se queda en
-// mini. Toggle BRAND_VISION_MODEL para experimentar el modelo primario.
-const VISION_PRIMARY = process.env.BRAND_VISION_MODEL || "gpt-5-mini"
-const VISION_FALLBACK = "gpt-5.1"
+// Ruteo de costo (router lib/tool-models.ts, tier "brand-vision", default
+// gpt-5-mini): la visión barata analiza cada imagen del inbox. Se ESCALA a
+// gpt-5.1 SOLO para la decisión sensible a world-knowledge — PROMOVER algo como
+// logo (reconocer la "C" de Canva / favicon de Wix como placeholder es lo que el
+// modelo grande hace mejor). Ajusta el primario con TOOL_MODEL_BRAND_VISION.
+const VISION_VERIFY = "gpt-5.1"
 
 export default defineTool({
   description:
@@ -77,17 +75,20 @@ export default defineTool({
       }
     }
 
-    const callVision = async (model: string): Promise<string> => {
+    const callVision = async (
+      model: LanguageModel,
+      label: string,
+    ): Promise<string> => {
       if (svgMarkup !== null) {
         const result = await generateText({
-          model: openai(model),
+          model,
           prompt: `${promptText}\n\nLa "imagen" es un SVG (logo vectorial — máxima calidad posible para logo). Analiza su markup: colores reales en fills/strokes/gradients, proporción por viewBox (cuadrado ≈ isotipo, ancho ≈ wordmark), y estructura:\n\n\`\`\`svg\n${svgMarkup}\n\`\`\``,
         })
-        await recordToolUsage(ctx, "brand-curator", model, result.usage)
+        await recordToolUsage(ctx, "brand-curator", label, result.usage)
         return result.text
       }
       const result = await generateText({
-        model: openai(model),
+        model,
         messages: [
           {
             role: "user",
@@ -98,7 +99,7 @@ export default defineTool({
           },
         ],
       })
-      await recordToolUsage(ctx, "brand-curator", model, result.usage)
+      await recordToolUsage(ctx, "brand-curator", label, result.usage)
       return result.text
     }
 
@@ -112,26 +113,26 @@ export default defineTool({
       }
     }
 
-    let model = VISION_PRIMARY
-    let text = await callVision(model)
+    let modelLabel = toolModelLabel("brand-vision")
+    let text = await callVision(toolModel("brand-vision"), modelLabel)
     let parsed = parse(text)
-    // Escala a 5.1 si mini no dio JSON válido, o si está a punto de PROMOVER un
-    // logo (la decisión sensible: no queremos que un placeholder de Canva pase
-    // como logo por un mini con menos world-knowledge).
+    // Escala a 5.1 si el primario no dio JSON válido, o si está a punto de
+    // PROMOVER un logo (la decisión sensible: no queremos que un placeholder de
+    // Canva pase como logo por un modelo barato con menos world-knowledge).
     const promotesLogo =
       parsed?.isLogoCandidate === true && Number(parsed?.logoScore ?? 0) >= 4
-    if ((parsed === null || promotesLogo) && model !== VISION_FALLBACK) {
-      model = VISION_FALLBACK
-      text = await callVision(model)
+    if ((parsed === null || promotesLogo) && modelLabel !== VISION_VERIFY) {
+      modelLabel = VISION_VERIFY
+      text = await callVision(openai(VISION_VERIFY), VISION_VERIFY)
       parsed = parse(text)
     }
 
     if (parsed) {
-      return { analysis: parsed, model }
+      return { analysis: parsed, model: modelLabel }
     }
     return {
       analysis: null,
-      model,
+      model: modelLabel,
       rawText: text.trim().replace(/^```(?:json)?\n?|```$/g, "").slice(0, 1500),
     }
   },
