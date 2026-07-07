@@ -33,7 +33,7 @@ export default defineTool({
     const supabase = getSupabaseClient()
     const { data: lead } = await supabase
       .from("leads")
-      .select("id, name, place_id, city, sites(id, slug, status)")
+      .select("id, name, place_id, city, website, sites(id, slug, status)")
       .ilike("name", `%${query}%`)
       .limit(1)
       .maybeSingle()
@@ -71,11 +71,44 @@ export default defineTool({
       note: `Brief creado para ${slug}${referenceSlug ? ` (referencia guía: ${referenceSlug})` : ""} — vía chat.`,
       actor: "humano",
     })
+
+    // Guard de ficha de marca: un sitio sin ficha sale genérico. Si el lead
+    // tiene MATERIAL (website o archivos en el inbox) pero CERO ficha guardada,
+    // es la firma del fallo silencioso del curador (analizó y reportó en prosa,
+    // pero no llamó save_brand_profile → dashboard "Sin ficha de marca"). Se
+    // avisa fuerte para que el root cure ANTES de componer el spec.
+    let brandWarning = ""
+    const { data: brand } = await supabase
+      .from("lead_brand")
+      .select("lead_id")
+      .eq("lead_id", lead.id)
+      .maybeSingle()
+    if (!brand) {
+      const { data: inbox } = await supabase.storage
+        .from("brand-assets")
+        .list(`${lead.id}/inbox`)
+      const inboxCount = inbox?.length ?? 0
+      if (inboxCount > 0 || lead.website) {
+        const material = [
+          inboxCount > 0 ? `${inboxCount} archivo(s) en el inbox` : "",
+          lead.website ? `sitio ${lead.website}` : "",
+        ]
+          .filter(Boolean)
+          .join(" + ")
+        brandWarning =
+          `⚠️ El lead NO tiene ficha de marca guardada pese a tener material (${material}). ` +
+          `Sin ficha el sitio sale GENÉRICO (paleta/logo/servicios inventados). CURA la marca ANTES de ` +
+          `componer: delega a brand-curator con [Contexto: lead ${lead.id}] y EXÍGELE guardar con ` +
+          `save_brand_profile (un reporte en prosa sin ficha guardada es un fallo). Después compón el spec. `
+      }
+    }
+
     return {
       siteId: site.id,
       slug: site.slug,
       alreadyExisted: false,
-      hint: `Ahora delega a ART-DIRECTOR (NO a site-builder): "Compón el SPEC de diseño del site ${site.id} (lead \"${lead.name}\")${referenceSlug ? ` — referencia guía: ${referenceSlug}` : ""}${instructions ? ` — instrucciones del humano: ${instructions}` : ""}". Con su reporte (site_id + notes), encadena a site-builder de inmediato y sin preguntar.`,
+      brandMissing: Boolean(brandWarning),
+      hint: `${brandWarning}Ahora delega a ART-DIRECTOR (NO a site-builder): "Compón el SPEC de diseño del site ${site.id} (lead \"${lead.name}\")${referenceSlug ? ` — referencia guía: ${referenceSlug}` : ""}${instructions ? ` — instrucciones del humano: ${instructions}` : ""}". Con su reporte (site_id + notes), encadena a site-builder de inmediato y sin preguntar.`,
     }
   },
 })
