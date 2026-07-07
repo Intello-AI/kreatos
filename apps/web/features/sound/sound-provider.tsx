@@ -15,13 +15,12 @@ import { Button } from "@/components/ui/button"
 
 /**
  * Capa de sonido de la app: tonos SINTETIZADOS con Web Audio (cero archivos,
- * cero deps). Dos usos:
- *  - Interacción global: un "tick" suave al hacer click en cualquier control y
- *    un whoosh al abrir/cerrar diálogos/sheets (delegación + MutationObserver;
- *    no hace falta cablear cada componente).
- *  - Notificaciones: success/error/ping desde el realtime (NotificationCenter).
- * Todo respeta un mute persistido y se desbloquea en el primer gesto (los
- * navegadores bloquean el audio hasta que el usuario interactúa).
+ * cero deps). Cubre TODA la interfaz sin cablear cada componente:
+ *  - Click en cualquier control (mouse Y teclado) → "tick".
+ *  - Abrir/cerrar diálogos y sheets → whoosh (observer de portales en <body>).
+ *  - Toasts / alertas (sonner) → success/error/ping según su tipo (observer).
+ * El AudioContext se desbloquea en el primer gesto (los navegadores bloquean el
+ * audio hasta que el usuario interactúa). Mute persistido en localStorage.
  */
 
 export type SoundName = "click" | "open" | "close" | "success" | "error" | "ping"
@@ -44,22 +43,21 @@ type Tone = {
   slideTo?: number
 }
 
-// Recetas cortas, suaves y no molestas.
+// Recetas cortas y claras (audibles pero no molestas).
 const PALETTE: Record<SoundName, Tone[]> = {
-  click: [{ freq: 320, type: "sine", dur: 0.035, gain: 0.035 }],
-  open: [{ freq: 460, type: "sine", dur: 0.1, gain: 0.05, slideTo: 680 }],
-  close: [{ freq: 480, type: "sine", dur: 0.1, gain: 0.05, slideTo: 300 }],
+  click: [{ freq: 340, dur: 0.03, gain: 0.09 }],
+  open: [{ freq: 480, dur: 0.11, gain: 0.11, slideTo: 720 }],
+  close: [{ freq: 520, dur: 0.11, gain: 0.11, slideTo: 320 }],
   success: [
-    { freq: 660, type: "sine", dur: 0.11, gain: 0.06 },
-    { freq: 880, type: "sine", dur: 0.16, gain: 0.06, delay: 0.09 },
+    { freq: 660, dur: 0.1, gain: 0.12 },
+    { freq: 990, dur: 0.16, gain: 0.12, delay: 0.08 },
   ],
-  error: [{ freq: 200, type: "sine", dur: 0.2, gain: 0.07, slideTo: 150 }],
-  ping: [{ freq: 880, type: "sine", dur: 0.13, gain: 0.05 }],
+  error: [{ freq: 220, dur: 0.22, gain: 0.13, slideTo: 160 }],
+  ping: [{ freq: 900, dur: 0.12, gain: 0.11 }],
 }
 
-// Selector de controles que suenan al presionarse.
 const INTERACTIVE =
-  'button, a[href], [role="button"], [role="menuitem"], [role="tab"], [role="switch"], [role="checkbox"], summary, label'
+  'button, a[href], [role="button"], [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], [role="tab"], [role="switch"], [role="checkbox"], [role="radio"], [role="option"], summary'
 const DIALOG = '[role="dialog"], [role="alertdialog"]'
 
 function hasDialog(node: Node): boolean {
@@ -67,19 +65,30 @@ function hasDialog(node: Node): boolean {
   return node.matches(DIALOG) || node.querySelector(DIALOG) !== null
 }
 
+function toastSound(el: Element): SoundName {
+  const type = el.getAttribute("data-type")
+  if (type === "success") return "success"
+  if (type === "error") return "error"
+  return "ping" // info / warning / default / loading
+}
+
 export function SoundProvider({ children }: { children: React.ReactNode }) {
   const ctxRef = useRef<AudioContext | null>(null)
   const [muted, setMuted] = useState(false)
+  // Ref para que play() sea ESTABLE (no se re-crea al mutear → no re-registra
+  // listeners ni re-observa el DOM).
+  const mutedRef = useRef(false)
 
   useEffect(() => {
-    // Lectura hidratación-segura de la preferencia (localStorage no existe en
-    // SSR): el efecto es el patrón correcto aquí, pese al lint anti-efecto.
+    let m = false
     try {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setMuted(localStorage.getItem(STORAGE_KEY) === "1")
+      m = localStorage.getItem(STORAGE_KEY) === "1"
     } catch {
       // sin localStorage: default sonando
     }
+    mutedRef.current = m
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMuted(m)
   }, [])
 
   const ensureCtx = useCallback((): AudioContext | null => {
@@ -98,69 +107,78 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
 
   const play = useCallback(
     (name: SoundName) => {
-      if (muted) return
+      if (mutedRef.current) return
       const ctx = ensureCtx()
-      if (!ctx) return
-      const now = ctx.currentTime
+      // Aún suspendido (sin gesto todavía): no programes en un ctx congelado.
+      if (!ctx || ctx.state !== "running") return
+      const now = ctx.currentTime + 0.001
       for (const t of PALETTE[name]) {
         const osc = ctx.createOscillator()
         const gain = ctx.createGain()
         const start = now + (t.delay ?? 0)
-        const g = t.gain ?? 0.05
+        const g = t.gain ?? 0.1
         osc.type = t.type ?? "sine"
         osc.frequency.setValueAtTime(t.freq, start)
         if (t.slideTo) {
           osc.frequency.exponentialRampToValueAtTime(t.slideTo, start + t.dur)
         }
         gain.gain.setValueAtTime(0.0001, start)
-        gain.gain.exponentialRampToValueAtTime(g, start + 0.008)
+        gain.gain.exponentialRampToValueAtTime(g, start + 0.01)
         gain.gain.exponentialRampToValueAtTime(0.0001, start + t.dur)
         osc.connect(gain).connect(ctx.destination)
         osc.start(start)
-        osc.stop(start + t.dur + 0.02)
+        osc.stop(start + t.dur + 0.03)
       }
     },
-    [muted, ensureCtx],
+    [ensureCtx],
   )
 
-  // Listeners globales de interacción. play() ya respeta `muted`, así que no hace
-  // falta re-atar al cambiar el mute (se evita re-registrar en cada toggle).
-  const playRef = useRef(play)
-  useEffect(() => {
-    playRef.current = play
-  }, [play])
   useEffect(() => {
     if (typeof window === "undefined") return
+    // Desbloqueo: crea/resume el ctx en el PRIMER gesto de cualquier tipo.
     const unlock = () => ensureCtx()
-    const onPointerDown = (e: PointerEvent) => {
+    // Sonido de interacción en CLICK: cubre mouse Y teclado (Enter/Espacio) y
+    // dispara UNA vez por activación.
+    const onClick = (e: MouseEvent) => {
       const el = (e.target as Element | null)?.closest?.(INTERACTIVE)
-      if (el && !(el as HTMLElement).hasAttribute("data-no-sound")) {
-        playRef.current("click")
-      }
+      if (el && !el.closest("[data-no-sound]")) play("click")
     }
-    // Radix portalea los diálogos como hijos directos de <body>: basta observar
-    // childList del body (sin subtree) — barato y sin falsos positivos.
-    const observer = new MutationObserver((mutations) => {
-      for (const m of mutations) {
+    // Toasts/alertas: sonner los añade como [data-sonner-toast] en cualquier
+    // parte → observer con subtree, pero SOLO un match barato por nodo.
+    const toastObserver = new MutationObserver((muts) => {
+      for (const m of muts)
         for (const node of m.addedNodes)
-          if (hasDialog(node)) playRef.current("open")
-        for (const node of m.removedNodes)
-          if (hasDialog(node)) playRef.current("close")
+          if (node instanceof HTMLElement && node.matches("[data-sonner-toast]"))
+            play(toastSound(node))
+    })
+    // Diálogos/sheets: Radix portalea a hijos DIRECTOS de <body> → childList sin
+    // subtree (barato) capta el montaje/desmontaje del portal.
+    const dialogObserver = new MutationObserver((muts) => {
+      for (const m of muts) {
+        for (const node of m.addedNodes) if (hasDialog(node)) play("open")
+        for (const node of m.removedNodes) if (hasDialog(node)) play("close")
       }
     })
-    window.addEventListener("pointerdown", unlock, { once: true })
-    window.addEventListener("pointerdown", onPointerDown)
-    observer.observe(document.body, { childList: true })
+    window.addEventListener("pointerdown", unlock)
+    window.addEventListener("keydown", unlock)
+    window.addEventListener("touchstart", unlock, { passive: true })
+    window.addEventListener("click", onClick)
+    toastObserver.observe(document.body, { childList: true, subtree: true })
+    dialogObserver.observe(document.body, { childList: true })
     return () => {
       window.removeEventListener("pointerdown", unlock)
-      window.removeEventListener("pointerdown", onPointerDown)
-      observer.disconnect()
+      window.removeEventListener("keydown", unlock)
+      window.removeEventListener("touchstart", unlock)
+      window.removeEventListener("click", onClick)
+      toastObserver.disconnect()
+      dialogObserver.disconnect()
     }
-  }, [ensureCtx])
+  }, [ensureCtx, play])
 
   const toggleMuted = useCallback(() => {
     setMuted((m) => {
       const next = !m
+      mutedRef.current = next
       try {
         localStorage.setItem(STORAGE_KEY, next ? "1" : "0")
       } catch {
