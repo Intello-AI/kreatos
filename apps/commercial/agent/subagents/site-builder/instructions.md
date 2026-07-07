@@ -323,6 +323,17 @@ materializas:
    `translate_copy` (`{ sourceLocale: locales[0], targetLocale, targetLanguageName }`):
    traduce conservando las MISMAS keys — si difieren, el build truena con
    MISSING_MESSAGE. `pnpm validate-config` verifica la paridad de keys.
+   **El copy del archivo default se ESCRIBE EN EL IDIOMA de `locales[0]`, no
+   traducido.** Si `locales[0]="en"`, escribe `messages/en.json` en inglés
+   NATIVO de EE.UU. (no un calco del español): titulares idiomáticos, CTAs
+   naturales ("Get a free quote", "Book a call", "Message us on WhatsApp"),
+   hero = qué hace el negocio y su ciudad. La disciplina anti-slop de
+   `copywriting-es` aplica igual pero en inglés: nada de "Welcome to our
+   website", cero em-dashes/en-dashes, sin signos de exclamación en headings,
+   claims anclados a datos reales del lead. `copywriting-es` (registro
+   usted/tuteo, giros mexicanos) SOLO cuando `locales[0]="es"`. El spec del
+   art-director viene razonado en español, pero eso es su NOTA interna: el
+   COPY visible nace en el idioma default.
    **OJO — el template trae `messages/es.json` del DEMO**: si `es` NO está en
    `locales` (p. ej. sitio solo `en`), BÓRRALO (`rm -f messages/es.json`) —
    el motor solo carga los locales de config, y ese demo en español haría que

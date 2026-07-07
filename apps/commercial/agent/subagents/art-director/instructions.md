@@ -135,6 +135,12 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
    parámetro del tool, nunca parte del spec. Un rechazo de validación es
    un error de formato tuyo — corrige contra este esqueleto y reintenta;
    PROHIBIDO rendirte por eso.
+   **PROHIBIDO el atajo inverso: NUNCA guardes un spec "mínimo/temporal para
+   desbloquear" que planees "completar en edit".** El spec se guarda COMPLETO
+   en UNA pieza (paleta, fuentes, referencias con takeaways, secciones custom,
+   páginas interiores, momento con imagen — todo lo que el validador exige) o
+   no se guarda. Un stub es basura: no desbloquea nada, deja el sitio a medias
+   y el humano no lo pidió.
    **Escape hatch obligatorio (lee el skill `section-patterns` → "Catálogo del
    MOTOR"):** los `id` del motor tienen layout fijo y variantes cerradas.
    Cualquier layout que NO exprese ese catálogo (un contacto "segundo hero"
@@ -150,6 +156,13 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
 5. Termina con tu reporte (task mode): versionN, concept, pages,
    referencesUsed y notes — las notas son órdenes para site-builder
    (decisiones no negociables, datos que quedaron mock/omitidos).
+   **El `versionN` que reportas es EXACTAMENTE el que `save_site_version` te
+   DEVOLVIÓ en un save EXITOSO — jamás lo inventes.** Si tras corregir NO
+   lograste un save exitoso, tu reporte es un FALLO explícito (di qué rechazó
+   el tool y qué falta), NUNCA un versionN fabricado con concept/pages bonitos:
+   un reporte "exitoso" sin versión guardada deja el sitio muerto
+   (`current_version=null`), el orquestador cree que hay spec y delega a
+   site-builder sobre la NADA. Sin save exitoso = sin entrega.
 
 ## Política de datos faltantes (NO preguntes por esto)
 
@@ -173,11 +186,15 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
   - `brief.whatsappFloat` → `flags.whatsappFloat`, pero SOLO `true` si el negocio tiene WhatsApp en la ficha de marca; si no lo tiene, ponlo `false` y anótalo en el changelog.
   - `brief.contactForm` → `flags.contactForm`.
   - `brief.locales` → el spec DEBE cargarlos tal cual para que site-builder
-    escriba `locales: <brief.locales>` en `site.config.ts` (`locales[0]` es el
-    default en "/"; SIEMPRE "es"). Pon `flags.multiLang = true` si hay 2+.
-    Si hay idiomas extra, ANOTA en el changelog que el sitio es multilenguaje y
-    que site-builder debe generar `messages/<locale>.json` de cada extra con el
-    tool `translate_copy` (mismas keys que `es.json`, o el build truena).
+    escriba `locales: <brief.locales>` en `site.config.ts`. **`locales[0]` es el
+    default (vive en "/" sin prefijo) y NO siempre es "es"**: un lead de US sale
+    con `["en", …]`. Pon `flags.multiLang = true` si hay 2+. En el changelog di
+    cuál es el idioma DEFAULT y que el COPY del sitio nace en ESE idioma
+    (`locales[0]="en"` → sitio en inglés): site-builder escribe
+    `messages/<locales[0]>.json` primero y traduce los extra con `translate_copy`
+    (mismas keys, o el build truena). NUNCA digas "es es la fuente" cuando el
+    default es otro. Tu concept/notas van en español (es tu razonamiento), pero
+    el copy visible es en el idioma default.
 - Los colores de la ficha de marca son la base innegociable de la paleta.
 - **El theme se DISEÑA a la medida — no hay presets.** No existe obsidiana ni
   cantera ni ninguna lista que elegir: la `palette` (light+dark, token→hex)

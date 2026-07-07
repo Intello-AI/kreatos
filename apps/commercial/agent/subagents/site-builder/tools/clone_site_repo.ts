@@ -64,34 +64,39 @@ export default defineTool({
     // siempre re-leíble aunque el contexto del run se compacte. Vive en
     // .agent/ (excluido del repo por el push tool). Con versionN se lee ESE
     // spec; sin él, el vigente.
-    let specWritten = false
     const target = versionN
       ? await getSiteVersion(siteId, versionN)
       : await getLatestVersion(siteId)
-    if (target?.spec) {
-      await sandbox.writeTextFile({
-        path: "site/.agent/spec.json",
-        content: JSON.stringify(
-          { versionN: target.version_n, changelog: target.changelog, spec: target.spec },
-          null,
-          2,
-        ),
-      })
-      specWritten = true
+    // Guard: sin spec NO hay nada que materializar. Antes se clonaba el demo
+    // pelón con un hint suave y site-builder terminaba montando el despacho
+    // ficticio. Un art-director que reporta versionN pero deja
+    // current_version=null es un FALLO disfrazado de éxito: cortamos aquí para
+    // que el orquestador re-delegue a art-director en vez de materializar sobre
+    // la nada.
+    if (!target?.spec) {
+      throw new Error(
+        `El site no tiene spec vigente (current_version=${site.current_version ?? "null"}): el art-director no guardó ninguna versión válida. No se puede materializar sin spec — el demo del template NUNCA es fuente. El orquestador debe delegar a art-director (compón/guarda el spec del site) ANTES de site-builder. Un reporte de art-director con versionN pero sin versión guardada es un fallo, no un éxito.`,
+      )
     }
+    await sandbox.writeTextFile({
+      path: "site/.agent/spec.json",
+      content: JSON.stringify(
+        { versionN: target.version_n, changelog: target.changelog, spec: target.spec },
+        null,
+        2,
+      ),
+    })
 
     return {
       path: "/workspace/site",
       repo: fullName,
       resumedFromBranch,
-      ...(specWritten ? { specFile: "site/.agent/spec.json" } : {}),
+      specFile: "site/.agent/spec.json",
       hint: [
         resumedFromBranch
           ? `El clone quedó en la rama ${resumedFromBranch} con el trabajo del run anterior (checkpoints): revisa git log y el estado de los archivos antes de re-materializar nada.`
           : "Clone limpio desde main.",
-        specWritten
-          ? "El SPEC VIGENTE (del art-director) está en site/.agent/spec.json — es tu ÚNICA fuente al materializar: reléelo con read_file cada vez que dudes del copy, la paleta o las secciones. El demo del template NUNCA es fuente."
-          : "Este site aún no tiene spec guardado (¿falta art-director?).",
+        "El SPEC VIGENTE (del art-director) está en site/.agent/spec.json — es tu ÚNICA fuente al materializar: reléelo con read_file cada vez que dudes del copy, la paleta o las secciones. El demo del template NUNCA es fuente.",
       ].join(" "),
     }
   },
