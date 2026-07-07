@@ -6,6 +6,7 @@ import { CaretDownIcon, ChatCircleDotsIcon, PlusIcon } from "@phosphor-icons/rea
 
 import { type ChatConversation } from "@/features/chat/actions"
 import { NotificationCenter } from "@/features/notifications/components/notification-center"
+import { SoundToggle } from "@/features/sound/sound-provider"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { formatRelative } from "@/lib/dates"
 import { Button } from "@/components/ui/button"
@@ -106,7 +107,10 @@ export function ChatHeader({
           </DropdownMenu>
         )}
       </div>
-      <NotificationCenter />
+      <div className="flex items-center gap-0.5">
+        <SoundToggle />
+        <NotificationCenter />
+      </div>
       {current && (
         <Button
           asChild

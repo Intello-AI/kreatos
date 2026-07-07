@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import {
   BellIcon,
@@ -19,6 +19,7 @@ import {
   type AgentNotification,
   type PendingQuestion,
 } from "@/features/notifications/actions"
+import { useSound } from "@/features/sound/sound-provider"
 import { formatRelative } from "@/lib/dates"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
@@ -41,6 +42,12 @@ import {
 export function NotificationCenter() {
   const [questions, setQuestions] = useState<PendingQuestion[]>([])
   const [notifications, setNotifications] = useState<AgentNotification[]>([])
+  // Sonido por ref: play() ya respeta el mute; evita re-suscribir el realtime.
+  const { play } = useSound()
+  const playRef = useRef(play)
+  useEffect(() => {
+    playRef.current = play
+  }, [play])
 
   const reloadQuestions = useCallback(() => {
     void listPendingQuestions().then(setQuestions)
@@ -60,6 +67,7 @@ export function NotificationCenter() {
         { event: "INSERT", schema: "public", table: "pending_inputs" },
         (payload) => {
           reloadQuestions()
+          playRef.current("ping")
           const prompt = (payload.new as { prompt?: string }).prompt
           toast.info("El agente tiene una pregunta", {
             description: prompt
@@ -82,9 +90,13 @@ export function NotificationCenter() {
           // reload). El hito aparece en el feed sin toast (evita ruido).
           const row = payload.new as Partial<AgentNotification> | null
           if (!row || row.level !== "task") return
-          if (row.status === "done") toast.success(row.title ?? "Tarea lista")
-          else if (row.status === "failed")
+          if (row.status === "done") {
+            playRef.current("success")
+            toast.success(row.title ?? "Tarea lista")
+          } else if (row.status === "failed") {
+            playRef.current("error")
             toast.error(`Falló: ${row.title ?? "una tarea"}`)
+          }
         },
       )
       .subscribe()

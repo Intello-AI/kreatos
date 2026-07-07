@@ -7,6 +7,7 @@ import { Logo } from "@/components/icons"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 
 import { NotificationCenter } from "@/features/notifications/components/notification-center"
+import { SoundToggle } from "@/features/sound/sound-provider"
 
 /**
  * Header global del dashboard. En `/dashboard` (el chat) no se renderiza:
@@ -29,7 +30,8 @@ export function DashboardHeader() {
       >
         <Logo className="h-5 w-auto" />
       </Link>
-      <div className="ml-auto">
+      <div className="ml-auto flex items-center gap-0.5">
+        <SoundToggle />
         <NotificationCenter />
       </div>
     </header>

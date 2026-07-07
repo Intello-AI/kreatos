@@ -25,6 +25,9 @@ importers:
 
   apps/commercial:
     dependencies:
+      '@ai-sdk/alibaba':
+        specifier: ^2.0.7
+        version: 2.0.7(zod@4.4.3)
       '@ai-sdk/anthropic':
         specifier: ^4.0.7
         version: 4.0.7(zod@4.4.3)
@@ -351,6 +354,12 @@ importers:
 
 packages:
 
+  '@ai-sdk/alibaba@2.0.7':
+    resolution: {integrity: sha512-qPrt3eJIQ8vkQ/XmzKRDcrwmqZhjqnN+ga7Tyb0O1v0Vyrh3cWMZf4yqcA3bg78C2x2mabukcVR81jj9TBnjEQ==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
   '@ai-sdk/anthropic@4.0.7':
     resolution: {integrity: sha512-PaUAERndv7dI2IUlXM58RPmOx5MRl1jtC9ECkXl5TTi/08R3Ht8fY3d6X9ihKV3fk+JcnrEznR8gbhb1nguRZg==}
     engines: {node: '>=22'}
@@ -359,6 +368,12 @@ packages:
 
   '@ai-sdk/gateway@4.0.8':
     resolution: {integrity: sha512-esHzojMp+LllqOnEu6sYa6NKOmPcE5UObPV61LE6L2QAzCH6WHMgTS+Q/HF5HU3lVUWsHtkDzN7TNqMfv/ecCg==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/openai-compatible@3.0.5':
+    resolution: {integrity: sha512-4UtDxT6Ga7U225o5fBEgtCFZHba4/iTDXRqMrU62yEfTrFks4o+F4jt0D3OWmUasR9LPFzLy0KnEITxFDtc89g==}
     engines: {node: '>=22'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -6473,6 +6488,13 @@ packages:
 
 snapshots:
 
+  '@ai-sdk/alibaba@2.0.7(zod@4.4.3)':
+    dependencies:
+      '@ai-sdk/openai-compatible': 3.0.5(zod@4.4.3)
+      '@ai-sdk/provider': 4.0.2
+      '@ai-sdk/provider-utils': 5.0.5(zod@4.4.3)
+      zod: 4.4.3
+
   '@ai-sdk/anthropic@4.0.7(zod@4.4.3)':
     dependencies:
       '@ai-sdk/provider': 4.0.2
@@ -6484,6 +6506,12 @@ snapshots:
       '@ai-sdk/provider': 4.0.1
       '@ai-sdk/provider-utils': 5.0.3(zod@4.4.3)
       '@vercel/oidc': 3.2.0
+      zod: 4.4.3
+
+  '@ai-sdk/openai-compatible@3.0.5(zod@4.4.3)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.2
+      '@ai-sdk/provider-utils': 5.0.5(zod@4.4.3)
       zod: 4.4.3
 
   '@ai-sdk/openai@4.0.5(zod@4.4.3)':
