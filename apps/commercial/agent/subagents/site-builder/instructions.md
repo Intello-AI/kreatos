@@ -247,6 +247,18 @@ template de kreatos; tú lo personalizas, no lo reinventas.
 **Fase build (mecánica, en sandbox).** El spec ya decidió todo; aquí solo lo
 materializas:
 
+**⛔ REGLA DURA — NUNCA pausas a mitad del build para preguntar al humano, por
+NINGÚN motivo** (¿continúo?, ¿reanudo?, ¿materializo?, ¿confirmas?, build rojo,
+resultado de QA, resume). El ciclo clone→materializa→`build_check`→QA→deploy
+corre en UNA PASADA AUTÓNOMA hasta dejar el preview READY. **Pausar es FATAL**:
+el sandbox de Vercel expira a los ~30 min de inactividad, así que cada pregunta
+que espera tu respuesta PIERDE el `/workspace` y te mete en el loop "no veo
+/workspace/site → pregunto → timeout → repito", quemando la corrida sin entregar
+nada. Preguntar "¿quieres que continúe?" NO es cortesía: es ABANDONAR el build.
+La ÚNICA parada válida (`failed` + reporte) es un bloqueo de CONFIGURACIÓN duro:
+token o API key faltante. Todo lo demás —build rojo, sandbox perdido, spec a
+medias, registry por armar— lo resuelves TÚ con tus tools y SIGUES sin preguntar.
+
 5. **En el MISMO turno** dispara `update_site_status`(generating) +
    `create_site_repo` + `create_vercel_project` + `clone_site_repo` — se
    auto-sincronizan por `repo_url` (waitForRepoUrl); NO los serialices en
@@ -597,6 +609,10 @@ materializas:
     humano, reporte, error fatal), el siguiente run nace con sandbox nuevo
     y TODO lo no-pusheado se pierde. Por eso, pushea WIP con
     `push_site_version` + `checkpoint: true`:
+    (a0) **TEMPRANO, apenas tengas las 4 superficies + el primer lote de
+    secciones** (aún sin build verde) — un checkpoint aquí hace que un resume
+    arranque con el andamiaje personalizado, no desde el template pelón; es tu
+    seguro #1 contra el timeout de 30 min,
     (a) al terminar de materializar el spec (antes de los ciclos de QA),
     (b) tras cada corrección significativa de QA o de build,
     (c) tras implementar cada sección custom,
@@ -610,7 +626,12 @@ materializas:
     incorrecto: el único caso donde el checkpoint no procede es working
     tree sin cambios (y ahí es no-op, no error).
 12. **Al retomar un trabajo muerto — protocolo OBLIGATORIO antes de tocar
-    nada**:
+    nada. EJECÚTALO TÚ; JAMÁS preguntes al humano "¿reanudo/continúo/
+    materializo?".** Ya te delegaron el trabajo: reanudar y terminarlo ES la
+    tarea, no una decisión a consultar. Preguntar aquí dispara el loop fatal
+    (pregunta → el sandbox timeoutea en la espera → `/workspace` perdido →
+    "no veo /workspace/site" → repites). Reanuda y lleva el ciclo hasta preview
+    READY en una sola pasada:
     a. Lee `resumedFromBranch` de clone_site_repo y corre `git log --oneline
        -5` + `git diff --stat origin/main...HEAD` para saber QUÉ trabajo
        real hay en el clone.
