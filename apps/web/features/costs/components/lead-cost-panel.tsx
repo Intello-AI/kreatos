@@ -133,7 +133,7 @@ export function LeadCostPanel({ cost }: { cost: LeadCost }) {
           </div>
           {groups.map((g) => (
             <details key={g.agent} className="group">
-              <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs hover:bg-sidebar">
+              <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs hover:bg-sidebar group-open:bg-sidebar/40 group-open:hover:bg-sidebar/40">
                 <CaretRightIcon
                   aria-hidden
                   className="size-3 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"
