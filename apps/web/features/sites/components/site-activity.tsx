@@ -1494,14 +1494,7 @@ export function SiteActivity({
  * solo el estado — la acción en curso con spinner, o "N pasos" al terminar —
  * y al expandir se ve la lista completa de acciones.
  */
-function ActionsBlock({
-  items,
-  flush = false,
-}: {
-  items: ActivityItem[]
-  /** Sin sangría de subagente (para la vista "entrar" donde ya es el foco). */
-  flush?: boolean
-}) {
+function ActionsBlock({ items }: { items: ActivityItem[] }) {
   const running = items.filter((i) => !i.done)
   const active = running.length > 0
   const failed = items.some((i) => i.failed)
@@ -1511,12 +1504,7 @@ function ActionsBlock({
   const label = current?.label ?? ""
 
   return (
-    <Collapsible
-      className={cn(
-        "border-l-2 border-border/60 py-0.5 pl-3",
-        !flush && items[0]?.depth === 1 && "ml-5"
-      )}
-    >
+    <Collapsible className="border-l-2 border-border/60 py-0.5 pl-3">
       <CollapsibleTrigger className="group flex w-full items-center gap-2 text-left text-xs">
         {/* Sin loader: el shimmer del label ya comunica "en ejecución". */}
         {!active && (
@@ -2209,7 +2197,14 @@ function SubagentFocus({
                 groups.map((g) =>
                   g.type === "actions" ? (
                     <MessageScrollerItem key={g.key} messageId={g.key}>
-                      <ActionsBlock items={g.items} flush />
+                      {/* Ya estás DENTRO del subagente: las tools se ven
+                          directo, sin un tercer colapsable de grupo. Cada fila
+                          sigue expandiendo su input/output al hacer click. */}
+                      <div className="space-y-1.5 border-l-2 border-border/60 py-0.5 pl-3">
+                        {g.items.map((item) => (
+                          <ActionRow key={item.id} item={item} />
+                        ))}
+                      </div>
                     </MessageScrollerItem>
                   ) : (
                     <SubagentMessage key={g.key} name={name} item={g.item} />
