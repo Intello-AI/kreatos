@@ -132,6 +132,51 @@ function hueDelta(a: number, b: number): number {
   return d > 180 ? 360 - d : d
 }
 
+/**
+ * hex (#rrggbb) → string `oklch(L C H)` (OKLab de Björn Ottosson, determinista).
+ * Precalcular esto en el tool le AHORRA al site-builder instalar coloraide +
+ * correr python para convertir la paleta cada build (4-6 comandos de Sonnet).
+ * null si no parsea. Achromático → hue 0 (mismo criterio que coloraide).
+ */
+function hexToOklch(hex: string): string | null {
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim())
+  if (!m) return null
+  const n = parseInt(m[1], 16)
+  const toLinear = (c: number) =>
+    c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+  const R = toLinear(((n >> 16) & 255) / 255)
+  const G = toLinear(((n >> 8) & 255) / 255)
+  const B = toLinear((n & 255) / 255)
+  // linear sRGB → LMS' (raíz cúbica)
+  const l_ = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B)
+  const m_ = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B)
+  const s_ = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B)
+  // LMS' → OKLab
+  const L = 0.2104542553 * l_ + 0.793617785 * m_ - 0.0040720468 * s_
+  const a = 1.9779984951 * l_ - 2.428592205 * m_ + 0.4505937099 * s_
+  const b = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.808675766 * s_
+  const chroma = Math.sqrt(a * a + b * b)
+  let hue = (Math.atan2(b, a) * 180) / Math.PI
+  if (hue < 0) hue += 360
+  const round = (x: number, d: number) => Number(x.toFixed(d))
+  return `oklch(${round(L, 4)} ${round(chroma, 4)} ${chroma < 1e-4 ? 0 : round(hue, 2)})`
+}
+
+/** Convierte un record de rol→hex a rol→oklch (ignora valores no-hex). */
+function paletteToOklch(
+  modeColors: unknown,
+): Record<string, string> | undefined {
+  if (!modeColors || typeof modeColors !== "object") return undefined
+  const out: Record<string, string> = {}
+  for (const [role, val] of Object.entries(
+    modeColors as Record<string, unknown>,
+  )) {
+    const o = typeof val === "string" ? hexToOklch(val) : null
+    if (o) out[role] = o
+  }
+  return Object.keys(out).length > 0 ? out : undefined
+}
+
 /** Texto libre que puede venir como string o array de strings (Postel). */
 function asText(value: unknown): string {
   if (typeof value === "string") return value
@@ -397,6 +442,26 @@ export default defineTool({
       throw new Error(
         `Spec rechazado (${problems.length} ${problems.length === 1 ? "problema" : "problemas"} — TODOS listados, corrígelos en UNA pasada y reintenta):\n- ${problems.join("\n- ")}`,
       )
+    }
+
+    // Precalcula la paleta en OKLCH (lo que consume app/theme.css) y la guarda
+    // en design.paletteOklch para que el site-builder la copie directo en vez
+    // de instalar coloraide + convertir hex→oklch en vivo (4-6 comandos de
+    // Sonnet por build). La paleta hex se conserva (anti-convergencia + og-*
+    // en hex que Satori necesita). Corre en ambos modos.
+    {
+      const designObj = (spec as Record<string, unknown>)["design"] as
+        | Record<string, unknown>
+        | undefined
+      if (designObj) {
+        const pal = (designObj["palette"] ?? {}) as Record<string, unknown>
+        const oklch: Record<string, Record<string, string>> = {}
+        const light = paletteToOklch(pal["light"])
+        const dark = paletteToOklch(pal["dark"])
+        if (light) oklch["light"] = light
+        if (dark) oklch["dark"] = dark
+        if (Object.keys(oklch).length > 0) designObj["paletteOklch"] = oklch
+      }
     }
 
     const { versionN } = await insertSiteVersion({

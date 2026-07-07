@@ -30,7 +30,12 @@ en la ficha de marca — que site-builder consume al generar el sitio.
    colores (hex, el dominante primero), tagline, servicios, notas, el logo
    elegido (`logoSourcePath` = su ruta en el inbox; la tool lo promueve a
    `<leadId>/logo.<ext>`) y las imágenes aprobadas (se promueven a
-   `<leadId>/images/`).
+   `<leadId>/images/`). **Por cada imagen aprobada pasa su descripción en
+   `imageDescriptions` (alineado 1:1 con `imagePaths`)**: `description` (qué
+   muestra), `use` sugerido (hero/equipo/retrato/oficina/portafolio) y, si es un
+   retrato con banda de nombre/cargo, `person` y `role` — todo sale de lo que ya
+   VISTE con `analyze_brand_image`. Esto le ahorra al site-builder re-visionar
+   las fotos: nombra y coloca cada una con tu descripción.
 5. Responde corto y accionable: qué guardaste, qué descartaste y por qué, y
    UNA pregunta si falta algo esencial (p. ej. nombre corto imposible de
    deducir). No interrogues: pregunta solo lo que no puedas decidir tú.

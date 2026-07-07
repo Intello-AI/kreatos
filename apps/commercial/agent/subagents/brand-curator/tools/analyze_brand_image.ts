@@ -16,9 +16,12 @@ const PROMPT = `Eres un director de arte. Analiza esta imagen de la marca de un 
   "dominantColors": ["#hex en orden de dominancia, máx 6"],
   "tokens": { "background": "#hex", "foreground": "#hex", "primary": "#hex", "muted-foreground": "#hex", "border": "#hex" },
   "siteImageUse": "hero | about | portfolio | none — y por qué en 3-5 palabras",
+  "personName": "si es un RETRATO de una persona con banda de nombre LEGIBLE, el nombre; null si no aplica o no se lee",
+  "role": "si hay banda de cargo legible, el cargo (p. ej. 'Contadora Senior', 'Socia Directora'); null si no aplica",
   "quality": "nítida/borrosa, resolución aparente, observaciones"
 }
 En "tokens" traduce la paleta al rol funcional (el color protagonista de la marca → primary). Si la imagen es un screenshot de un sitio/red social de la marca, extrae la paleta REAL visible.
+personName/role: SOLO si la imagen es un retrato con una banda/etiqueta de texto legible (nombre y/o cargo); si es una foto de equipo, un banner o no hay texto, deja ambos en null. NUNCA inventes un nombre.
 CRÍTICO — isPlaceholder: los favicons scrapeados de un sitio a veces NO son la marca del negocio sino el logo de la herramienta con que lo hicieron o un ícono default: la "C" de Canva, el logo de Wix/Squarespace/WordPress/GoDaddy, el ícono genérico de "documento/mundo" del navegador. Si reconoces la imagen como uno de esos (o como un ícono genérico sin relación con el negocio), marca isPlaceholder=true, isLogoCandidate=false, logoScore=1. NUNCA promuevas un placeholder como logo ni isotipo.`
 
 // Ruteo de costo: gpt-5-mini hace el análisis (visión input domina y es ~5x

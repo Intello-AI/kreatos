@@ -50,6 +50,30 @@ export default defineTool({
       .array(z.string())
       .optional()
       .describe("Rutas del inbox aprobadas como imágenes del sitio."),
+    imageDescriptions: z
+      .array(
+        z.object({
+          description: z
+            .string()
+            .describe("Qué muestra la imagen, en una frase (de analyze_brand_image)."),
+          use: z
+            .string()
+            .optional()
+            .describe('Uso sugerido en el sitio: "hero", "equipo", "retrato", "oficina", "portafolio"…'),
+          person: z
+            .string()
+            .optional()
+            .describe("Si es un retrato con banda de nombre: el nombre de la persona."),
+          role: z
+            .string()
+            .optional()
+            .describe("Si hay banda de cargo: el cargo/rol (p. ej. 'Contadora Senior')."),
+        }),
+      )
+      .optional()
+      .describe(
+        "Alineado 1:1 con imagePaths: qué muestra cada imagen, su uso y (retratos) nombre/cargo. El site-builder los usa para nombrar/colocar SIN re-visionar.",
+      ),
   }),
   async execute(input) {
     const supabase = getSupabaseClient()
@@ -84,8 +108,20 @@ export default defineTool({
       }
     }
 
+    // Merge sobre lo existente: solo se pisa lo enviado.
+    const { data: existing } = await supabase
+      .from("lead_brand")
+      .select("*")
+      .eq("lead_id", input.leadId)
+      .maybeSingle()
+
+    // Descripción por imagen, keyed por la ruta FINAL (dest): robusto al
+    // dedup/merge de `images`. Se conserva lo previo y se pisa por ruta.
+    const imageMeta: Record<string, unknown> = {
+      ...((existing?.image_meta as Record<string, unknown> | null) ?? {}),
+    }
     const images: string[] = []
-    for (const source of input.imagePaths ?? []) {
+    for (const [i, source] of (input.imagePaths ?? []).entries()) {
       const name = source.split("/").pop() ?? "imagen"
       const dest = `${input.leadId}/images/${name}`
       if (source !== dest) {
@@ -98,14 +134,9 @@ export default defineTool({
           throw new Error(`No se pudo promover ${name}: ${error.message}`)
       }
       images.push(dest)
+      const meta = input.imageDescriptions?.[i]
+      if (meta) imageMeta[dest] = meta
     }
-
-    // Merge sobre lo existente: solo se pisa lo enviado.
-    const { data: existing } = await supabase
-      .from("lead_brand")
-      .select("*")
-      .eq("lead_id", input.leadId)
-      .maybeSingle()
 
     const prevImages = (existing?.images as string[] | null) ?? []
     const { error } = await supabase.from("lead_brand").upsert(
@@ -120,6 +151,7 @@ export default defineTool({
         notes: input.notes ?? existing?.notes ?? null,
         voice: (input.voice ?? existing?.voice ?? null) as never,
         images: Array.from(new Set([...prevImages, ...images])) as never,
+        image_meta: imageMeta as never,
         ...(logoPath ? { logo_path: logoPath } : {}),
         ...(iconPath ? { icon_path: iconPath } : {}),
       },

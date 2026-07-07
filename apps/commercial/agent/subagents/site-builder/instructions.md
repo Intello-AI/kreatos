@@ -326,11 +326,14 @@ materializas:
    número uno (el cliente recibe "Su contabilidad al día" con su logo) — el
    push lo rechaza. Tu `content` de es-json cubre TODOS los namespaces del
    sitio (home completa + cada página), no solo los que cambian. Puedes llamarlo para varias superficies en el mismo turno
-   (corren en paralelo). Para theme.css dale los valores finales a la medida
-   (paleta light+dark en hex, radius, overlay y og-* — tú los diseñas desde la
-   marca; convierte la paleta a oklch para los bloques de UI y deja og-* en
-   hex). NO hay preset que copiar — respeta la anatomía de `themes/README.md`
-   (los tres bloques). El transcriptor no decide colores.
+   (corren en paralelo). Para theme.css la paleta EN OKLCH ya viene precalculada
+   en el spec: `design.paletteOklch.{light,dark}` (rol→`oklch(...)`), derivada
+   por `save_site_version` de la paleta hex. **Pásala a draft_surface tal cual
+   para los bloques `:root`/`.dark` — NO instales coloraide ni conviertas
+   hex→oklch a mano** (eran 4-6 comandos por build). Los `og-*` quedan en HEX
+   (de `design.palette`, porque Satori no lee oklch); radius y overlay también
+   se los das. NO hay preset que copiar — respeta la anatomía de
+   `themes/README.md` (los tres bloques). El transcriptor no decide colores.
    **`components/custom/` lo escribes TÚ siempre** con las
    herramientas del sandbox: ese código es diseño, no transcripción.
    **Idioma DEFAULT y multilenguaje.** El `locales` del brief manda: `locales[0]`
@@ -418,10 +421,18 @@ materializas:
    del cliente (`clients-strip.tsx`, `process-timeline.tsx`,
    `services-breakdown.tsx` — no `hero-jimsa.tsx`); su namespace en
    es.json se llama IGUAL que el componente; las imágenes en public/images/
-   llevan nombre semántico (`hero.webp`, `nosotros.webp`, `servicio-1.webp`
+   llevan nombre semántico (`hero-equipo.webp`, `equipo-1.webp`, `servicio-1.webp`
    — nunca `brand-1.webp`). Todos los sitios deben navegarse igual: quien
    abra cualquier repo encuentra cada cosa en el mismo lugar con el mismo
    nombre.
+   **Qué muestra cada foto ya viene dado:** `fetch_brand_assets` devuelve
+   `imageManifest` con, por cada `brand-N.webp`, su `description`, `use`
+   sugerido y (retratos) `person`/`role`. Nómbralas y colócalas con eso — el
+   nombre de un retrato sale de su persona (`equipo-melanie-gonzalez.webp`), el
+   copy de su cargo. **NO uses `view_reference_screenshots` sobre las fotos de
+   marca** (esa tool es para las REFERENCIAS de diseño del brief, no para
+   adivinar qué hay en una foto del cliente — ya te lo dice el manifiesto). Si
+   una foto no está en el manifiesto, entonces sí inspecciónala.
    Correcciones puntuales tras QA/build también las haces tú directo —
    re-transcribir un archivo entero por un typo es desperdicio. Antes de
    escribir secciones custom o tocar theme.css, carga `stack-docs` (docs

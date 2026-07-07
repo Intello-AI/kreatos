@@ -33,7 +33,7 @@ export default defineTool({
     const supabase = getSupabaseClient()
     const { data: brand } = await supabase
       .from("lead_brand")
-      .select("logo_path, icon_path, images")
+      .select("logo_path, icon_path, images, image_meta")
       .eq("lead_id", site.lead_id)
       .maybeSingle()
     if (!brand) {
@@ -116,11 +116,29 @@ export default defineTool({
 
     // ——— Fotos aprobadas → webp optimizado ———
     const images = ((brand.images as string[] | null) ?? []).filter(Boolean)
+    // Descripción por imagen (qué muestra + uso + persona/cargo), guardada por
+    // el brand-curator al ingerir. Se devuelve mapeada a cada brand-<n>.webp
+    // para que el site-builder NO re-visione las fotos.
+    const meta = (brand.image_meta ?? {}) as Record<
+      string,
+      { description?: string; use?: string; person?: string; role?: string }
+    >
+    const imageManifest: Array<{
+      file: string
+      description?: string
+      use?: string
+      person?: string
+      role?: string
+    }> = []
     let ogMade = false
     for (const [i, path] of images.entries()) {
       const tmp = `/tmp/brand-src-${i}.${extOf(path)}`
       const dest = `site/public/images/brand-${i + 1}.webp`
       if (!(await fetchToSandbox(publicUrl(path), tmp))) continue
+      const m = meta[path]
+      if (m) {
+        imageManifest.push({ file: `brand-${i + 1}.webp`, ...m })
+      }
       // La PRIMERA foto de marca descargada alimenta el Open Graph: un JPEG
       // 1200x630 (cover) en public/images/og.jpg. Es OBLIGATORIO que sea JPEG,
       // NO webp: Satori (@vercel/og) NO decodifica webp en <img> y un webp
@@ -147,8 +165,13 @@ export default defineTool({
     return {
       downloaded,
       icons,
+      imageManifest: imageManifest.length > 0 ? imageManifest : undefined,
       problems: problems.length > 0 ? problems : undefined,
-      hint: "Declara business.logo/business.icon en site.config.ts con estas rutas. Las brand-N.webp RENÓMBRALAS SIEMPRE a nombre semántico antes de usarlas (hero.webp, nosotros.webp, servicio-1.webp): todos los repos deben navegarse igual para ediciones manuales.",
+      hint: `Declara business.logo/business.icon en site.config.ts con estas rutas. Las brand-N.webp RENÓMBRALAS SIEMPRE a nombre semántico antes de usarlas (hero-equipo.webp, equipo-1.webp, servicio-1.webp): todos los repos deben navegarse igual para ediciones manuales.${
+        imageManifest.length > 0
+          ? " `imageManifest` ya dice qué muestra cada brand-N.webp (uso + persona/cargo si aplica): NÓMBRALAS y COLÓCALAS con eso — NO uses view_reference_screenshots sobre estas fotos."
+          : " (Sin imageManifest: la ficha no trae descripciones; solo en este caso inspecciona las fotos que necesites.)"
+      }`,
     }
   },
 })

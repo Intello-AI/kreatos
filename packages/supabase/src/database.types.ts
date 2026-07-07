@@ -181,6 +181,7 @@ export type Database = {
           eve_run_ids: string[]
           eve_session_id: string | null
           icon_path: string | null
+          image_meta: Json
           images: Json
           lead_id: string
           logo_path: string | null
@@ -198,6 +199,7 @@ export type Database = {
           eve_run_ids?: string[]
           eve_session_id?: string | null
           icon_path?: string | null
+          image_meta?: Json
           images?: Json
           lead_id: string
           logo_path?: string | null
@@ -215,6 +217,7 @@ export type Database = {
           eve_run_ids?: string[]
           eve_session_id?: string | null
           icon_path?: string | null
+          image_meta?: Json
           images?: Json
           lead_id?: string
           logo_path?: string | null
