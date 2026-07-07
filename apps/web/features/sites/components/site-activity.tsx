@@ -1605,7 +1605,7 @@ function DiffBlock({ diff }: { diff: NonNullable<ActivityItem["diff"]> }) {
         {oldLines.map((line, i) => (
           <div
             key={`o${i}`}
-            className="bg-destructive/10 px-2 text-destructive"
+            className="w-fit min-w-full bg-destructive/10 px-2 text-destructive"
           >
             <span aria-hidden className="mr-1 opacity-50 select-none">
               −
@@ -1614,7 +1614,7 @@ function DiffBlock({ diff }: { diff: NonNullable<ActivityItem["diff"]> }) {
           </div>
         ))}
         {newLines.map((line, i) => (
-          <div key={`n${i}`} className="bg-success/10 px-2 text-success">
+          <div key={`n${i}`} className="w-fit min-w-full bg-success/10 px-2 text-success">
             <span aria-hidden className="mr-1 opacity-50 select-none">
               +
             </span>
