@@ -63,6 +63,7 @@ export function makeUsageHook(agent: string, model: string) {
         try {
           const data = event.data as {
             turnId?: string
+            stepIndex?: number
             usage?: {
               inputTokens?: number
               outputTokens?: number
@@ -77,6 +78,9 @@ export function makeUsageHook(agent: string, model: string) {
           await getSupabaseClient().from("token_usage").insert({
             session_id: ctx.session.id,
             turn_id: data.turnId ?? null,
+            // step_index correlaciona esta fila con las tool_calls del mismo
+            // step (vista lead_tool_cost reparte el costo del step por tool).
+            step_index: data.stepIndex ?? null,
             agent,
             model,
             input_tokens: input,
@@ -100,6 +104,9 @@ export function makeUsageHook(agent: string, model: string) {
             agent,
             tool_name: a.kind === "tool-call" ? a.toolName : a.kind,
             kind: a.kind,
+            // (turn_id, step_index) = llave para unir con token_usage y
+            // repartir el costo del step entre sus tools (lead_tool_cost).
+            turn_id: event.data.turnId ?? null,
             step_index: event.data.stepIndex ?? null,
           }))
           await getSupabaseClient().from("tool_calls").insert(rows)

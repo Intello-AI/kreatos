@@ -19,18 +19,25 @@ export interface CostStage extends CostTotal {
   model: string
 }
 
-/** Conteo de llamadas de una tool dentro de un subagente (tabla tool_calls). */
-export interface ToolCallStat {
+/**
+ * Costo de una tool dentro de un subagente: llamadas + tokens + USD. El costo
+ * de cada step se reparte entre las tools que invocó (vista lead_tool_cost).
+ */
+export interface ToolCostStat {
   agent: string
   toolName: string
   calls: number
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  costUsd: number
 }
 
 export interface LeadCost {
   total: CostTotal | null
   stages: CostStage[]
-  /** Desglose por tool dentro de cada subagente (counts, no tokens). */
-  toolCalls: ToolCallStat[]
+  /** Desglose por tool dentro de cada subagente (llamadas + tokens + USD). */
+  toolCalls: ToolCostStat[]
 }
 
 const ZERO: CostTotal = {
@@ -56,10 +63,10 @@ export async function getLeadCost(leadId: string): Promise<LeadCost> {
         .eq("lead_id", leadId)
         .order("cost_usd", { ascending: false }),
       supabase
-        .from("lead_tool_calls")
+        .from("lead_tool_cost")
         .select("*")
         .eq("lead_id", leadId)
-        .order("calls", { ascending: false }),
+        .order("cost_usd", { ascending: false }),
     ])
 
   const total: CostTotal | null = totalRow
@@ -80,10 +87,14 @@ export async function getLeadCost(leadId: string): Promise<LeadCost> {
     cacheReadTokens: r.cache_read_tokens ?? 0,
   }))
 
-  const toolCalls: ToolCallStat[] = (toolRows ?? []).map((r) => ({
+  const toolCalls: ToolCostStat[] = (toolRows ?? []).map((r) => ({
     agent: r.agent ?? "—",
     toolName: r.tool_name ?? "—",
     calls: Number(r.calls ?? 0),
+    inputTokens: Number(r.input_tokens ?? 0),
+    outputTokens: Number(r.output_tokens ?? 0),
+    cacheReadTokens: Number(r.cache_read_tokens ?? 0),
+    costUsd: Number(r.cost_usd ?? 0),
   }))
 
   return { total, stages, toolCalls }

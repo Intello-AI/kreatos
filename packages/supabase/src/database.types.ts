@@ -600,6 +600,7 @@ export type Database = {
           model: string
           output_tokens: number
           session_id: string
+          step_index: number | null
           turn_id: string | null
         }
         Insert: {
@@ -611,6 +612,7 @@ export type Database = {
           model: string
           output_tokens?: number
           session_id: string
+          step_index?: number | null
           turn_id?: string | null
         }
         Update: {
@@ -622,6 +624,7 @@ export type Database = {
           model?: string
           output_tokens?: number
           session_id?: string
+          step_index?: number | null
           turn_id?: string | null
         }
         Relationships: []
@@ -635,6 +638,7 @@ export type Database = {
           session_id: string
           step_index: number | null
           tool_name: string
+          turn_id: string | null
         }
         Insert: {
           agent: string
@@ -644,6 +648,7 @@ export type Database = {
           session_id: string
           step_index?: number | null
           tool_name: string
+          turn_id?: string | null
         }
         Update: {
           agent?: string
@@ -653,6 +658,7 @@ export type Database = {
           session_id?: string
           step_index?: number | null
           tool_name?: string
+          turn_id?: string | null
         }
         Relationships: []
       }
@@ -698,6 +704,19 @@ export type Database = {
           agent: string | null
           calls: number | null
           lead_id: string | null
+          tool_name: string | null
+        }
+        Relationships: []
+      }
+      lead_tool_cost: {
+        Row: {
+          agent: string | null
+          cache_read_tokens: number | null
+          calls: number | null
+          cost_usd: number | null
+          input_tokens: number | null
+          lead_id: string | null
+          output_tokens: number | null
           tool_name: string | null
         }
         Relationships: []
