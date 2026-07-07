@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation"
 import { Logo } from "@/components/icons"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 
-import { PendingQuestionsBell } from "@/features/notifications/components/pending-questions-bell"
+import { NotificationCenter } from "@/features/notifications/components/notification-center"
 
 /**
  * Header global del dashboard. En `/dashboard` (el chat) no se renderiza:
@@ -30,7 +30,7 @@ export function DashboardHeader() {
         <Logo className="h-5 w-auto" />
       </Link>
       <div className="ml-auto">
-        <PendingQuestionsBell />
+        <NotificationCenter />
       </div>
     </header>
   )
