@@ -39,11 +39,7 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
      brief del producto desde el lead+marca y para razonar el concepto. (Trae
      un preámbulo de adaptación kreatos: ignora sus scripts/sandbox; el
      contrato del template manda.)
-   - `ui-ux-pro-max` — base buscable de estilos, paletas, pares tipográficos,
-     tipos de producto y guías UX (cubre Tailwind/shadcn/Next). Consúltala al
-     elegir estilo/paleta/fuentes por giro. (El "design read" y la disciplina
-     anti-default los da ya el skill `taste`, destilado y adaptado al template.)
-   **Precedencia:** estas dos son razonamiento genérico de frontend. El
+   **Precedencia:** `impeccable` es razonamiento genérico de frontend. El
    contrato del template kreatos (stack fijo, cero deps nuevas, motion del
    motor, solo tokens, copy next-intl) MANDA sobre cualquier consejo que
    choque — tómalas por su criterio de diseño, no por su código ni stack.
@@ -109,6 +105,10 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
    `business.address` (parsea el string del lead a {street,colonia,city,state,zip}),
    `business.geo`, `business.category` legible, `seo.title/description/keywords`, y
    todo `design` + `sections` + `pages`. compose_spec NO decide diseño ni persiste.
+   **Antes de llamar `save_site_version`, corre el pre-flight `spec-gate-check`**:
+   espeja las condiciones EXACTAS de rechazo del gate (concept≥60, `why` por
+   sección, marca usada, anti-convergencia OKLCH, /servicios si 3+ servicios) —
+   pasarlas primero evita el ping-pong.
    Luego `save_site_version` con el spec COMPLETO y `changelog`. El tool valida
    pensamiento de diseño (concepto, whys, takeaways, anti-clon estructural,
    marca usada, anti-convergencia de giro): si rechaza, lee TODOS los

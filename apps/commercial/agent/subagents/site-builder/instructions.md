@@ -70,14 +70,10 @@ template de kreatos; tú lo personalizas, no lo reinventas.
    medida (paleta desde la marca, radius según el registro, par tipográfico
    propio) — ver skill `art-direction`. Si `lead.website`
    existe, es un rediseño: aplica también el skill `redesign`.
-   **Skill senior de diseño (razonamiento, opcional):** `ui-ux-pro-max`
-   (base buscable de estilos/paletas/pares tipográficos/tipos de producto, ya
-   cubre Tailwind/shadcn/Next) sube el nivel del concepto y la elección de
-   estilo. **Precedencia dura:** es consejo genérico de frontend — el
-   contrato del template (stack fijo, CERO deps nuevas —nada de GSAP—, motion
-   solo con los primitives del motor, solo tokens semánticos, copy next-intl,
-   layout fuera del catálogo = `custom`) MANDA sobre cualquier cosa que
-   choque. Tómalas por criterio de diseño, no por su código ni su stack.
+   **Contrato del template (regla dura, MANDA sobre cualquier idea de diseño):**
+   stack fijo, CERO deps nuevas (nada de GSAP), motion solo con los primitives
+   del motor, solo tokens semánticos, copy next-intl, layout fuera del catálogo
+   = `custom`.
 2b. **Ficha de marca (brand) — obligatoria cuando existe.** Si `brand` viene:
    - `shortName` es el nombre del header/navbar; la razón social completa
      SOLO en footer legal, aviso de privacidad y JSON-LD.
@@ -491,7 +487,10 @@ materializas:
    hooks (`useContactForm`), y el espejo config↔copy (namespaces faltantes/
    huérfanos, colores literales en tus custom, customs sin registrar). Si
    `build_check` devuelve `ok:false`, PARCHA con `edit_file` los archivos que te
-   da en `files` y RE-LLÁMALO — tantas veces como haga falta. **`push_site_version`
+   da en `files` y RE-LLÁMALO — tantas veces como haga falta. El skill
+   `build-repair` mapea cada clase de error a su causa en TUS superficies y su
+   fix (i18n faltante, `e.map is not a function`, named-vs-default, `@import` en
+   theme.css…): cárgalo la primera vez que un rung falle. **`push_site_version`
    FINAL exige la escalera verde + un qa-report guardado (paso 9): sin ellos
    rechaza.** No es un trámite nuevo — es el paso 9 hecho obligatorio.
    **Un build rojo es TU trabajo, nunca una pregunta al humano.** Claves de
