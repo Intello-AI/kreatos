@@ -52,6 +52,9 @@ export function ChatView({
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col">
+      {/* Nombre accesible de la ruta: el título vive en el dropdown del header,
+          esta pantalla no tenía h1 para lectores de pantalla. */}
+      <h1 className="sr-only">{conversation.title ?? "Conversación"}</h1>
       <ChatActivity
         key={conversation.id}
         runIds={runIds}

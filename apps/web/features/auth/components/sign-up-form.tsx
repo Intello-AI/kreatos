@@ -58,11 +58,14 @@ export function SignUpForm() {
             placeholder="Nombre y apellido"
             autoComplete="name"
             aria-invalid={!!errors.full_name || undefined}
+            aria-describedby={errors.full_name ? "signup-name-error" : undefined}
             disabled={pending}
             {...register("full_name")}
           />
           {errors.full_name && (
-            <FieldError>{errors.full_name.message}</FieldError>
+            <FieldError id="signup-name-error">
+              {errors.full_name.message}
+            </FieldError>
           )}
         </Field>
 
@@ -74,10 +77,13 @@ export function SignUpForm() {
             placeholder="mail@mail.com"
             autoComplete="email"
             aria-invalid={!!errors.email || undefined}
+            aria-describedby={errors.email ? "signup-email-error" : undefined}
             disabled={pending}
             {...register("email")}
           />
-          {errors.email && <FieldError>{errors.email.message}</FieldError>}
+          {errors.email && (
+            <FieldError id="signup-email-error">{errors.email.message}</FieldError>
+          )}
         </Field>
 
         <Field data-invalid={!!errors.password || undefined}>
@@ -89,6 +95,9 @@ export function SignUpForm() {
               placeholder="********"
               autoComplete="new-password"
               aria-invalid={!!errors.password || undefined}
+              aria-describedby={
+                errors.password ? "signup-password-error" : "signup-password-hint"
+              }
               disabled={pending}
               {...register("password")}
             />
@@ -104,9 +113,13 @@ export function SignUpForm() {
             </InputGroupAddon>
           </InputGroup>
           {errors.password ? (
-            <FieldError>{errors.password.message}</FieldError>
+            <FieldError id="signup-password-error">
+              {errors.password.message}
+            </FieldError>
           ) : (
-            <FieldDescription>Mínimo 6 caracteres.</FieldDescription>
+            <FieldDescription id="signup-password-hint">
+              Mínimo 6 caracteres.
+            </FieldDescription>
           )}
         </Field>
 

@@ -59,10 +59,13 @@ export function LoginForm() {
             placeholder="mail@mail.com"
             autoComplete="email"
             aria-invalid={!!errors.email || undefined}
+            aria-describedby={errors.email ? "email-error" : undefined}
             disabled={pending}
             {...register("email")}
           />
-          {errors.email && <FieldError>{errors.email.message}</FieldError>}
+          {errors.email && (
+            <FieldError id="email-error">{errors.email.message}</FieldError>
+          )}
         </Field>
 
         <Field data-invalid={!!errors.password || undefined}>
@@ -74,6 +77,7 @@ export function LoginForm() {
               placeholder="********"
               autoComplete="current-password"
               aria-invalid={!!errors.password || undefined}
+              aria-describedby={errors.password ? "password-error" : undefined}
               disabled={pending}
               {...register("password")}
             />
@@ -89,7 +93,7 @@ export function LoginForm() {
             </InputGroupAddon>
           </InputGroup>
           {errors.password && (
-            <FieldError>{errors.password.message}</FieldError>
+            <FieldError id="password-error">{errors.password.message}</FieldError>
           )}
         </Field>
 
