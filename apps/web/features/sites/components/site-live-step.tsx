@@ -92,7 +92,11 @@ export function SiteLiveStep({ runId }: { runId: string }) {
 
   if (done) {
     return (
-      <span className="block w-full truncate text-xs text-muted-foreground">
+      <span
+        role="status"
+        aria-live="polite"
+        className="block w-full truncate text-xs text-muted-foreground"
+      >
         Terminando…
       </span>
     )
@@ -100,8 +104,10 @@ export function SiteLiveStep({ runId }: { runId: string }) {
   // block w-full truncate: llena la celda de ancho fijo (w-56) y recorta — así
   // la columna no salta de ancho cuando el label cambia de longitud.
   return (
-    <Shimmer className="block w-full truncate text-xs">
-      {label ?? "Conectando…"}
-    </Shimmer>
+    <span role="status" aria-live="polite" className="block w-full">
+      <Shimmer className="block w-full truncate text-xs">
+        {label ?? "Conectando…"}
+      </Shimmer>
+    </span>
   )
 }
