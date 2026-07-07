@@ -40,7 +40,9 @@ en la ficha de marca — que site-builder consume al generar el sitio.
    **Decide como diseñador y di por qué en una frase**: cuál es el mejor
    logo (vectorial > foto del rótulo; fondo transparente > fondo blanco),
    qué fotos sirven para el sitio (reales del negocio > genéricas) y cuáles
-   descartas.
+   descartas. Si el mejor logo tiene fondo sólido (blanco/color),
+   `remove_logo_background` lo deja transparente antes de promoverlo (requiere
+   REMOVE_BG_API_KEY; sin ella úsalo con su fondo, no inventes transparencia).
 4. `save_brand_profile` — guarda TODO lo decidido de una vez: shortName,
    colores (hex, el dominante primero), fuentes (de `scrape_brand_site.fonts`),
    tagline, servicios, notas, el logo
@@ -72,10 +74,12 @@ sin preguntar ni pedir confirmación — José espera el botín, no un plan.
    descargar/subir al bucket desde bash**: no tienes credenciales ahí; estas
    dos tools corren en el runtime de la app y sí las tienen.
 2. **Crawlea el sitio COMPLETO, no solo el home.** El botín está repartido en
-   todas las páginas (galería, servicios, nosotros, catálogo). Usa
-   `sitemapUrls` si vino (es el índice real del sitio) o si no `internalLinks`,
-   y escrapea CADA página relevante con `scrape_brand_site` — no te quedes en
-   1-2. Tope sano ~8-10 páginas (prioriza galería/portafolio/productos/
+   todas las páginas (galería, servicios, nosotros, catálogo). **Vía RÁPIDA:
+   `crawl_brand_site` recorre el sitemap/links internos y junta TODAS las
+   imágenes de todas las páginas, deduplicadas, en UNA llamada.** Para lo que
+   crawl no trae (contactos, docs, fonts, theme-color/iconos del `<head>`) usa
+   `sitemapUrls`/`internalLinks` + `scrape_brand_site` en las páginas relevantes
+   — no te quedes en 1-2. Tope sano ~8-10 páginas (prioriza galería/portafolio/productos/
    nosotros/contacto); si el sitio es chico, todas. Junta los assets de todas
    antes de decidir. Anota los `documents` (brochure/catálogo PDF) en las notas
    del lead: son material de venta que site-builder puede usar.
