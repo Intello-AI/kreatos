@@ -49,38 +49,36 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
    contrato del template kreatos (stack fijo, cero deps nuevas, motion del
    motor, solo tokens, copy next-intl) MANDA sobre cualquier consejo que
    choque — tómalas por su criterio de diseño, no por su código ni stack.
-   **COMPÓN CON LA BIBLIOTECA DE BLOQUES (lee el skill `block-catalog`).** Es
-   lo que evita el sitio-plantilla. Jerarquía al elegir cada sección de
-   contenido:
-   1. **Custom-first — tu default es CREAR, no reutilizar.** Prefiere SIEMPRE
-      una sección `{ id: "custom", component, ns, why }` hecha a la medida de
-      ESTE negocio antes que un bloque de la biblioteca. Tienes LIBERTAD total:
-      crea cuantas custom mejoren el sitio — sin techo — y hazlo en la HOME **y
-      en CADA página interior** (una ruta interior también merece su firma, no
-      se rellena con bloques). El punto es que se vea BIEN y ÚNICO; si puedes
-      hacer algo mejor a la medida que cualquier bloque, hazlo. Se DISEÑAN
-      robando composición de las referencias del brief (por eso van con
-      takeaways). Piso duro: un sitio sin firma custom se lee a plantilla —
-      `save_site_version` rechaza specs sin al menos una custom en la home —
-      pero eso es el MÍNIMO, no la meta.
-   2. **Bloques de la biblioteca** (`{ id: "block", block: "<key>", ns }`) —
-      úsalos SOLO cuando el arquetipo encaja perfecto y no harías uno mejor a la
-      medida (evita reinventar un FAQ o un trust-bar cuando el bloque sirve tal
-      cual). Son el REPARTO de apoyo: 48 arquetipos con HERMANOS por tipo
-      (2-3 de features/servicios/procesos/galerías/stats/CTAs/FAQs/about).
-      Elige por arquetipo + su `ns`,
-      ALTERNANDO vecinos (denso/aireado, oscuro/claro, cifras/lista) — el RITMO
-      hace único al sitio. No repitas un bloque >2 veces, y dos sitios del
-      mismo giro NO deben llevar la misma secuencia de bloques.
-   3. **Sección de motor** (`{ id: "hero"/"contact"/"faq"/… }`) — solo las
-      commodity (navbar, footer, contact, faq, trust-bar) y el hero base.
-   Cada sección lleva su `why` (qué pregunta responde + por qué ESE arquetipo).
+   **COMPÓN DESDE CERO — el motor es un LIENZO EN BLANCO.** No hay secciones
+   fijas ni biblioteca de bloques montable: **TODA sección del sitio es custom**
+   (`{ id: "custom", component: "<kebab>", ns: "<kebab>", why, slot? }`). TÚ
+   decides la composición completa y con LIBERTAD TOTAL:
+   - **Cuántas secciones, cuáles y en qué orden** — no hay skeleton obligatorio
+     ni conteo fijo. La materia prima del inventario (1b) manda: cada sección
+     existe porque VENDE algo real, no para llenar. Un sitio puede llevar 4
+     secciones densas o 10; tú lo decides por lo que el negocio tiene que decir.
+   - **Cuántas páginas y qué rutas** — home + las interiores que el material
+     real justifique (ver paso 3). Cada página se compone igual: desde cero.
+   - **El header y el footer** son dos customs más, marcados con `slot:"header"`
+     y `slot:"footer"` (el motor los envuelve en sus landmarks e inyecta el
+     crédito de agencia). A lo más uno de cada; el resto son body.
+   Cada sección DEBE ser ÚNICA — dos sitios jamás comparten layout. Se DISEÑAN
+   robando composición de las referencias del brief (por eso van con takeaways),
+   nunca clonando. Piensa en arquetipos (hero, servicios como ledger, banda de
+   cifras, contacto split, cierre CTA…) pero MATERIALÍZALOS a la medida de ESTE
+   negocio, no como una plantilla.
+   **`reference/` del template = corpus de inspiración, NO catálogo montable.**
+   `reference/sections/` (15 arquetipos) y `reference/blocks/` (52 patrones) son
+   ejemplos probados para ROBAR composición/estructura/técnica y luego DIVERGIR.
+   site-builder los lee como referencia; nunca los monta. En el spec no existen
+   `id: "block"` ni ids de motor — solo customs con su `why` (qué pregunta del
+   visitante responde + qué gesto de composición usa).
    **Referencias: úsalas para ROBAR COMPOSICIÓN, no solo colores (2-3, no una).**
    design-scout ya descifró cada referencia. Explótalo así:
    - **`analysis.sections`** (orden + kind + notes) es tu PLANO de composición:
      roba su RITMO (qué va primero, dónde rompe la retícula, densidades,
-     asimetrías) y TRADÚCELO a tu selección de bloques + tu firma custom. No su
-     copy ni su giro — su ESTRUCTURA y su ritmo.
+     asimetrías) y TRADÚCELO a tu composición de secciones custom. No su copy ni
+     su giro — su ESTRUCTURA y su ritmo.
    - **`do_steal` / `dont_steal`** (campos de cada referencia, junto a
      `analysis`): los gestos robables van a la sección de FIRMA (el custom) —
      ahí es donde el "por qué se ve caro" de la referencia se materializa a la
@@ -94,12 +92,16 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
    jerarquía por opacidad de texto para la firma"; "el ritmo 2:1 entre secciones";
    "asimetría 60/40 en el hero") — nunca "usar el mismo layout". Dos referencias
    distintas + una firma propia = un sitio que no se parece a ningún otro.
-3. **Arquitectura de páginas — multi-página es la norma.** /servicios casi
-   siempre (cada servicio del inventario con su propio bloque: qué
-   incluye, entregables, para quién); /nosotros cuando hay material real;
-   otras por giro. Home 6+ secciones; página interior 4+ con contenido
-   propio — si no da para 4 con sustancia, recórtala. Cada sección de
-   contenido lleva su `why`.
+3. **Arquitectura de páginas — TÚ decides cuántas y cuáles.** Multi-página es
+   lo normal en un sitio corporativo (un one-pager se ve barato y limita el SEO
+   local), pero no hay número obligatorio: /servicios casi siempre (cada
+   servicio del inventario desarrollado: qué incluye, entregables, para quién);
+   /nosotros cuando hay material real; otras por giro (/proyectos, /cobertura…).
+   El criterio es SUSTANCIA, no conteo: una página existe si tiene contenido
+   PROPIO que la justifique; si no da para llenarla con algo real, no la crees
+   (nada de páginas de relleno que repitan la home). Igual con las secciones de
+   cada página: tantas como el material merezca, ni una de paja. Cada sección
+   lleva su `why`.
 4. `save_site_version` con el spec COMPLETO y `changelog`. El tool valida
    pensamiento de diseño (concepto, whys, takeaways, anti-clon estructural,
    marca usada, anti-convergencia de giro): si rechaza, lee TODOS los
@@ -120,12 +122,14 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
        "references": [{ "slug": "<slug>", "takeaways": "qué robas y qué no" }]
      },
      "sections": [
-       { "id": "hero", "variant": "stat-led", "why": "..." },
-       { "id": "block", "block": "stat-wall", "ns": "impacto", "why": "credenciales en cifras grandes, rompe el ritmo tras el hero" },
-       { "id": "block", "block": "feature-zigzag", "ns": "servicios", "why": "3 servicios con foto real, filas alternas con aire" },
-       { "id": "custom", "component": "contact-hero", "ns": "contact-hero", "why": "cierre tipo segundo hero oscuro — no hay bloque ni sección de motor que lo logre" }
+       { "id": "custom", "component": "site-header", "ns": "site-header", "slot": "header", "why": "nav sobria con la marca y CTA a contacto" },
+       { "id": "custom", "component": "hero-editorial", "ns": "hero-editorial", "why": "masthead asimétrico con la ficha de Google como prueba social" },
+       { "id": "custom", "component": "impact-wall", "ns": "impacto", "why": "credenciales en cifras grandes, rompe el ritmo tras el hero" },
+       { "id": "custom", "component": "services-ledger", "ns": "servicios", "why": "servicios como ledger editorial, no cards genéricas" },
+       { "id": "custom", "component": "contact-split", "ns": "contact-split", "why": "cierre con datos + form (useContactForm) + mapa (MapEmbed)" },
+       { "id": "custom", "component": "site-footer", "ns": "footer", "slot": "footer", "why": "footer editorial; el motor le inyecta el crédito" }
      ],
-     "pages": [{ "slug": "servicios", "sections": [{ "id": "...", "why": "..." }] }],
+     "pages": [{ "slug": "servicios", "sections": [{ "id": "custom", "component": "page-intro", "ns": "pages.servicios.header", "why": "..." }, { "id": "custom", "component": "...", "ns": "pages.servicios....", "why": "..." }] }],
      "seo": { "title": "...", "description": "...", "jsonLdType": "...", "keywords": [] },
      "flags": { "contactForm": true, "whatsappFloat": false, "multiLang": false, "themeToggle": true }
    }
@@ -141,15 +145,14 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
    páginas interiores, momento con imagen — todo lo que el validador exige) o
    no se guarda. Un stub es basura: no desbloquea nada, deja el sitio a medias
    y el humano no lo pidió.
-   **Escape hatch obligatorio (lee el skill `section-patterns` → "Catálogo del
-   MOTOR"):** los `id` del motor tienen layout fijo y variantes cerradas.
-   Cualquier layout que NO exprese ese catálogo (un contacto "segundo hero"
-   oscuro, banda de logos, tabla de flota, cobertura con mapa) va como
-   `{ "id": "custom", "component": "<kebab>", "ns": "<kebab>", "why": "..." }`
-   — NUNCA como un `id` de motor con un `why` que le pide algo que su variante
-   no hace. Si especificas un layout imposible sobre un id de motor, obligas a
-   site-builder a editar el motor y tumbas su corrida entera. Ante la duda:
-   custom. **imageTreatment:** si el negocio tiene fotos reales (scrape/
+   **TODAS las secciones son custom** (`id: "custom"`): no existen ids de motor
+   ni bloques en el spec — cada sección es un componente que site-builder escribe
+   a la medida. Piensa el layout con total libertad (un contacto "segundo hero"
+   oscuro, banda de logos, tabla de flota, cobertura con mapa: todos son customs).
+   Recuerda la plomería headless que site-builder DEBE reusar (dilo en el `why`
+   cuando aplique): form → `useContactForm`, mapa → `MapEmbed`, motion →
+   `Reveal`; el crédito de agencia lo inyecta el motor en el footer.
+   **imageTreatment:** si el negocio tiene fotos reales (scrape/
    material), ponlo en `"none"` (el duotono tiñe y arruina las fotos reales);
    `duotone-accent`/`bw`/`warm` solo para sitios de puro stock (skill
    `image-style`).

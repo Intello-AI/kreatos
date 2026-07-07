@@ -109,38 +109,41 @@ template de kreatos; tú lo personalizas, no lo reinventas.
      **jpg/png** (NUNCA `.webp`). NO toques `opengraph-image.tsx` (es motor) ni
      generes el OG a mano. Si el lead no trae fotos de marca, no hay og.jpg y el
      OG cae a una tarjeta sólida de marca (correcto, no lo fuerces).
-2b-bis. **BIBLIOTECA DE BLOQUES — tu primera arma contra lo genérico.** El
-   template trae `components/blocks/` (48 arquetipos curados y probados) que se
-   COMPONEN, no se escriben: declaras `{ id: "block", block: "<key>", ns }` en
-   config y llenas su copy en es.json — **NADA de .tsx**. Lee
-   `components/blocks/catalog.md` del clone para el arquetipo y la forma de `ns`
-   de cada bloque. En el flujo normal el spec del art-director YA eligió los
-   bloques: solo transcríbelos (config + su copy con la forma del catálogo). Si
-   compones tú (sin art-director), prefiere bloques sobre secciones de motor
-   para el CONTENIDO, alternando arquetipos vecinos, sin repetir un bloque >2
-   veces.
-2c. **Secciones custom — CUSTOM-FIRST: tu default es CREAR, no reutilizar.** El
-   template permite escribir componentes de sección desde cero en
-   `components/custom/` (registrados en `components/custom/registry.ts`,
-   declarados en config como `{ id: "custom", component, ns }`). PREFIERE
-   SIEMPRE una custom a la medida de ESTE negocio antes que un bloque de la
-   biblioteca; un bloque solo cuando encaja perfecto y no harías uno mejor.
-   Tienes LIBERTAD total: crea cuantas mejoren el sitio — sin techo — en la
-   HOME **y en CADA página interior** (una ruta interior merece su propia firma,
-   no se rellena con bloques repetidos). El punto es que se vea BIEN y ÚNICO.
-   En el flujo normal el spec del art-director ya las declara: TÚ escribes
-   su .tsx (con su layout del spec, robando composición de las referencias).
-   Piso duro: `save_site_version` rechaza la home sin al menos una custom — pero
-   eso es el MÍNIMO, no la meta.
-   **Sin tope numérico**: hero y toda
-   sección de contenido pueden ser custom cuando la dirección de arte lo
-   pida — dos sitios distintos NO deben compartir los mismos layouts; las
-   variantes del motor son piso de velocidad, no techo de diseño. Quedan
-   SIEMPRE en el motor las commodity (navbar, footer, contact, faq,
-   trust-bar, aviso): de ellas dependen SEO/a11y/form. Cada custom se
-   justifica en el spec ("la variante X no logra Y de la referencia").
-   Contrato: solo tokens del theme, copy vía next-intl, motion con los
-   primitives del motor, accesibilidad AA, cero dependencias nuevas.
+2c. **TODO es CUSTOM — el motor es un lienzo en blanco.** No hay secciones
+   fijas ni biblioteca de bloques montable: CADA sección del sitio es un
+   componente que TÚ escribes en `components/custom/` (registrado en
+   `components/custom/registry.ts`, declarado en config como
+   `{ id: "custom", component, ns, slot? }`). En el flujo normal el spec del
+   art-director YA definió la composición (qué secciones, cuántas, en qué orden,
+   con qué slot); TÚ escribes cada `.tsx` a la medida de ESTE negocio, robando
+   composición de las referencias del brief — nunca clonando. Dos sitios jamás
+   comparten layout.
+   - **`reference/` = corpus de INSPIRACIÓN, no se monta.** `reference/sections/`
+     (15 arquetipos) y `reference/blocks/` (52 patrones) son ejemplos probados
+     para robar composición/estructura/técnica y luego DIVERGIR. Léelos como
+     referencia; NUNCA los importes, montes ni copies verbatim a `components/custom/`
+     (copiar uno tal cual es reúso disfrazado y traiciona el objetivo). En config
+     no existen `id: "block"` ni ids de motor — solo `custom`.
+   - **Slots (landmarks del motor)**: la sección con `slot: "header"` la envuelve
+     el motor en `<header>`; `slot: "footer"` en `<footer>` + le INYECTA el
+     crédito de agencia (no lo escribas tú); sin slot va en `<main>`. A lo más
+     una header y una footer — el header/footer emiten su CONTENIDO, no su propio
+     `<header>`/`<footer>`.
+   - **Plomería HEADLESS — úsala, NUNCA la reimplementes** (es comportamiento sin
+     diseño, ya probado; tu custom la cablea a SU markup): formulario →
+     `import { useContactForm } from "@/components/shared/use-contact-form"`
+     (PROHIBIDO `fetch("/api/contact")` a mano o reescribir `lib/contact-schema.ts`);
+     mapa → `import { MapEmbed } from "@/components/shared/map-embed"` (tú decides
+     el marco); motion → `Reveal` de `components/shared/reveal`; imágenes →
+     `SmartImage`; átomos funcionales (`GoogleRatingBadge`, `WhatsappButton`,
+     `LocaleSwitcher`, `ThemeToggle`) en `components/shared/`. El crédito de
+     agencia lo pone el motor en el footer.
+   - **Para ITERAR una custom ya escrita usa `edit_file`** (diff), no reescribas
+     el archivo entero (output de Sonnet es lo caro).
+   - Contrato de cada custom: solo tokens del theme, copy 100% vía next-intl,
+     motion con los primitives del motor, server component salvo isla de cliente
+     acotada, accesibilidad AA (h1 SOLO en el héroe / `page-intro`), cero
+     dependencias nuevas.
    **Copy = TODAS las claves que el componente lee.** Cada `t("x")` del .tsx
    DEBE tener su clave en es.json bajo ese ns — si falta, el build ahora TUMBA
    (next-intl lanza en MISSING_MESSAGE; antes pintaba "ns.clave" cruda en el
@@ -158,7 +161,7 @@ template de kreatos; tú lo personalizas, no lo reinventas.
    fundirse con el overlay. NUNCA dejes el texto caer al `foreground`/
    `muted-foreground` del tema: en light son oscuros y desaparecen sobre la
    foto (el titular queda invisible — el bug de contraste #1). Espeja el patrón
-   de los bloques del motor `banner-image`/`cta-bg-image`/`image-fullbleed-caption`;
+   de `reference/blocks/banner-image`/`cta-bg-image`/`image-fullbleed-caption`;
    el reviewer marca texto ilegible sobre imagen como **structural** (bloquea
    el push). Las
    referencias analizadas (`designReferences[].analysis`) son tu catálogo de
@@ -186,20 +189,21 @@ template de kreatos; tú lo personalizas, no lo reinventas.
    plantilla.** `page-header + una lista + cta-band` repetido en todas las
    páginas es un molde prohibido (save_site_version lo rechaza). Usa el
    inventario del paso 1b: en /servicios cada servicio con su ángulo puede
-   ser su propio bloque (alternados, numerados, con su dato duro), no una
-   tabla única; /nosotros puede abrir con la historia real, no con un
+   ser su propia sección custom (alternadas, numeradas, con su dato duro), no
+   una tabla única; /nosotros puede abrir con la historia real, no con un
    header genérico. Las referencias también aplican aquí — sus páginas
    interiores están en `analysis.sitemap` y `analysis.sections`.
-   **Extensión mínima — el sitio se vende por sustancia, no por resumen:**
-   - Home: 6+ secciones (sin contar navbar/footer).
-   - Cada página interior: 4+ secciones con contenido PROPIO; /servicios
-     desglosa CADA servicio del inventario en su propio bloque (qué
-     incluye, entregables, para quién) — un servicio real nunca se queda
-     en título + una línea.
-   - El copy interior PROFUNDIZA lo que la home resume: alcances, proceso,
-     materiales, zonas, preguntas reales del giro. Si tras el inventario
-     una página no da para 4 secciones con sustancia, recórtala del sitemap
-     (mejor 3 páginas densas que 5 flacas).
+   **Extensión por SUSTANCIA, no por conteo — no hay número obligatorio de
+   secciones.** El art-director decide cuántas; tú materializas esa composición.
+   La vara es que cada sección diga algo real:
+   - La home lleva las secciones que el negocio necesita para vender (un teaser
+     de servicios, prueba social, la firma visual, contacto…), tantas como el
+     material merezca — ni relleno ni resumen.
+   - Cada página interior PROFUNDIZA lo que la home resume (alcances, proceso,
+     materiales, zonas, preguntas reales del giro): /servicios desglosa cada
+     servicio del inventario con su ángulo, no una lista de una línea. Si una
+     página no da para llenarse con contenido PROPIO, recórtala del sitemap
+     (mejor pocas páginas densas que muchas flacas).
 4. Corre el pre-flight del skill `taste` sobre el spec y luego
    `save_site_version`. El tool rechaza specs sin pensamiento de diseño
    (sin concepto, secciones sin `why`, referencias ignoradas, esqueleto
@@ -225,8 +229,8 @@ template de kreatos; tú lo personalizas, no lo reinventas.
        "imageTreatment": "duotone-accent",
        "references": [{ "slug": "<slug>", "takeaways": "qué robas y qué no" }]
      },
-     "sections": [{ "id": "hero", "variant": "full-bleed", "why": "..." }],
-     "pages": [{ "slug": "servicios", "sections": [{ "id": "...", "why": "..." }] }],
+     "sections": [{ "id": "custom", "component": "site-header", "ns": "site-header", "slot": "header", "why": "..." }, { "id": "custom", "component": "hero-...", "ns": "hero-...", "why": "..." }, { "id": "custom", "component": "site-footer", "ns": "footer", "slot": "footer", "why": "..." }],
+     "pages": [{ "slug": "servicios", "sections": [{ "id": "custom", "component": "...", "ns": "pages.servicios....", "why": "..." }] }],
      "seo": { "title": "...", "description": "...", "jsonLdType": "...", "keywords": [] },
      "flags": { "contactForm": true, "whatsappFloat": false, "multiLang": false, "themeToggle": true }
    }
@@ -258,11 +262,14 @@ materializas:
    en es.json.
    **⚡ NO SPELUNKEES EL TEMPLATE. Con `latestSpec` presente ya lo conoces —
    escribe directo desde el spec, sin re-explorar.** Reglas de lectura en build:
-   - **PROHIBIDO abrir el `.tsx` de cualquier block/section del motor**
-     (`components/{blocks,sections,shared,ui}/*`). Los blocks se declaran por
-     KEY (su contrato completo — props/ns/tokens — está en
-     `components/blocks/catalog.md`); las sections por su tabla id→variantes
-     en AGENT.md. Abrir su código no aporta nada y quema minutos cada corrida.
+   - **PROHIBIDO abrir el `.tsx` del MOTOR** (`components/{shared,ui}/*`): su
+     contrato está en AGENT.md, y la plomería headless (`useContactForm`,
+     `MapEmbed`, `Reveal`, `SmartImage`…) se USA por su import, no leyendo su
+     código. Abrirlo no aporta y quema minutos.
+   - **`reference/` (sections + blocks) es INSPIRACIÓN, léelo con criterio**: NO
+     lo explores entero cada corrida; ábrelo puntualmente cuando quieras robar la
+     composición de un arquetipo concreto, y luego DIVERGE. Nunca lo importes,
+     montes ni copies verbatim a `components/custom/`.
    - **PROHIBIDO leer `scripts/*` y `themes/*`**: corre `pnpm validate-config`
      y lee su SALIDA (más corta y accionable que el script). El contrato del
      theme (3 bloques :root/.dark/@theme) ya lo sabes.
@@ -579,9 +586,10 @@ materializas:
        `pnpm build` y vuelve a pushear. Todo tu trabajo custom/config/copy
        queda intacto. `git checkout -- <archivo>` (sin `origin/main`) NO
        revierte lo ya commiteado en checkpoint: usa siempre `origin/main --`.
-       Si parchaste una sección de motor porque su layout no te servía (p. ej.
-       contact "footer-hero"), reviértela y créala como CUSTOM
-       (`components/custom/`), nunca re-parches el motor.
+       Si editaste PLOMERÍA del motor (`components/{shared,ui}/*`, el
+       section-renderer, un helper de `lib/`) para forzar un layout, reviértelo:
+       ese layout va en TU componente `components/custom/`, no en el motor. La
+       plomería headless (form/mapa/motion) se USA, no se modifica.
     e2. **Motor desactualizado o repo inconsistente** (distinto de e): si
        `validate-config` o el build fallan por reglas/archivos del MOTOR que
        el template actual YA corrigió (no algo que tú editaste), ahí sí corre

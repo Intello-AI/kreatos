@@ -59,18 +59,6 @@ const specSchema = z
   })
   .passthrough()
 
-/** Secciones commodity del motor: no requieren `why` creativo propio. */
-const COMMODITY_SECTIONS = new Set([
-  "navbar",
-  "footer",
-  "contact",
-  "trust-bar",
-  "cta-band",
-  "faq",
-  "page-header",
-  "aviso",
-])
-
 /**
  * Familia de arquetipo de un bloque de la biblioteca, derivada del prefijo de
  * su key. Dos bloques de la MISMA familia producen el mismo gesto visual
@@ -112,6 +100,36 @@ function lcsLength(a: string[], b: string[]): number {
     }
   }
   return dp[b.length]
+}
+
+/** hex (#rrggbb) → HSL (h en grados 0-360, s/l en 0-1). null si no parsea. */
+function hexToHsl(hex: string): { h: number; s: number; l: number } | null {
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim())
+  if (!m) return null
+  const n = parseInt(m[1], 16)
+  const r = ((n >> 16) & 255) / 255
+  const g = ((n >> 8) & 255) / 255
+  const b = (n & 255) / 255
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  const d = max - min
+  const l = (max + min) / 2
+  let h = 0
+  let s = 0
+  if (d !== 0) {
+    s = d / (1 - Math.abs(2 * l - 1))
+    if (max === r) h = (((g - b) / d) % 6 + 6) % 6
+    else if (max === g) h = (b - r) / d + 2
+    else h = (r - g) / d + 4
+    h *= 60
+  }
+  return { h, s, l }
+}
+
+/** Distancia angular mínima entre dos hues (grados, 0-180). */
+function hueDelta(a: number, b: number): number {
+  const d = Math.abs(a - b) % 360
+  return d > 180 ? 360 - d : d
 }
 
 /** Texto libre que puede venir como string o array de strings (Postel). */
@@ -207,8 +225,6 @@ export default defineTool({
     }
 
     const sections = spec.sections as Array<Record<string, unknown>>
-    const hero = sections.find((s) => s["id"] === "hero")
-    const heroVariant = hero?.["variant"] as string | undefined
     const design = spec.design as Record<string, unknown>
 
     // ——— Reglas de creatividad: el spec debe PENSAR, no rellenar el menú ———
@@ -220,10 +236,13 @@ export default defineTool({
       )
     }
 
-    // 2. Cada sección de contenido justifica su existencia y su layout.
+    // 2. Cada sección de CONTENIDO justifica su existencia y su layout. El
+    // header y el footer (slots) son chrome estructural: no requieren `why`
+    // creativo. Todo lo demás (body) sí.
     const missingWhy = sections.filter(
       (s) =>
-        !COMMODITY_SECTIONS.has(String(s["id"])) &&
+        s["slot"] !== "header" &&
+        s["slot"] !== "footer" &&
         asText(s["why"] ?? s["rationale"]).trim().length < 20,
     )
     if (missingWhy.length > 0) {
@@ -231,16 +250,6 @@ export default defineTool({
         `secciones sin \`why\` (${missingWhy
           .map((s) => String(s["component"] ?? s["id"]))
           .join(", ")}): cada sección de contenido declara qué pregunta del visitante responde y por qué ESE layout la responde mejor.`,
-      )
-    }
-
-    // 2b. Momento FIRMA obligatorio: cada sitio necesita ≥1 sección `custom`
-    // hecha a la medida (el gesto memorable). Solo bloques + motor = un sitio
-    // armado de piezas prefabricadas, genérico por definición.
-    const hasSignature = sections.some((s) => String(s["id"]) === "custom")
-    if (!hasSignature) {
-      problems.push(
-        "la home no tiene NINGUNA sección `custom` de firma: todo son bloques de la biblioteca y/o secciones de motor → se ve a plantilla. Diseña 1-2 `custom` a la medida de ESTE negocio (el gesto memorable, robando composición de las referencias del brief). Los bloques son el reparto de apoyo, no el sitio entero.",
       )
     }
 
@@ -350,78 +359,36 @@ export default defineTool({
       }
     }
 
-    // ——— Anti-convergencia dentro del giro: acento + hero ———
-    // Sin presets, la firma visual de entrada es la paleta (su acento) + el
-    // hero. Dos sitios del giro con el MISMO acento y el MISMO hero se ven
-    // gemelos aunque el resto difiera.
+    // ——— Anti-convergencia dentro del giro: ACENTO ———
+    // En el motor 100%-custom no hay hero/navbar variants: la firma visual de
+    // entrada compartida entre sitios es el ACENTO de la paleta. Dos sitios del
+    // giro con un acento casi del mismo tono (hue) se ven gemelos de entrada por
+    // más que el layout difiera. Se compara la proximidad de hue (la dirección
+    // de arte tiene la orden de variar ±15-30°, anclado a la marca).
     const palette = (design["palette"] ?? {}) as Record<string, unknown>
     const dark = (palette["dark"] ?? palette["light"] ?? {}) as Record<
       string,
       unknown
     >
     const accent = dark["accent"] as string | undefined
-    const navbar = sections.find((s) => s["id"] === "navbar")
-    const navbarVariant = navbar?.["variant"] as string | undefined
     const siblings = await getSiblingSpecs({
       industry: spec.industry,
       excludeSiteId: siteId,
     })
-    const clash = accent
-      ? siblings.find(
-          (s) => s.accent === accent && s.heroVariant === heroVariant,
+    const specHsl = accent ? hexToHsl(accent) : null
+    // Solo acentos SATURADOS: un acento casi gris (s<0.15) no tiene hue estable
+    // y comparar su tono daría falsos positivos.
+    if (specHsl && specHsl.s >= 0.15) {
+      const clash = siblings.find((s) => {
+        if (!s.accent) return false
+        const h = hexToHsl(s.accent)
+        return h !== null && h.s >= 0.15 && hueDelta(h.h, specHsl.h) < 18
+      })
+      if (clash) {
+        problems.push(
+          `otro sitio del giro "${spec.industry}" ya usa un acento casi del mismo tono (${clash.accent}) que el tuyo (${accent}) — se verían gemelos de entrada. Varía el HUE del acento ±15-30° (siempre anclado a la marca del cliente).`,
         )
-      : undefined
-    if (clash) {
-      problems.push(
-        `otro sitio del giro "${spec.industry}" ya usa hero=${clash.heroVariant} + acento=${clash.accent}. Cambia al menos uno (normalmente el acento: varía el hue ±15-30°, siempre anclado a la marca).`,
-      )
-    }
-    // El HEADER también debe variar entre sitios del giro: mismo hero + mismo
-    // navbar variant = se ven iguales de entrada aunque cambie el acento.
-    const headerClash = siblings.find(
-      (s) =>
-        s.heroVariant === heroVariant && s.navbarVariant === navbarVariant,
-    )
-    if (headerClash && (heroVariant || navbarVariant)) {
-      problems.push(
-        `otro sitio del giro "${spec.industry}" ya combina hero=${heroVariant ?? "editorial"} + navbar=${navbarVariant ?? "minimal"}. Varía el HERO o el NAVBAR (el header no puede verse igual entre clientes): prueba otra variante de navbar (minimal/split/centered-logo) u otro hero (full-bleed/stat-led/split-image).`,
-      )
-    }
-
-    // ——— Momento con FONDO de imagen (contra el "todo tipografía plana") ———
-    // El humano lo pidió: secciones con fondo de imagen, no todo genérico. Se
-    // exige al menos un momento de imagen protagonista: hero full-bleed, o un
-    // bloque/custom de fondo con imagen. Escape: concepto deliberadamente
-    // type-only justificado en el changelog.
-    const IMAGE_BG_BLOCKS = new Set([
-      "image-fullbleed-caption",
-      "banner-image",
-      "cta-bg-image",
-      "stat-bg-image",
-      "feature-bg-split",
-    ])
-    const heroImageForward =
-      heroVariant === "full-bleed" || heroVariant === "split-image"
-    const hasImageBgBlock = sections.some(
-      (s) =>
-        String(s["id"]) === "block" &&
-        IMAGE_BG_BLOCKS.has(String(s["block"])),
-    )
-    // Una custom cuyo why/nombre habla de imagen de fondo también cuenta.
-    const hasImageCustom = sections.some(
-      (s) =>
-        String(s["id"]) === "custom" &&
-        /imagen|foto|fondo|bg|hero|bleed/i.test(
-          `${s["component"] ?? ""} ${asText(s["why"])}`,
-        ),
-    )
-    const typeOnly = /type-only|sin imagen de fondo|solo tipograf/i.test(
-      changelog,
-    )
-    if (!heroImageForward && !hasImageBgBlock && !hasImageCustom && !typeOnly) {
-      problems.push(
-        "el sitio no tiene NINGÚN momento con fondo de imagen (ni hero full-bleed/split-image, ni un bloque de fondo con imagen como image-fullbleed-caption/banner-image/cta-bg-image, ni una custom con imagen). Un sitio 100% tipografía sobre fondo plano se lee a plantilla — mete al menos uno (foto real del cliente, o stock del giro con treatment). Si el concepto es deliberadamente type-only, justifícalo con 'type-only' en el changelog.",
-      )
+      }
     }
 
     } // fin del gauntlet de sitio-nuevo (se salta con mode:"edit")
