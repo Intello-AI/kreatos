@@ -388,6 +388,19 @@ function ModelBadge({ model }: { model?: string }) {
   )
 }
 
+// Modelo INTERNO que usa cada tool (espeja lib/tool-models.ts del agente). Las
+// strings llevan el keyword de proveedor para que ModelBadge elija el logo. Solo
+// las tools con modelo interno; el resto muestra el del orquestador (item.model).
+// Si cambias un override por env (TOOL_MODEL_*), actualízalo aquí.
+const TOOL_MODEL: Record<string, string> = {
+  draft_section: "qwen3.7-plus",
+  translate_copy: "qwen3.7-plus",
+  draft_surface: "gpt-5-nano",
+  view_reference_screenshots: "gpt-5-mini",
+  capture_screenshots: "gpt-5-mini",
+  review_screenshots: "claude-sonnet-5",
+}
+
 export interface ChatHandlers {
   send: (text: string) => Promise<{ formError?: string } | void>
   answer: (
@@ -1530,8 +1543,14 @@ function ActionsBlock({ items }: { items: ActivityItem[] }) {
  * shimmer mientras corre, rojo si falló. Click expande el input completo.
  */
 function ActionRow({ item }: { item: ActivityItem }) {
-  const expandable = Boolean(item.inputJson || item.outputJson)
+  const expandable = Boolean(
+    item.inputJson || item.outputJson || item.detail
+  )
   const running = !item.done
+  // Modelo interno de la tool (draft_section→qwen, review→sonnet…), o el del
+  // orquestador (item.model) si la tool corre código puro.
+  const model =
+    (item.toolName ? TOOL_MODEL[item.toolName] : undefined) ?? item.model
   return (
     <Collapsible>
       <CollapsibleTrigger
@@ -1552,30 +1571,26 @@ function ActionRow({ item }: { item: ActivityItem }) {
           )}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="flex items-baseline gap-1.5">
-            {running && !item.failed ? (
-              <Shimmer className="truncate text-xs font-medium">
-                {item.label}
-              </Shimmer>
-            ) : (
-              <span
-                className={cn(
-                  "truncate text-xs font-medium",
-                  item.failed ? "text-destructive" : "text-foreground"
-                )}
-              >
-                {item.label}
-              </span>
-            )}
-            {item.detail && (
-              <span className="min-w-0 truncate font-mono text-[11px] text-muted-foreground">
-                ({item.detail})
-              </span>
-            )}
-          </span>
+          {/* Solo el nombre en el row colapsado; el detalle/args vive al expandir. */}
+          {running && !item.failed ? (
+            <Shimmer className="block truncate text-xs font-medium">
+              {item.label}
+            </Shimmer>
+          ) : (
+            <span
+              className={cn(
+                "block truncate text-xs font-medium",
+                item.failed ? "text-destructive" : "text-foreground"
+              )}
+            >
+              {item.label}
+            </span>
+          )}
         </span>
-        <span className="flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground/70 tabular-nums">
+        <span className="flex shrink-0 items-center gap-1.5 text-[10px] text-muted-foreground/70 tabular-nums">
           {formatTime(item.at)}
+          {/* Modelo de la tool, pegado al chevron del colapsable. */}
+          <ModelBadge model={model} />
           {/* Siempre ocupa espacio (aunque no sea expandible) para que las
               horas de todas las filas queden alineadas. */}
           <CaretRightIcon
@@ -1591,6 +1606,13 @@ function ActionRow({ item }: { item: ActivityItem }) {
       {expandable && (
         <CollapsibleContent>
           <div className="mt-1 ml-5 space-y-1.5">
+            {/* Detalle/args del row colapsado: ahora solo al expandir. Si hay
+                inputJson estructurado, ese lo cubre; si no, se muestra aquí. */}
+            {!item.inputJson && item.detail && (
+              <pre className="overflow-x-auto border bg-background p-2 font-mono text-[10px] leading-relaxed text-muted-foreground">
+                {item.detail}
+              </pre>
+            )}
             {item.inputJson && (
               <div>
                 <p className="mb-0.5 text-[10px] font-medium tracking-wide text-muted-foreground/70 uppercase">
