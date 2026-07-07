@@ -3,6 +3,8 @@ import { generateText } from "ai"
 import { defineTool } from "eve/tools"
 import { z } from "zod"
 
+import { recordToolUsage } from "../../../lib/tool-usage"
+
 /**
  * Ojos para la fase spec: el site-builder no procesa imágenes en su loop,
  * así que este tool VE las capturas de una referencia (Storage) con un
@@ -27,7 +29,7 @@ export default defineTool({
         "TODAS tus preguntas sobre esta referencia, en una sola llamada (composición del hero, ritmo de secciones, retícula de servicios, colapso en mobile...). Se responden numeradas sobre las MISMAS capturas — no hagas una llamada por pregunta.",
       ),
   }),
-  async execute({ screenshotUrls, questions }) {
+  async execute({ screenshotUrls, questions }, ctx) {
     const images: Array<{ bytes: Uint8Array; mediaType: string }> = []
     let skippedSvg = false
     for (const url of screenshotUrls) {
@@ -77,6 +79,7 @@ export default defineTool({
         },
       ],
     })
+    await recordToolUsage(ctx, "site-builder", "gpt-5.1", result.usage)
     return { answers: result.text }
   },
 })

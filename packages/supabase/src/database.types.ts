@@ -626,8 +626,51 @@ export type Database = {
         }
         Relationships: []
       }
+      tool_calls: {
+        Row: {
+          agent: string
+          created_at: string
+          id: string
+          kind: string
+          session_id: string
+          step_index: number | null
+          tool_name: string
+        }
+        Insert: {
+          agent: string
+          created_at?: string
+          id?: string
+          kind?: string
+          session_id: string
+          step_index?: number | null
+          tool_name: string
+        }
+        Update: {
+          agent?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          session_id?: string
+          step_index?: number | null
+          tool_name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
+      cache_health: {
+        Row: {
+          agent: string | null
+          cache_read_pct: number | null
+          cache_read_tokens: number | null
+          calls: number | null
+          first_seen: string | null
+          input_tokens: number | null
+          last_seen: string | null
+          model: string | null
+        }
+        Relationships: []
+      }
       lead_cost_by_stage: {
         Row: {
           agent: string | null
@@ -649,6 +692,24 @@ export type Database = {
           output_tokens: number | null
         }
         Relationships: []
+      }
+      site_tool_calls: {
+        Row: {
+          agent: string | null
+          calls: number | null
+          scope_id: string | null
+          site_id: string | null
+          tool_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_context_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {

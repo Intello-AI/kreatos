@@ -78,6 +78,26 @@ export function makeUsageHook(agent: string, model: string) {
           // best-effort
         }
       },
+      // Atribuye cada step a su(s) tool(s): sin esto token_usage sabe CUÁNTO
+      // cuesta un step pero no QUÉ hizo. Con esto un build real dice qué tools
+      // se llevan los ~43-55% de steps mecánicos (bash de QA/build vs edit_file
+      // vs draft_surface) → dónde colapsar. Una fila por acción; best-effort.
+      async "actions.requested"(event, ctx) {
+        try {
+          const actions = event.data?.actions
+          if (!actions?.length) return
+          const rows = actions.map((a) => ({
+            session_id: ctx.session.id,
+            agent,
+            tool_name: a.kind === "tool-call" ? a.toolName : a.kind,
+            kind: a.kind,
+            step_index: event.data.stepIndex ?? null,
+          }))
+          await getSupabaseClient().from("tool_calls").insert(rows)
+        } catch {
+          // best-effort
+        }
+      },
     },
   })
 }

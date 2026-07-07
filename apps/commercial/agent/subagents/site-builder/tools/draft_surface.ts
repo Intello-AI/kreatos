@@ -3,6 +3,8 @@ import { generateText } from "ai"
 import { defineTool } from "eve/tools"
 import { z } from "zod"
 
+import { recordToolUsage } from "../../../lib/tool-usage"
+
 /**
  * Escritor barato de superficies mecánicas: el spec ya decidió TODO y este
  * tool solo transcribe. gpt-5-nano escribe (output ~37x más barato que el
@@ -195,26 +197,22 @@ ${content}
 Devuelve ÚNICAMENTE el contenido completo y final del archivo. Sin markdown fences, sin explicación, sin comentarios de proceso.`
 
     let modelUsed = "gpt-5-nano"
-    let result = stripFences(
-      (
-        await generateText({
-          model: openai("gpt-5-nano"),
-          prompt,
-        })
-      ).text,
-    )
+    const nano = await generateText({
+      model: openai("gpt-5-nano"),
+      prompt,
+    })
+    await recordToolUsage(ctx, "site-builder", "gpt-5-nano", nano.usage)
+    let result = stripFences(nano.text)
     let problem = await validate(surface, result)
     if (problem) {
       // Fallback: una pasada con mini, informándole el defecto.
       modelUsed = "gpt-5-mini"
-      result = stripFences(
-        (
-          await generateText({
-            model: openai("gpt-5-mini"),
-            prompt: `${prompt}\n\nOJO: un intento anterior falló la validación por: ${problem}. Evítalo.`,
-          })
-        ).text,
-      )
+      const mini = await generateText({
+        model: openai("gpt-5-mini"),
+        prompt: `${prompt}\n\nOJO: un intento anterior falló la validación por: ${problem}. Evítalo.`,
+      })
+      await recordToolUsage(ctx, "site-builder", "gpt-5-mini", mini.usage)
+      result = stripFences(mini.text)
       problem = await validate(surface, result)
       if (problem) {
         throw new Error(

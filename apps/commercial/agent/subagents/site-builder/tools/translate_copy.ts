@@ -3,6 +3,8 @@ import { generateText } from "ai"
 import { defineTool } from "eve/tools"
 import { z } from "zod"
 
+import { recordToolUsage } from "../../../lib/tool-usage"
+
 /**
  * Genera messages/<locale>.json traduciendo el copy del locale de referencia
  * (por defecto es.json) a otro idioma, MANTENIENDO las keys idénticas. Para
@@ -75,7 +77,7 @@ export default defineTool({
     const sourcePaths = leafPaths(sourceJson)
 
     const attempt = async (model: string): Promise<string | null> => {
-      const { text } = await generateText({
+      const res = await generateText({
         model: openai(model),
         messages: [
           {
@@ -84,7 +86,8 @@ export default defineTool({
           },
         ],
       })
-      const out = stripFences(text)
+      await recordToolUsage(ctx, "site-builder", model, res.usage)
+      const out = stripFences(res.text)
       let parsed: unknown
       try {
         parsed = JSON.parse(out)

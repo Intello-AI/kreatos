@@ -3,6 +3,8 @@ import { generateText } from "ai"
 import { defineTool } from "eve/tools"
 import { z } from "zod"
 
+import { recordToolUsage } from "../../../lib/tool-usage"
+
 /**
  * Director de arte con visión: revisa los screenshots que `pnpm qa` dejó en
  * .qa/screenshots/ ANTES de pushear. Un par de ojos independiente (gpt-5.1,
@@ -206,6 +208,7 @@ export default defineTool({
         },
       ],
     })
+    await recordToolUsage(ctx, "site-builder", "gpt-5.1", result.usage)
 
     const raw = result.text.trim().replace(/^```(?:json)?\n?|```$/g, "")
     // Persistir el veredicto en site/.qa/review.json: push_site_version lo lee

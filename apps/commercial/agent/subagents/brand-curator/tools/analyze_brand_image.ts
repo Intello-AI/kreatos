@@ -3,6 +3,8 @@ import { generateText } from "ai"
 import { defineTool } from "eve/tools"
 import { z } from "zod"
 
+import { recordToolUsage } from "../../../lib/tool-usage"
+
 const PROMPT = `Eres un director de arte. Analiza esta imagen de la marca de un negocio local y responde SOLO un JSON válido (sin markdown) con esta forma:
 {
   "description": "qué es la imagen, en una frase",
@@ -42,7 +44,7 @@ export default defineTool({
       .optional()
       .describe("Pregunta extra específica sobre la imagen, si la hay."),
   }),
-  async execute({ imageUrl, question }) {
+  async execute({ imageUrl, question }, ctx) {
     const res = await fetch(imageUrl)
     if (!res.ok) {
       throw new Error(`No se pudo descargar la imagen (${res.status}).`)
@@ -78,6 +80,7 @@ export default defineTool({
           model: openai(model),
           prompt: `${promptText}\n\nLa "imagen" es un SVG (logo vectorial — máxima calidad posible para logo). Analiza su markup: colores reales en fills/strokes/gradients, proporción por viewBox (cuadrado ≈ isotipo, ancho ≈ wordmark), y estructura:\n\n\`\`\`svg\n${svgMarkup}\n\`\`\``,
         })
+        await recordToolUsage(ctx, "brand-curator", model, result.usage)
         return result.text
       }
       const result = await generateText({
@@ -92,6 +95,7 @@ export default defineTool({
           },
         ],
       })
+      await recordToolUsage(ctx, "brand-curator", model, result.usage)
       return result.text
     }
 

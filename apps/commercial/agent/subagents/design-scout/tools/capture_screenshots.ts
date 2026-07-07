@@ -4,6 +4,7 @@ import { defineTool } from "eve/tools"
 import { z } from "zod"
 
 import { getSupabaseClient } from "../../../lib/supabase"
+import { recordToolUsage } from "../../../lib/tool-usage"
 
 // Copia literal del CHROMIUM_BOOTSTRAP de ../sandbox/sandbox.ts (un import
 // cruzado tool↔sandbox rompe el bundler de eve) — si cambias uno, cambia el
@@ -223,6 +224,7 @@ export default defineTool({
           },
         ],
       })
+      await recordToolUsage(ctx, "design-scout", "gpt-5.1", result.usage)
       visualAnalysis = result.text
     }
 
