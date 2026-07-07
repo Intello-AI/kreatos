@@ -259,6 +259,19 @@ La ÚNICA parada válida (`failed` + reporte) es un bloqueo de CONFIGURACIÓN du
 token o API key faltante. Todo lo demás —build rojo, sandbox perdido, spec a
 medias, registry por armar— lo resuelves TÚ con tus tools y SIGUES sin preguntar.
 
+**📊 STATUS (`update_site_status`) — el dashboard lo muestra EN VIVO, no lo
+ensucies:** mientras trabajas el status es `generating`, y punto. `preview` lo
+pone `push_site_version` al quedar READY (no lo toques a mano). **`failed` es
+EXCLUSIVAMENTE la ÚLTIMA acción de un turno que se rinde por un bloqueo REAL de
+infraestructura** (falta un token/API key y no puedes ni clonar ni desplegar).
+**NUNCA marques `failed` y sigas trabajando**: si vas a continuar, sigues en
+`generating` — un `failed` seguido de más pasos deja el dashboard MINTIENDO
+("Falló" mientras el build está verde). NO son failure y NO tocan el status a
+`failed`: "no hay deployment previo / no hay logs que inspeccionar" (es el primer
+build, normal), un validate-config/typecheck/build rojo (se arregla con
+`build-repair`), un checkpoint, o un sandbox perdido (se reanuda). Ante
+cualquiera de esos SIGUES en `generating` y resuelves.
+
 5. **En el MISMO turno** dispara `update_site_status`(generating) +
    `create_site_repo` + `create_vercel_project` + `clone_site_repo` — se
    auto-sincronizan por `repo_url` (waitForRepoUrl); NO los serialices en
