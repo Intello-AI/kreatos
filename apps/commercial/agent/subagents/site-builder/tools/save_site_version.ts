@@ -102,28 +102,34 @@ function lcsLength(a: string[], b: string[]): number {
   return dp[b.length]
 }
 
-/** hex (#rrggbb) → HSL (h en grados 0-360, s/l en 0-1). null si no parsea. */
-function hexToHsl(hex: string): { h: number; s: number; l: number } | null {
+/**
+ * hex (#rrggbb) → componentes OKLCH {L, C(hroma), H(ue en grados 0-360)}.
+ * OKLab de Björn Ottosson, determinista. null si no parsea. Es la MISMA base que
+ * consume `hexToOklch` (string) y app/theme.css: así la anti-convergencia mide
+ * la distancia de tono en el espacio perceptual que ve el visitante, no en HSL
+ * (donde 18° en amarillo ≠ 18° perceptual en azul). Achromático → C≈0, H=0.
+ */
+function hexToOklchParts(
+  hex: string,
+): { L: number; C: number; H: number } | null {
   const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim())
   if (!m) return null
   const n = parseInt(m[1], 16)
-  const r = ((n >> 16) & 255) / 255
-  const g = ((n >> 8) & 255) / 255
-  const b = (n & 255) / 255
-  const max = Math.max(r, g, b)
-  const min = Math.min(r, g, b)
-  const d = max - min
-  const l = (max + min) / 2
-  let h = 0
-  let s = 0
-  if (d !== 0) {
-    s = d / (1 - Math.abs(2 * l - 1))
-    if (max === r) h = (((g - b) / d) % 6 + 6) % 6
-    else if (max === g) h = (b - r) / d + 2
-    else h = (r - g) / d + 4
-    h *= 60
-  }
-  return { h, s, l }
+  const toLinear = (c: number) =>
+    c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+  const R = toLinear(((n >> 16) & 255) / 255)
+  const G = toLinear(((n >> 8) & 255) / 255)
+  const B = toLinear((n & 255) / 255)
+  const l_ = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B)
+  const m_ = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B)
+  const s_ = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B)
+  const L = 0.2104542553 * l_ + 0.793617785 * m_ - 0.0040720468 * s_
+  const a = 1.9779984951 * l_ - 2.428592205 * m_ + 0.4505937099 * s_
+  const b = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.808675766 * s_
+  const C = Math.sqrt(a * a + b * b)
+  let H = (Math.atan2(b, a) * 180) / Math.PI
+  if (H < 0) H += 360
+  return { L, C, H }
 }
 
 /** Distancia angular mínima entre dos hues (grados, 0-180). */
@@ -139,27 +145,10 @@ function hueDelta(a: number, b: number): number {
  * null si no parsea. Achromático → hue 0 (mismo criterio que coloraide).
  */
 function hexToOklch(hex: string): string | null {
-  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim())
-  if (!m) return null
-  const n = parseInt(m[1], 16)
-  const toLinear = (c: number) =>
-    c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
-  const R = toLinear(((n >> 16) & 255) / 255)
-  const G = toLinear(((n >> 8) & 255) / 255)
-  const B = toLinear((n & 255) / 255)
-  // linear sRGB → LMS' (raíz cúbica)
-  const l_ = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B)
-  const m_ = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B)
-  const s_ = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B)
-  // LMS' → OKLab
-  const L = 0.2104542553 * l_ + 0.793617785 * m_ - 0.0040720468 * s_
-  const a = 1.9779984951 * l_ - 2.428592205 * m_ + 0.4505937099 * s_
-  const b = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.808675766 * s_
-  const chroma = Math.sqrt(a * a + b * b)
-  let hue = (Math.atan2(b, a) * 180) / Math.PI
-  if (hue < 0) hue += 360
+  const p = hexToOklchParts(hex)
+  if (!p) return null
   const round = (x: number, d: number) => Number(x.toFixed(d))
-  return `oklch(${round(L, 4)} ${round(chroma, 4)} ${chroma < 1e-4 ? 0 : round(hue, 2)})`
+  return `oklch(${round(p.L, 4)} ${round(p.C, 4)} ${p.C < 1e-4 ? 0 : round(p.H, 2)})`
 }
 
 /** Convierte un record de rol→hex a rol→oklch (ignora valores no-hex). */
@@ -188,7 +177,7 @@ function asText(value: unknown): string {
 
 export default defineTool({
   description:
-    "Guarda una nueva versión del spec en site_versions (version_n incremental) y actualiza sites.current_version. Con mode 'new'/'redesign' valida pensamiento de diseño: exige design.concept (idea rectora), `why` por sección de contenido, design.references con takeaways cuando hay biblioteca, y rechaza esqueletos clonados de sitios recientes (orden+variants), páginas interiores de plantilla, specs que ignoran la ficha de marca y la convergencia acento+hero dentro del giro. Con mode 'edit' (bump post-venta sobre un sitio ya vendido) SALTA ese gauntlet creativo — es un delta quirúrgico, no un sitio nuevo — y solo persiste versión+changelog.",
+    "Guarda una nueva versión del spec en site_versions (version_n incremental) y actualiza sites.current_version. Con mode 'new'/'redesign' valida pensamiento de diseño: exige design.concept (idea rectora), `why` por sección de contenido, design.references con takeaways cuando hay biblioteca, y rechaza esqueletos clonados de sitios recientes (orden+variants), páginas interiores de plantilla, specs que ignoran la ficha de marca y la convergencia de tono (primary/accent en OKLCH, con excepción brand-anchored) dentro del giro. Con mode 'edit' (bump post-venta sobre un sitio ya vendido) SALTA ese gauntlet creativo — es un delta quirúrgico, no un sitio nuevo — y solo persiste versión+changelog.",
   inputSchema: z.object({
     siteId: z.string().uuid(),
     spec: specSchema.describe(
@@ -212,6 +201,10 @@ export default defineTool({
     // parecerse a un sitio MÁS nuevo). Solo persiste versión + changelog.
     const mode = String((spec as Record<string, unknown>)["mode"] ?? "new")
     if (mode !== "edit") {
+
+    // Colores de la ficha de marca: los usa el chequeo de marca (abajo) Y la
+    // anti-convergencia de tono (excepción brand-anchored). Se hoistea aquí.
+    let brandColors: string[] = []
 
     // ——— Ficha de marca: obligatoria cuando existe ———
     {
@@ -238,7 +231,7 @@ export default defineTool({
             "la ficha tiene isotipo y el spec no declara business.icon",
           )
         }
-        const brandColors = (brand.colors as string[]) ?? []
+        brandColors = (brand.colors as string[]) ?? []
         if (brandColors.length > 0) {
           const specText = JSON.stringify(spec.design).toLowerCase()
           const used = brandColors.some((c) =>
@@ -404,34 +397,66 @@ export default defineTool({
       }
     }
 
-    // ——— Anti-convergencia dentro del giro: ACENTO ———
+    // ——— Anti-convergencia dentro del giro: TOKENS DE FIRMA ———
     // En el motor 100%-custom no hay hero/navbar variants: la firma visual de
-    // entrada compartida entre sitios es el ACENTO de la paleta. Dos sitios del
-    // giro con un acento casi del mismo tono (hue) se ven gemelos de entrada por
-    // más que el layout difiera. Se compara la proximidad de hue (la dirección
-    // de arte tiene la orden de variar ±15-30°, anclado a la marca).
+    // entrada compartida entre sitios son los TOKENS CROMÁTICOS que la PÁGINA
+    // renderiza — `primary` y `accent` (los que app/theme.css expone vía
+    // @theme inline como bg-primary/bg-accent; el resto de la paleta son
+    // neutros/foregrounds sin tono estable). Dos sitios del giro con el primary
+    // o el accent casi del mismo TONO se ven gemelos de entrada por más que el
+    // layout difiera.
+    //
+    // Se mide en OKLCH (mismo espacio perceptual que ve el visitante y que
+    // consume theme.css), no en HSL. EXCEPCIÓN brand-anchored: si el token cae
+    // dentro de BRAND_ANCHOR_TOL° del tono de un color de la FICHA DE MARCA, no
+    // se rechaza — la identidad real del cliente MANDA sobre la anti-
+    // convergencia (dos constructoras con marca dorada conservan su oro; la
+    // dirección de arte varía el OTRO token).
+    const SIGNATURE_TOKENS = ["primary", "accent"] as const
+    const CHROMA_MIN = 0.05 // OKLCH C por debajo = neutro/gris, sin tono estable
+    const HUE_TWIN_TOL = 15 // grados OKLCH: por debajo = mismo tono => gemelos
+    const BRAND_ANCHOR_TOL = 22 // grados OKLCH: "este token ES el color de su marca"
+
     const palette = (design["palette"] ?? {}) as Record<string, unknown>
-    const dark = (palette["dark"] ?? palette["light"] ?? {}) as Record<
+    const sigColors = (palette["dark"] ?? palette["light"] ?? {}) as Record<
       string,
       unknown
     >
-    const accent = dark["accent"] as string | undefined
     const siblings = await getSiblingSpecs({
       industry: spec.industry,
       excludeSiteId: siteId,
     })
-    const specHsl = accent ? hexToHsl(accent) : null
-    // Solo acentos SATURADOS: un acento casi gris (s<0.15) no tiene hue estable
-    // y comparar su tono daría falsos positivos.
-    if (specHsl && specHsl.s >= 0.15) {
+    // Tonos cromáticos de la marca, para la excepción brand-anchored.
+    const brandHues = brandColors
+      .map((c) => hexToOklchParts(c))
+      .filter(
+        (p): p is { L: number; C: number; H: number } =>
+          p !== null && p.C >= CHROMA_MIN,
+      )
+      .map((p) => p.H)
+
+    for (const token of SIGNATURE_TOKENS) {
+      const specHex = sigColors[token] as string | undefined
+      const specParts = specHex ? hexToOklchParts(specHex) : null
+      // Token neutro (gris): no tiene tono que pueda "converger".
+      if (!specParts || specParts.C < CHROMA_MIN) continue
+      // Anclado a un color de la marca: la identidad del cliente gana, exento.
+      const anchored = brandHues.some(
+        (bh) => hueDelta(bh, specParts.H) <= BRAND_ANCHOR_TOL,
+      )
+      if (anchored) continue
       const clash = siblings.find((s) => {
-        if (!s.accent) return false
-        const h = hexToHsl(s.accent)
-        return h !== null && h.s >= 0.15 && hueDelta(h.h, specHsl.h) < 18
+        const sibHex = s[token]
+        const sibParts = sibHex ? hexToOklchParts(sibHex) : null
+        return (
+          sibParts !== null &&
+          sibParts.C >= CHROMA_MIN &&
+          hueDelta(sibParts.H, specParts.H) < HUE_TWIN_TOL
+        )
       })
       if (clash) {
         problems.push(
-          `otro sitio del giro "${spec.industry}" ya usa un acento casi del mismo tono (${clash.accent}) que el tuyo (${accent}) — se verían gemelos de entrada. Varía el HUE del acento ±15-30° (siempre anclado a la marca del cliente).`,
+          `otro sitio del giro "${spec.industry}" ya usa un ${token} casi del mismo tono (${clash[token]}) que el tuyo (${specHex}) — se verían gemelos de entrada. Varía el HUE de ${token} (≥${HUE_TWIN_TOL}° OKLCH), anclado a la marca. Si ${specHex} ES un color de la ficha de marca queda exento: entonces mueve el OTRO token de firma.`,
         )
       }
     }

@@ -70,11 +70,10 @@ template de kreatos; tú lo personalizas, no lo reinventas.
    medida (paleta desde la marca, radius según el registro, par tipográfico
    propio) — ver skill `art-direction`. Si `lead.website`
    existe, es un rediseño: aplica también el skill `redesign`.
-   **Skills senior de diseño (razonamiento, opcionales):** `taste-skill`
-   (anti-slop: design read + diales VARIANCE/MOTION/DENSITY) y `ui-ux-pro-max`
+   **Skill senior de diseño (razonamiento, opcional):** `ui-ux-pro-max`
    (base buscable de estilos/paletas/pares tipográficos/tipos de producto, ya
-   cubre Tailwind/shadcn/Next) suben el nivel del concepto y la elección de
-   estilo. **Precedencia dura:** son consejo genérico de frontend — el
+   cubre Tailwind/shadcn/Next) sube el nivel del concepto y la elección de
+   estilo. **Precedencia dura:** es consejo genérico de frontend — el
    contrato del template (stack fijo, CERO deps nuevas —nada de GSAP—, motion
    solo con los primitives del motor, solo tokens semánticos, copy next-intl,
    layout fuera del catálogo = `custom`) MANDA sobre cualquier cosa que
@@ -405,11 +404,26 @@ materializas:
    - ANTES de fánear, TÚ asignas el ARQUETIPO de cada sección (del menú de
      arriba / del `why` del spec) y se lo DICTAS a cada hijo. Reparte
      arquetipos DISTINTOS entre grupos — dos hijos nunca con el mismo esqueleto.
-   - Cada encargo es AUTOCONTENIDO (la copia nace sin tu contexto): el brief
-     compartido (concepto, tokens del theme, primitives Reveal/SmartImage/
-     useContactForm, reglas de taste + anti-generic, AA, cero deps nuevas) + la
-     porción del spec de cada sección (layout, ns, why) + su ARQUETIPO asignado
-     + la RUTA exacta `components/custom/<x>.tsx` que debe escribir.
+   - Cada encargo es AUTOCONTENIDO. **La copia NO hereda tu contexto NI tus
+     skills cargadas** (taste, anti-generic): nace con el system prompt del
+     site-builder y nada más. Por eso el brief NO puede decir "aplica el skill
+     taste" — el hijo no lo tiene cargado. Embebe las REGLAS CONCRETAS verbatim
+     en CADA encargo (si no, cada hijo improvisa y salen 5-7 paddings distintos):
+       · **Ritmo + contenedor**: envuelve el cuerpo en `<Section>`
+         (`@/components/shared/section`) — hornea `py-(--section-gap)` y el
+         contenedor `max-w-6xl px-6 lg:px-8`. PROHIBIDO `py-16/20/24/28` o
+         `max-w-*` propios. Fondo/borde/`id` de ancla van en el `className` del
+         `<Section>`; solo el héroe (fija su alto con `min-h`) usa `<Section flush>`.
+       · **Solo tokens semánticos** (`bg-primary`, `text-foreground`, `border-border`…),
+         CERO hex/`rgb`/`oklch`; acento con avaricia (CTAs y datos, nunca fondos).
+       · **Primitives**: `Reveal` (motion), `SmartImage` (imágenes — pásale
+         `className` con el aspecto, NUNCA props `fill`/`width`/`height`, ya hace
+         fill por dentro), `useContactForm`+`MapEmbed` (contacto).
+       · **Copy 100% next-intl** con su `ns` (`useTranslations`/`getTranslations`,
+         arrays con `t.raw`); server component salvo isla client acotada.
+       · Headings jerárquicos (h2/h3; h1 solo héroe/page-intro), `alt`, AA, cero deps.
+     + la porción del spec de cada sección (layout, ns, why) + su ARQUETIPO
+     asignado + la RUTA exacta `components/custom/<x>.tsx` que debe escribir.
    - Write scopes SIN solapar: cada hijo escribe SOLO sus `.tsx`. NADIE toca
      `registry.ts`, `site.config.ts` ni `es.json` — eso lo ensamblas TÚ después,
      con los archivos de todos ya presentes.

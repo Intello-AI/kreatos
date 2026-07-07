@@ -1,4 +1,4 @@
-import { openai } from "@ai-sdk/openai"
+import { anthropic } from "@ai-sdk/anthropic"
 import { generateText } from "ai"
 import { defineTool } from "eve/tools"
 import { z } from "zod"
@@ -7,8 +7,9 @@ import { recordToolUsage } from "../../../lib/tool-usage"
 
 /**
  * Director de arte con visión: revisa los screenshots que `pnpm qa` dejó en
- * .qa/screenshots/ ANTES de pushear. Un par de ojos independiente (gpt-5.1,
- * otro proveedor) que juzga lo renderizado de verdad — no el código.
+ * .qa/screenshots/ ANTES de pushear. Un par de ojos con criterio de diseño
+ * (claude-sonnet-5, visión) que juzga lo renderizado de verdad — no el código.
+ * Es el GATE del push: por eso el mejor ojo para "agencia vs plantilla".
  */
 
 const REVIEW_PROMPT = `Eres un director de arte senior revisando la ENTREGA de un sitio corporativo que se vende por cientos de dólares. Te paso screenshots reales de los modos que el sitio REALMENTE ofrece al visitante: si solo hay capturas light, el sitio es light-only (sin toggle) y el dark NO existe para el visitante — NO lo pidas ni lo penalices; juzga solo lo que te paso. Sé exigente: "correcto pero mediocre" NO se aprueba. El pecado capital que MÁS debes cazar: que se vea a PLANTILLA — el mismo sitio con otro color.
@@ -177,7 +178,7 @@ export default defineTool({
     }
 
     const result = await generateText({
-      model: openai("gpt-5.1"),
+      model: anthropic("claude-sonnet-5"),
       messages: [
         {
           role: "user",
@@ -208,7 +209,7 @@ export default defineTool({
         },
       ],
     })
-    await recordToolUsage(ctx, "site-builder", "gpt-5.1", result.usage)
+    await recordToolUsage(ctx, "site-builder", "claude-sonnet-5", result.usage)
 
     const raw = result.text.trim().replace(/^```(?:json)?\n?|```$/g, "")
     // Persistir el veredicto en site/.qa/review.json: push_site_version lo lee

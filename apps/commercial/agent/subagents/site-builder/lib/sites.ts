@@ -313,8 +313,10 @@ export async function getSiblingSpecs(input: {
   limit?: number
 }): Promise<
   Array<{
-    heroVariant?: string
-    navbarVariant?: string
+    // Tokens de firma que la página renderiza (los cromáticos de la paleta).
+    // En el motor 100%-custom no hay hero/navbar variants: la convergencia se
+    // mide por el TONO de primary/accent, no por layout. Ver save_site_version.
+    primary?: string
     accent?: string
   }>
 > {
@@ -332,14 +334,13 @@ export async function getSiblingSpecs(input: {
     .filter((spec) => spec && spec["industry"] === input.industry)
     .map((spec) => {
       const design = (spec["design"] ?? {}) as Record<string, unknown>
-      const sections = (spec["sections"] ?? []) as Array<Record<string, unknown>>
-      const hero = sections.find((s) => s["id"] === "hero")
-      const navbar = sections.find((s) => s["id"] === "navbar")
       const palette = (design["palette"] ?? {}) as Record<string, unknown>
-      const dark = (palette["dark"] ?? {}) as Record<string, unknown>
+      const dark = (palette["dark"] ?? palette["light"] ?? {}) as Record<
+        string,
+        unknown
+      >
       return {
-        heroVariant: hero?.["variant"] as string | undefined,
-        navbarVariant: navbar?.["variant"] as string | undefined,
+        primary: dark["primary"] as string | undefined,
         accent: dark["accent"] as string | undefined,
       }
     })

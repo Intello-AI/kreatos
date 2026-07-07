@@ -21,13 +21,17 @@ partida obligatorio, no sugerencia.
 ## Tipografía
 
 - Nunca el mismo par tipográfico que el sitio anterior del mismo giro (la
-  anti-convergencia valida acento+hero (+navbar); tú extiende la variación al
+  anti-convergencia valida el tono de primary/accent; tú extiende la variación al
   par de fuentes cuando haya empate).
 - Serif como display solo si el giro lo justifica de verdad (editorial,
   heritage, legal premium) y puedes decir por qué EN el spec
-  (design.concept). "Se ve premium" no es razón.
+  (design.concept). "Se ve premium" no es razón. `Fraunces` e `Instrument Serif`
+  son los serifs-favoritos-de-IA: evítalos como default salvo que la marca los pida.
 - Énfasis dentro de un headline: itálica o bold de la MISMA familia. Nunca
   inyectes una palabra serif en un headline sans para "darle interés".
+- Itálica en display con letra descendente (`y g j p q`): `leading-none` la
+  corta. Usa `leading-[1.1]` mínimo + `pb-1`/`mb-1` en el wrapper. Audita cada
+  palabra itálica de un headline antes de entregar.
 
 ## Color
 
@@ -40,14 +44,27 @@ partida obligatorio, no sugerencia.
 - Nada de morados/violetas de gradiente AI. Si la marca del cliente ES
   morada, adóptala con intención (neutros armonizados, cero glow).
 
+## Forma y superficie
+
+- **Un solo radius** por sitio (lo fija `design.radius`): no mezcles botones
+  pill con cards de esquina recta. Si el sistema mezcla, que sea una regla
+  explícita y constante (p. ej. "botones pill, cards 2px, inputs 4px").
+- Cards SOLO cuando la elevación comunica jerarquía real; si no, agrupa con
+  `border-t`/`divide-y`/aire. Sombras tintadas al fondo (`shadow-primary/5`…),
+  nunca negro puro sobre claro; nada de `shadow-xl + rounded-2xl` por default.
+
 ## Copy (se valida sobre messages/es.json)
 
 - **Cero em-dashes (`—`) y en-dashes (`–`) en todo el copy visible.** Es el
   tell #1. Reestructura: punto, coma, dos puntos o paréntesis. Rangos con
   guion normal (2018-2026).
+- Comillas tipográficas (" ") o ninguna; nunca ASCII (").
 - Hero: headline máx ~8 palabras (2 líneas), subtexto máx 20 palabras,
   1 CTA primario + máx 1 secundario. Si no cabe la propuesta de valor en 20
   palabras, la propuesta está confusa, no la regla apretada.
+- CTA en UNA línea en desktop (máx 3 palabras el primario); si envuelve,
+  acorta o ensancha, nunca lo constriñas con `max-width`. El texto del botón
+  contrasta con su fondo (AA); botón fantasma sobre foto = con scrim o borde.
 - Un solo label por intención en toda la página: "Contáctanos" y "Hablemos"
   juntos = error; elige uno y úsalo en navbar, hero y cta-band.
 - Números fake-precisos prohibidos: "98.7% de satisfacción" sin dato real
@@ -68,10 +85,24 @@ partida obligatorio, no sugerencia.
 
 - Cada sección: un mensaje. Headline corto + párrafo ≤25 palabras + un
   visual o CTA. Lo que no quepa, se corta o se va a una página interior.
-- Listas de >5 ítems: usa la variante correcta (bordered-table, asym-grid) o
-  divide en grupos; nunca una `<ul>` larga con hairline bajo cada fila.
-- No repitas la misma variante de sección con el mismo rol dos veces en una
-  página. Servicios y proceso no pueden verse iguales.
+- **Prohibido el "split-header"** (titular grande a la izquierda + párrafo chico
+  a la derecha como ENCABEZADO de sección): es un tell que produce el fan-out en
+  cadena. Apila titular + lead (`max-w-[65ch]`), salvo que la columna derecha
+  lleve un visual o interacción real, no relleno.
+- **Diversidad de familia de layout**: una familia (grid de cards, split
+  imagen+texto, banda full-width, ledger, bento, stat-wall) aparece MÁX una vez
+  por página. 8 secciones → ≥4 familias distintas. Servicios y proceso no pueden
+  verse iguales.
+- **Zigzag máx 2 seguidos**: el 3er bloque imagen+texto alterno consecutivo es
+  slop. Rómpelo con una banda full-width, un stat-wall o un bento.
+- **Bento = tantas celdas como contenido** (3 ítems → 3 celdas): nunca una celda
+  vacía de relleno. Y no 6 cards blanco-sobre-blanco: 2-3 celdas con imagen o
+  tono real.
+- **Navbar en UNA línea en desktop**, alto 64-72px (nunca una barra "de agencia"
+  que se coma el 15% del viewport); si no cabe, condensa labels o hamburguesa.
+- Listas de >5 ítems: usa el arquetipo correcto (ledger, grid asimétrico, tabla
+  con divisores sparse, acordeón, o divide en grupos); nunca una `<ul>` larga con
+  hairline bajo cada fila.
 - Un tema por sitio (defaultMode del design): las secciones no invierten de
   claro a oscuro a media página; eso lo gobierna el theme, no lo pelees.
 
@@ -116,11 +147,11 @@ El motor del template trae la capa de animación; tú la diriges desde
 Repasa y marca cada uno; si uno falla, corrige antes de guardar:
 
 1. Lectura de diseño declarada y reflejada en design.concept.
-2. Cero `—`/`–` en es.json (búscalo literal).
-3. Un solo acento, idéntico en light y dark.
+2. Cero `—`/`–` en es.json (búscalo literal); comillas tipográficas, no ASCII.
+3. Un solo acento, idéntico en light y dark; un solo radius.
 4. Paleta ≠ beige+latón+espresso salvo justificación de marca explícita.
 5. Hero: ≤8 palabras headline, ≤20 subtexto, ≤2 CTAs, sin micro-strips.
-6. Una sola intención por label de CTA en todo el sitio.
+6. Una sola intención por label de CTA; CTA primario ≤3 palabras, sin wrap.
 7. Ningún número inventado; solo datos del lead.
 8. Eyebrows ≤ ceil(secciones/3), ninguno numerado.
 9. Citas ≤3 líneas con atribución completa.
@@ -128,3 +159,5 @@ Repasa y marca cada uno; si uno falla, corrige antes de guardar:
 11. Par tipográfico y paleta distintos al último sitio del mismo giro.
 12. `design.motion` elegido con razón escrita en design.concept; si es
     `expressive`, el hero y los reveals realmente lo entregan.
+13. ≥4 familias de layout en una home de 8 secciones; sin split-header de
+    relleno; zigzag ≤2 seguidos; sin celdas de bento vacías.

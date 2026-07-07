@@ -427,12 +427,24 @@ export default defineTool({
     })
 
     const message = checkpoint ? `wip: ${escaped}` : escaped
-    // Si no hay cambios sin commitear (push final tras un checkpoint), NO se
-    // commitea — se entrega el HEAD que ya trae el trabajo. `git commit` sin
-    // cambios falla y tumbaría el `&&` (el bug que dejó Almex sin entregar).
-    const commitStep = hasChanges
-      ? `git add -A && git commit -m "${message}" && `
-      : ``
+    // Construcción del commit del push:
+    //  - Con cambios sin commitear: commit normal. (`git commit` sin cambios
+    //    falla y tumbaría el `&&` — el bug que dejó Almex sin entregar.)
+    //  - Push FINAL sin cambios nuevos (todo el trabajo ya vive en checkpoints):
+    //    no hay árbol que re-commitear, PERO si el HEAD es un checkpoint "wip:"
+    //    Vercel CANCELA el deployment (commandForIgnoringBuildStep salta wip:* →
+    //    exit 0) y el sitio queda SIN preview para siempre. Se reescribe el
+    //    mensaje del HEAD a la versión ENTREGADA (amend: mismo árbol, nuevo sha,
+    //    el push -f ya lo sube) para que Vercel lo construya. Bug de Kepler: QA
+    //    pasó limpio tras el checkpoint → el push final reusó el commit wip:.
+    let commitStep: string
+    if (hasChanges) {
+      commitStep = `git add -A && git commit -m "${message}" && `
+    } else if (!checkpoint) {
+      commitStep = `if git log -1 --pretty=%s | grep -q '^wip:'; then git commit --amend -m "${escaped}"; fi && `
+    } else {
+      commitStep = ``
+    }
     const push = await sandbox.run({
       command: `cd site && git checkout -B ${branch} && ${commitStep}git push -f origin ${branch}`,
     })

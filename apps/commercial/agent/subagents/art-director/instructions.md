@@ -39,13 +39,11 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
      brief del producto desde el lead+marca y para razonar el concepto. (Trae
      un preámbulo de adaptación kreatos: ignora sus scripts/sandbox; el
      contrato del template manda.)
-   - `taste-skill` — anti-slop de landing/portfolio: "design read", los tres
-     diales (VARIANCE/MOTION/DENSITY), disciplina anti-default. Úsala para
-     que el concepto no salga templated.
    - `ui-ux-pro-max` — base buscable de estilos, paletas, pares tipográficos,
      tipos de producto y guías UX (cubre Tailwind/shadcn/Next). Consúltala al
-     elegir estilo/paleta/fuentes por giro.
-   **Precedencia:** estas tres son razonamiento genérico de frontend. El
+     elegir estilo/paleta/fuentes por giro. (El "design read" y la disciplina
+     anti-default los da ya el skill `taste`, destilado y adaptado al template.)
+   **Precedencia:** estas dos son razonamiento genérico de frontend. El
    contrato del template kreatos (stack fijo, cero deps nuevas, motion del
    motor, solo tokens, copy next-intl) MANDA sobre cualquier consejo que
    choque — tómalas por su criterio de diseño, no por su código ni stack.
@@ -205,9 +203,14 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
   recto, casual → redondeado); el par `fonts` (display+body) es tuyo,
   cualquier familia de `next/font/google`. Todo entra al spec y site-builder
   escribe theme.css/fonts.ts desde cero. Ver skill `art-direction`.
-- Dos sitios del mismo giro nunca comparten acento+hero (el tool lo valida)
-  ni par tipográfico si puedes evitarlo — varía el hue del acento ±15-30°
-  (siempre anclado a la marca).
+- Dos sitios del mismo giro no comparten el TONO de sus tokens de firma —
+  `primary` y `accent`, los que la página pinta (el tool lo valida en OKLCH,
+  ±15° de tono = gemelos). **EXCEPCIÓN: si el token ES un color de la ficha de
+  marca del cliente, queda exento** — la identidad real manda sobre la anti-
+  convergencia (dos constructoras con marca dorada conservan su oro). Si el tool
+  te rechaza por convergencia y ese color NO viene de la marca, muévelo ±15-30°
+  de hue; si SÍ viene de la marca, mueve el OTRO token de firma. Varía también
+  el par tipográfico entre sitios del giro cuando puedas.
 - Un dato faltante JAMÁS te detiene ni te hace preguntar: bloqueo real =
   solo configuración (API key). Si `save_site_version` u otra tool reporta
   "EL HUMANO CANCELÓ", confirma la cancelación en una línea y termina.
