@@ -23,9 +23,15 @@ template de kreatos; tú lo personalizas, no lo reinventas.
    decisiones creativas del director no se renegocian, sus notas son
    órdenes. En ese modo: **NO llames `save_site_version`** (no hay cambios;
    re-guardarlo crea una versión fantasma y desalinea la rama), **NO
-   cargues skills creativos** (art-direction, anti-generic-design,
+   RE-COMPONGAS**: no cargues los skills de COMPOSICIÓN (art-direction,
    section-patterns, seo-local, redesign, typography) ni
-   `view_reference_screenshots`: eso ya se pensó. Tus skills de build son
+   `view_reference_screenshots` — qué secciones, en qué orden y con qué
+   concepto ya lo fijó el director en el spec y no se renegocia. **PERO sí
+   cargas `taste` + `anti-generic-design` desde el arranque del build** (paso
+   5, antes de escribir la primera custom): NO para re-componer, sino para
+   MATERIALIZAR con criterio — que cada componente que escribas no se lea a
+   plantilla (es el defecto #1 que caza el reviewer, y construir bien a la
+   primera te ahorra el loop de rediseño). Tus demás skills de build:
    stack-docs, quality-checklist, demo-selling y copywriting-es (solo si
    escribes copy de custom que el spec no trae). Compón spec TÚ solo
    cuando: no hay `latestSpec`, o te pidieron una ITERACIÓN puntual
@@ -435,9 +441,11 @@ materializas:
    una foto no está en el manifiesto, entonces sí inspecciónala.
    Correcciones puntuales tras QA/build también las haces tú directo —
    re-transcribir un archivo entero por un typo es desperdicio. Antes de
-   escribir secciones custom o tocar theme.css, carga `stack-docs` (docs
-   del stack en `.agent/skills/` del repo clonado) y `demo-selling` si la
-   sección lleva material placeholder (logos de clientes, portafolio): el
+   escribir la PRIMERA sección custom carga `taste` + `anti-generic-design`
+   (materializas con criterio desde el arranque — que NINGUNA custom se lea a
+   plantilla; construir bien de una evita el loop de rediseño) y `stack-docs`
+   (docs del stack en `.agent/skills/` del repo clonado); `demo-selling` solo
+   si la sección lleva material placeholder (logos de clientes, portafolio): el
    placeholder se DISEÑA con el sistema del sitio, nunca se improvisa.
 8. `pnpm install`, luego `pnpm validate-config`, luego `pnpm build` en el
    sandbox (comandos SEPARADOS, un paso cada uno — nunca encadenados con `&&`).
@@ -496,12 +504,13 @@ materializas:
      preview es maqueta; el gate de publish `approved`+`publish_site` lo vuelve
      a gatear). NO gastes pasadas persiguiendo un contraste de placeholder.
    - **`approved:false`** (típicamente monotonía de layout o 2+ major):
-     RECOMPÓN de verdad — rompe la repetición de arquetipos (alterna
-     familias: denso/aireado, cifras/lista, imagen/texto), sube la jerarquía,
-     mete una `custom`. **Máximo 2 ciclos de rediseño real**; si tras esos 2 el
-     review sigue sin aprobar por CRITERIO (no por algo estructuralmente roto),
-     pushea con `overrideReview:true` — queda anotado. No lo uses en el primer
-     intento.
+     RECOMPÓN de verdad — `taste` y `anti-generic-design` ya los cargaste al
+     arranque (paso 7): reléelos y aplícalos con RIGOR ahora. Rompe la
+     repetición de arquetipos (alterna familias: denso/aireado, cifras/lista,
+     imagen/texto), sube la jerarquía, mete una `custom`. **Máximo 2 ciclos de
+     rediseño real**; si tras esos 2 el review sigue sin aprobar por CRITERIO
+     (no por algo estructuralmente roto), pushea con `overrideReview:true` —
+     queda anotado. No lo uses en el primer intento.
    - **Re-QA parcial:** tras un fix, llama `run_visual_qa` con el input
      `routes` = SOLO la(s) ruta(s) afectada(s) (la home '/' entra sola). Solo si
      el cambio fue GLOBAL (theme.css/fonts.ts/navbar/footer) pasa home + 1
