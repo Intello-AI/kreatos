@@ -66,7 +66,9 @@ async function SitesSection() {
           <TableRow className="divide-x">
             <TableHead>Negocio</TableHead>
             <TableHead>Estado</TableHead>
-            <TableHead>Actividad</TableHead>
+            {/* Ancho fijo: el paso vivo cambia de texto y sin esto la columna
+                saltaba de ancho en cada acción. */}
+            <TableHead className="w-56">Actividad</TableHead>
             <TableHead>Versión</TableHead>
             <TableHead>Preview</TableHead>
             <TableHead>Creado</TableHead>
@@ -87,9 +89,13 @@ async function SitesSection() {
                   </Link>
                 </TableCell>
                 <TableCell>
-                  <SiteStatusBadge status={site.status} statusUpdatedAt={site.status_updated_at} />
+                  <SiteStatusBadge
+                    status={site.status}
+                    statusUpdatedAt={site.status_updated_at}
+                    lastActivityAt={site.lastActivityAt}
+                  />
                 </TableCell>
-                <TableCell>
+                <TableCell className="w-56">
                   {site.status === "generating" && lastRunId ? (
                     <SiteLiveStep runId={lastRunId} />
                   ) : (

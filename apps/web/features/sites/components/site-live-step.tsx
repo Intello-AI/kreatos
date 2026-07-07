@@ -91,10 +91,16 @@ export function SiteLiveStep({ runId }: { runId: string }) {
   }, [runId])
 
   if (done) {
-    return <span className="text-xs text-muted-foreground">Terminando…</span>
+    return (
+      <span className="block w-full truncate text-xs text-muted-foreground">
+        Terminando…
+      </span>
+    )
   }
+  // block w-full truncate: llena la celda de ancho fijo (w-56) y recorta — así
+  // la columna no salta de ancho cuando el label cambia de longitud.
   return (
-    <Shimmer className="max-w-56 truncate text-xs">
+    <Shimmer className="block w-full truncate text-xs">
       {label ?? "Conectando…"}
     </Shimmer>
   )

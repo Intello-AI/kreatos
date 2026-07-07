@@ -23,24 +23,38 @@ const STATUS_DOT_CLASS: Record<SiteStatus, string> = {
 }
 
 // Un run de generación que muere (crash/timeout) deja el status en
-// "generating" para siempre: el agente ya no está vivo para corregirlo. Si
-// lleva más de esto sin transicionar, se muestra como "Detenido" en vez de
-// seguir pulsando "Generando". Umbral holgado: una generación sana con fan-out
-// puede tardar varios minutos; no queremos marcar detenido a un run vivo.
-const STALE_GENERATING_MS = 20 * 60 * 1000
+// "generating" para siempre: el agente ya no está vivo para corregirlo. Si NO
+// hay ACTIVIDAD (steps del agente) en este lapso, se muestra "Detenido" en vez
+// de seguir pulsando "Generando". Se mide desde el ÚLTIMO latido real
+// (lastActivityAt = max token_usage.created_at), NO desde que entró a
+// "generating": un build vivo pero largo sigue emitiendo steps. Umbral con
+// margen para esperas de deploy (await_preview_deployment no emite steps).
+const STALE_GENERATING_MS = 25 * 60 * 1000
+
+// Helper a nivel módulo (NO en el cuerpo del componente): Date.now() dentro del
+// render marca el componente como impuro (regla react-compiler). Aquí es una
+// función normal llamada durante el render, que sí está permitido.
+function isGenerationStale(
+  status: SiteStatus,
+  freshness: string | null | undefined,
+): boolean {
+  if (status !== "generating" || freshness == null) return false
+  return Date.now() - new Date(freshness).getTime() > STALE_GENERATING_MS
+}
 
 export function SiteStatusBadge({
   status,
   statusUpdatedAt,
+  lastActivityAt,
 }: {
   status: SiteStatus
-  /** sites.status_updated_at — cuándo entró al status actual. */
+  /** sites.status_updated_at — cuándo entró al status actual (fallback). */
   statusUpdatedAt?: string | null
+  /** Última actividad real del agente (max token_usage.created_at). */
+  lastActivityAt?: string | null
 }) {
-  const stalled =
-    status === "generating" &&
-    statusUpdatedAt != null &&
-    Date.now() - new Date(statusUpdatedAt).getTime() > STALE_GENERATING_MS
+  // Prefiere la actividad real; cae a status_updated_at si aún no hay steps.
+  const stalled = isGenerationStale(status, lastActivityAt ?? statusUpdatedAt)
 
   const label = stalled ? "Detenido" : SITE_STATUS_LABELS[status]
   const badgeClass = stalled
@@ -54,7 +68,7 @@ export function SiteStatusBadge({
       className={cn("gap-1.5", badgeClass)}
       title={
         stalled
-          ? "La generación no ha avanzado en más de 20 min: el run probablemente se detuvo. Vuelve a pedir que genere el sitio."
+          ? "Sin actividad del agente en más de 25 min: el run probablemente se detuvo. Vuelve a pedir que genere el sitio."
           : undefined
       }
     >

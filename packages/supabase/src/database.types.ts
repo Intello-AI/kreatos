@@ -724,6 +724,21 @@ export type Database = {
         }
         Relationships: []
       }
+      site_activity_ping: {
+        Row: {
+          last_activity_at: string | null
+          site_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_context_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_tool_calls: {
         Row: {
           agent: string | null

@@ -8,6 +8,9 @@ export interface SiteWithLead extends Site {
 export interface SiteListRow extends SiteWithLead {
   /** Última versión embebida (limit 1 desc) — para el link de preview. */
   site_versions: { preview_url: string | null; version_n: number }[]
+  /** Última actividad real del agente (max token_usage.created_at). El badge
+   *  la usa para no marcar "Detenido" una generación viva pero larga. */
+  lastActivityAt?: string | null
 }
 
 /** Lista de sitios con su lead y última versión, más recientes primero. */
@@ -29,7 +32,31 @@ export async function getSites(): Promise<{
     .limit(1, { referencedTable: "site_versions" })
 
   if (error) return { sites: [], error: error.message }
-  return { sites: (data ?? []) as SiteListRow[], error: null }
+
+  const sites = (data ?? []) as SiteListRow[]
+
+  // Último latido real solo de las generaciones en curso (el badge lo usa para
+  // no marcar "Detenido" un build vivo pero largo). Una query barata: una fila
+  // por sitio en site_activity_ping.
+  const generatingIds = sites
+    .filter((s) => s.status === "generating")
+    .map((s) => s.id)
+  if (generatingIds.length > 0) {
+    const { data: pings } = await supabase
+      .from("site_activity_ping")
+      .select("site_id, last_activity_at")
+      .in("site_id", generatingIds)
+    const pingBySite = new Map(
+      (pings ?? []).map((p) => [p.site_id, p.last_activity_at]),
+    )
+    for (const site of sites) {
+      if (pingBySite.has(site.id)) {
+        site.lastActivityAt = pingBySite.get(site.id) ?? null
+      }
+    }
+  }
+
+  return { sites, error: null }
 }
 
 /** Un sitio con lead y todas sus versiones. Server-only. */
