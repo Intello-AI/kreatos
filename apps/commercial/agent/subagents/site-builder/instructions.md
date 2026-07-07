@@ -277,8 +277,20 @@ materializas:
    |---|---|---|
    | `messages/es.json`, `app/theme.css`, `app/fonts.ts` | **`draft_surface`** (transcribe, sin guard) | write_file |
    | `site.config.ts` | **`draft_surface` surface `"site-config"`** (pass-through verbatim, sin modelo, sin guard) | write_file |
-   | `components/custom/*`, su `registry.ts`, `DEMO.md`, iconos nuevos | **`write_file`** (archivo nuevo, sin guard) | — |
-   | parche puntual a un archivo existente sin escritor dedicado | `read_file` → `write_file`, o un replace de python | write_file a secas |
+   | `components/custom/*`, su `registry.ts`, `DEMO.md`, iconos nuevos (archivo NUEVO) | **`write_file`** (archivo nuevo, sin guard) | — |
+   | parche puntual a un archivo EXISTENTE (una custom ya escrita, `registry.ts`, un import, una clase) | **`edit_file`** (diff str_replace: `oldString`→`newString`) | write_file / heredoc del archivo COMPLETO |
+
+   **⚡ EDITAR ≠ REESCRIBIR: usa `edit_file` para tocar lo ya escrito.**
+   Re-emitir un archivo completo por `write_file`/heredoc/`draft_surface` cuesta
+   miles de tokens de SALIDA (los caros, ~5x el input) por cambiar tres líneas.
+   `edit_file` manda solo el fragmento (`oldString` exacto → `newString`): ~90%
+   menos output. Aplica SIEMPRE en modo edit para un cambio PUNTUAL: una
+   custom/registry/import existente, **y también un valor suelto de es.json o
+   site.config.ts** (un teléfono, un typo, una frase — el hot path de las
+   ediciones `copyOnly`). Tras tocar es.json/config corre `pnpm validate-config`.
+   Reserva `draft_surface` para COMPONER una superficie COMPLETA (build inicial,
+   o un cambio estructural que reordena muchos namespaces): ahí sí valida el
+   espejo config↔copy y que no sobreviva el demo.
 
    **Las 4 superficies del template (es.json/theme.css/fonts.ts/site.config.ts)
    JAMÁS pasan por `write_file`** — son archivos que YA existen en el clone y el
@@ -755,14 +767,16 @@ cubre.
   (`head`/`cat`/`grep` sin archivo, pipes rotos) — se cuelgan y congelan la
   sesión. Pasa siempre el archivo como argumento y termina pipes con un
   consumidor que no espere entrada.
-- **`read_file`→`write_file` aplica SOLO a archivos SIN escritor dedicado.**
+- **Parche a un archivo EXISTENTE = `edit_file` (diff), no `write_file`.**
   Las 4 superficies del template (es.json/theme.css/fonts.ts/site.config.ts)
   NUNCA se tocan con `write_file` — usa la tabla de ruteo del paso 7
-  (draft_surface / heredoc, sin guard). Para un parche puntual a otro archivo
-  existente sin escritor: un replace de python (`text.replace`) es un solo
-  paso; si usas `write_file` sobre un existente, `read_file` primero (el
-  sandbox lo exige). No normalices el ciclo write→error→read→write: elígelo
-  bien de entrada con la tabla.
+  (draft_surface, sin guard). Para un parche puntual a cualquier otro archivo
+  existente (una custom, `registry.ts`, un import): `edit_file` con
+  `oldString`→`newString` — un solo paso, solo emite el fragmento (nada de
+  re-escribir el archivo completo ni el frágil replace de python por shell). Si
+  de plano usas `write_file` sobre un existente, `read_file` primero (el sandbox
+  lo exige). No normalices el ciclo write→error→read→write: elígelo bien de
+  entrada con la tabla.
 - **Un build rojo se ARREGLA antes de seguir con otra cosa.** Si el build
   reporta MISSING_MESSAGE o un error concreto, ese error es tu ÚNICA
   prioridad: no avances a otras secciones/archivos con el build roto (cada

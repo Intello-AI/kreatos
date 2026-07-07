@@ -44,7 +44,7 @@ export async function ensureVercelProject(input: {
   const existing = await vercelFetch(`/v9/projects/${input.slug}`)
   if (existing.ok) {
     const project = (await existing.json()) as { id: string }
-    await disableDeploymentProtection(project.id)
+    await applyProjectSettings(project.id)
     return { projectId: project.id, alreadyExisted: true }
   }
 
@@ -61,19 +61,34 @@ export async function ensureVercelProject(input: {
     throw new Error(`Creación de proyecto Vercel falló (${res.status}): ${body}`)
   }
   const project = (await res.json()) as { id: string }
-  await disableDeploymentProtection(project.id)
+  await applyProjectSettings(project.id)
   return { projectId: project.id, alreadyExisted: false }
 }
 
 /**
- * Apaga Vercel Authentication en el proyecto del sitio: las previews de rama
- * deben ser públicas (se muestran en el iframe del dashboard y se comparten
- * con el cliente antes de publicar). Best-effort: si falla, no rompe el flujo.
+ * Ajustes idempotentes del proyecto del sitio (best-effort: si falla no rompe
+ * el flujo). Se aplica igual a proyectos nuevos y ya existentes:
+ *
+ * - ssoProtection null: apaga Vercel Authentication → las previews de rama son
+ *   públicas (se muestran en el iframe del dashboard y se comparten con el
+ *   cliente antes de publicar).
+ *
+ * - commandForIgnoringBuildStep: NO construir los checkpoints WIP. Los commits
+ *   de checkpoint van prefijados "wip:" (push_site_version:429) y son ruido
+ *   puro para Vercel — muchos quedan en estado roto (checkpoint = pushea aunque
+ *   todo falle) y nadie mira ese preview. Construirlos quema minutos de build
+ *   por gusto. Solo las versiones ENTREGADAS (mensaje sin prefijo) y el publish
+ *   disparan build. Semántica de Vercel: exit 0 = SALTA el build, exit 1 =
+ *   procede. `case` es POSIX sh (el ignore step no garantiza bash).
  */
-async function disableDeploymentProtection(projectId: string): Promise<void> {
+async function applyProjectSettings(projectId: string): Promise<void> {
   await vercelFetch(`/v9/projects/${projectId}`, {
     method: "PATCH",
-    body: JSON.stringify({ ssoProtection: null }),
+    body: JSON.stringify({
+      ssoProtection: null,
+      commandForIgnoringBuildStep:
+        'case "$VERCEL_GIT_COMMIT_MESSAGE" in wip:*) exit 0 ;; *) exit 1 ;; esac',
+    }),
   }).catch(() => undefined)
 }
 

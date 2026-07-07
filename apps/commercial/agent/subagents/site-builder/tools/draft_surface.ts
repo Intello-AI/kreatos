@@ -176,7 +176,7 @@ export default defineTool({
         path: `site/${path}`,
         bytes: content.length,
         model: "pass-through",
-        hint: "Escrito verbatim (sin guard). Verifica con `pnpm validate-config`/`pnpm build`; si algo falla, corrige con un replace de python o vuelve a llamar draft_surface — NO uses write_file sobre esta superficie (ya existe → dispara el guard).",
+        hint: "Escrito verbatim (sin guard). Verifica con `pnpm validate-config`/`pnpm build`; si falla un valor puntual, corrígelo con `edit_file` (diff, barato) — solo vuelve a llamar draft_surface si hay que recomponer la superficie completa. NO uses write_file sobre esta superficie (ya existe → dispara el guard).",
       }
     }
 
@@ -228,7 +228,7 @@ Devuelve ÚNICAMENTE el contenido completo y final del archivo. Sin markdown fen
       path: `site/${path}`,
       bytes: result.length,
       model: modelUsed,
-      hint: "Verifica con `pnpm validate-config`/`pnpm build`; si algo salió mal, corrige con un replace de python (un paso) o vuelve a llamar draft_surface con el content corregido — NO uses write_file sobre esta superficie (ya existe → dispara el guard read-before-write).",
+      hint: "Verifica con `pnpm validate-config`/`pnpm build`; si un valor puntual salió mal, corrígelo con `edit_file` (diff, un paso barato) — solo vuelve a llamar draft_surface si hay que recomponer la superficie completa. NO uses write_file sobre esta superficie (ya existe → dispara el guard read-before-write).",
     }
   },
 })

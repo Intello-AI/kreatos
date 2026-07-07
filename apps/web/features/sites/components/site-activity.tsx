@@ -16,6 +16,7 @@ import {
   MagnifyingGlassIcon,
   PaperclipIcon,
   PaperPlaneRightIcon,
+  PencilSimpleIcon,
   QuestionIcon,
   AirTrafficControlIcon,
   SparkleIcon,
@@ -108,6 +109,13 @@ interface ActivityItem {
   toolName?: string
   /** Input completo de la tool (JSON legible) para el detalle expandible. */
   inputJson?: string
+  /** edit_file: el parche (oldString→newString) para render como diff. */
+  diff?: {
+    path?: string
+    oldString: string
+    newString: string
+    replaceAll?: boolean
+  }
   /** Output de la tool (action.result) para el detalle expandible. */
   outputJson?: string
   /** Presente cuando la acción es una delegación a subagente. */
@@ -162,6 +170,10 @@ const TOOL_LABELS: Record<
   },
   write_file: {
     label: "Escribiendo archivo",
+    detail: (i) => (i["path"] ? String(i["path"]) : undefined),
+  },
+  edit_file: {
+    label: "Editando por diff",
     detail: (i) => (i["path"] ? String(i["path"]) : undefined),
   },
   glob: { label: "Buscando archivos" },
@@ -226,15 +238,17 @@ function ToolIcon({
       ? SparkleIcon
       : toolName === "bash"
         ? TerminalWindowIcon
-        : toolName === "read_file" || toolName === "write_file"
-          ? FileTextIcon
-          : toolName === "glob" || toolName === "grep"
-            ? MagnifyingGlassIcon
-            : toolName === "web_fetch" || toolName === "web_search"
-              ? GlobeIcon
-              : toolName === "todo"
-                ? ListChecksIcon
-                : WrenchIcon
+        : toolName === "edit_file"
+          ? PencilSimpleIcon
+          : toolName === "read_file" || toolName === "write_file"
+            ? FileTextIcon
+            : toolName === "glob" || toolName === "grep"
+              ? MagnifyingGlassIcon
+              : toolName === "web_fetch" || toolName === "web_search"
+                ? GlobeIcon
+                : toolName === "todo"
+                  ? ListChecksIcon
+                  : WrenchIcon
   return <Icon className={className} />
 }
 
@@ -570,12 +584,32 @@ export function SiteActivity({
         for (const action of actions) {
           const { label, detail, toolName, subagentName } =
             describeAction(action)
+          const input = (action["input"] ?? {}) as Record<string, unknown>
+          // edit_file: se extrae el parche a un campo dedicado (con presupuesto
+          // propio) para renderizarlo como diff rojo/verde en vez de JSON crudo.
+          let diff: ActivityItem["diff"] | undefined
+          if (
+            toolName === "edit_file" &&
+            typeof input["oldString"] === "string" &&
+            typeof input["newString"] === "string"
+          ) {
+            const cap = (s: unknown) => String(s ?? "").slice(0, 4000)
+            diff = {
+              path: input["path"] ? String(input["path"]) : undefined,
+              oldString: cap(input["oldString"]),
+              newString: cap(input["newString"]),
+              replaceAll: input["replaceAll"] === true,
+            }
+          }
           let inputJson: string | undefined
-          try {
-            const raw = JSON.stringify(action["input"] ?? {}, null, 2)
-            inputJson = raw === "{}" ? undefined : raw.slice(0, 2000)
-          } catch {
-            inputJson = undefined
+          // Con diff dedicado el JSON crudo es redundante (y enorme): se omite.
+          if (!diff) {
+            try {
+              const raw = JSON.stringify(input, null, 2)
+              inputJson = raw === "{}" ? undefined : raw.slice(0, 2000)
+            } catch {
+              inputJson = undefined
+            }
           }
           add({
             at,
@@ -586,6 +620,7 @@ export function SiteActivity({
             toolName,
             subagentName,
             inputJson,
+            diff,
             callId: action["callId"] ? String(action["callId"]) : undefined,
             done: false,
           })
@@ -1527,11 +1562,76 @@ function ActionsBlock({
 }
 
 /**
+ * Diff de un edit_file: el bloque reemplazado (oldString) en rojo con `-` y el
+ * nuevo (newString) en verde con `+`. No es un diff LCS: str_replace ES
+ * "cambia este bloque por este otro", así que mostrarlos apilados es fiel.
+ * Cada lado se recorta a MAX_LINES para no reventar el timeline.
+ */
+function DiffBlock({ diff }: { diff: NonNullable<ActivityItem["diff"]> }) {
+  const MAX_LINES = 40
+  const clamp = (text: string): string[] => {
+    if (!text.length) return []
+    const lines = text.split("\n")
+    return lines.length > MAX_LINES
+      ? [
+          ...lines.slice(0, MAX_LINES),
+          `… (+${lines.length - MAX_LINES} líneas)`,
+        ]
+      : lines
+  }
+  const oldLines = clamp(diff.oldString)
+  const newLines = clamp(diff.newString)
+  return (
+    <div>
+      <p className="mb-0.5 flex items-center gap-1.5 text-[10px] font-medium tracking-wide text-muted-foreground/70 uppercase">
+        Diff
+        {diff.path && (
+          <span className="font-mono tracking-normal text-muted-foreground normal-case">
+            {diff.path}
+          </span>
+        )}
+        {diff.replaceAll && (
+          <span className="tracking-normal normal-case">
+            · todas las coincidencias
+          </span>
+        )}
+      </p>
+      <pre className="overflow-x-auto border bg-background font-mono text-[10px] leading-relaxed">
+        {oldLines.map((line, i) => (
+          <div
+            key={`o${i}`}
+            className="bg-destructive/10 px-2 text-destructive"
+          >
+            <span aria-hidden className="mr-1 opacity-50 select-none">
+              −
+            </span>
+            {line || " "}
+          </div>
+        ))}
+        {newLines.map((line, i) => (
+          <div key={`n${i}`} className="bg-success/10 px-2 text-success">
+            <span aria-hidden className="mr-1 opacity-50 select-none">
+              +
+            </span>
+            {line || " "}
+          </div>
+        ))}
+        {newLines.length === 0 && (
+          <div className="px-2 text-muted-foreground/60 italic">
+            (fragmento eliminado)
+          </div>
+        )}
+      </pre>
+    </div>
+  )
+}
+
+/**
  * Fila de tool call estilo Claude Code: icono de la tool + `Label(detalle)`;
  * shimmer mientras corre, rojo si falló. Click expande el input completo.
  */
 function ActionRow({ item }: { item: ActivityItem }) {
-  const expandable = Boolean(item.inputJson || item.outputJson)
+  const expandable = Boolean(item.inputJson || item.outputJson || item.diff)
   const running = !item.done
   return (
     <Collapsible>
@@ -1592,6 +1692,7 @@ function ActionRow({ item }: { item: ActivityItem }) {
       {expandable && (
         <CollapsibleContent>
           <div className="mt-1 ml-5 space-y-1.5">
+            {item.diff && <DiffBlock diff={item.diff} />}
             {item.inputJson && (
               <div>
                 <p className="mb-0.5 text-[10px] font-medium tracking-wide text-muted-foreground/70 uppercase">
@@ -1712,17 +1813,21 @@ function taskTranscript(
         break
       }
       case "action": {
-        const status = item.failed
-          ? " [ERROR]"
-          : item.done
-            ? ""
-            : " [en curso]"
+        const status = item.failed ? " [ERROR]" : item.done ? "" : " [en curso]"
         lines.push(
           `[${time}] ${item.toolName ?? "acción"}${status} — ${item.label}${
             item.detail ? ` (${item.detail})` : ""
           }`
         )
-        if (item.inputJson) lines.push(`  input: ${item.inputJson}`)
+        if (item.diff) {
+          lines.push(`  diff${item.diff.path ? ` (${item.diff.path})` : ""}:`)
+          for (const l of item.diff.oldString.split("\n"))
+            lines.push(`  - ${l}`)
+          for (const l of item.diff.newString.split("\n"))
+            lines.push(`  + ${l}`)
+        } else if (item.inputJson) {
+          lines.push(`  input: ${item.inputJson}`)
+        }
         if (item.outputJson) lines.push(`  output: ${item.outputJson}`)
         break
       }
@@ -1965,7 +2070,10 @@ function BlockItem({
               </div>
               <ModelBadge model={item.model} />
             </MessageHeader>
-            <Bubble variant="muted" className={item.chosen ? "mb-2" : undefined}>
+            <Bubble
+              variant="muted"
+              className={item.chosen ? "mb-2" : undefined}
+            >
               {item.chosen && (
                 // Respuesta elegida como "reacción" colgada de la burbuja.
                 <BubbleReactions side="bottom" align="end" className="gap-1">

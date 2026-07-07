@@ -15,6 +15,19 @@ const MODEL_TOGGLE: Record<string, string> = {
 }
 const gptModel = MODEL_TOGGLE[process.env.SITE_BUILDER_MODEL ?? ""]
 
+// ── INVARIANTE DE PROMPT CACHING (no romper) ────────────────────────────────
+// eve activa el caching de Anthropic AUTOMÁTICAMENTE para agentes con provider
+// "anthropic": marca cacheables el system prompt (instructions.md), el bloque
+// de tools y los últimos turnos (4 breakpoints = el máximo de la API). En prod
+// site-builder/Sonnet corre a ~97% de input servido desde cache (0.1x del
+// precio). NO agregues providerOptions.anthropic.cacheControl a mano: un 5º
+// breakpoint hace fallar el request o desplaza uno de los actuales y tumba el
+// hit-rate (input x10). Para preservarlo:
+//   1. instructions.md y el REGISTRO de tools deben ser ESTABLES por sesión.
+//   2. NUNCA interpolar datos volátiles (siteId, timestamp, git sha, estado
+//      vivo) al inicio del system prompt — esos van por mensajes user/tool.
+//   3. Vigila la salud con la vista `cache_health` (migración cache_health):
+//      si cache_read_pct de site-builder cae de ~90%, algo rompió el prefijo.
 export default defineAgent({
   description:
     "Materializa, itera y PUBLICA el sitio web de un lead — el ciclo de vida completo en tres modos: (build) toma el spec vigente de art-director y genera el código en su sandbox desde el template, pasa QA visual y despliega un PREVIEW; (edit) aplica cambios post-venta sobre sitios ya construidos partiendo del CÓDIGO REAL del repo (no del spec: el humano pudo editar a mano) y completa placeholders del demo con material real; (publish) el ÚNICO que publica a producción (merge a main) cuando el humano lo pide sobre un sitio aprobado. Delegar aquí: 'materializa/genera/itera el sitio del site <uuid>', 'cámbiale/mejora X al sitio', 'publica el sitio X'.",

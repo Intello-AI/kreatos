@@ -18,7 +18,7 @@ export default defineTool({
       .string()
       .optional()
       .describe(
-        "Giro normalizado para buscar referencias (ej. 'contable', 'construccion', 'logistica', 'distribucion'). Si se omite, no se traen referencias.",
+        "Giro normalizado para buscar referencias (ej. 'contable', 'construccion', 'logistica', 'distribucion'). Si se omite, NO se traen referencias ni sitios hermanos (ahorra ~2-8K tokens del brief). OMÍTELO cuando ya vas a construir desde latestSpec (el art-director ya compuso el spec con sus referencias): solo pásalo cuando TÚ vas a componer el spec y necesitas ver referencias del giro.",
       ),
   }),
   async execute({ siteId, industry }) {
