@@ -390,33 +390,36 @@ materializas:
    PROHIBIDO generar stubs idénticos en masa: una sección sin su layout propio
    del spec NO se escribe. El review visual marca "monotonía de layout" como
    major y te rebota.
-   **Escribir las custom TÚ en lotes es el default fiable — hazlo así casi
-   siempre.** Varias por comando (`cat > a.tsx <<'EOF' … EOF` encadenados),
-   verificando con `read_file` y corrigiendo tú.
-   **CRÍTICO sobre el fan-out con `agent`: las copias NO comparten tu sandbox.**
-   Cada copia nace en un sandbox PROPIO y VACÍO — NO ve ni puede escribir tu
-   `/workspace/site`. Una copia a la que le digas "escribe SOLO
-   components/custom/X.tsx" o (a) falla con "/workspace/site no existe" (no
-   tiene clone) o (b) responde "escribí el archivo" pero lo escribió en SU
-   sandbox efímero que tú NO puedes leer (tu `read_file` da File not found).
-   Ese trabajo se pierde. **NUNCA delegues a una copia la ESCRITURA de un
-   archivo en tu repo.**
-   **Único fan-out válido: generación de código como TEXTO.** Si quieres
-   paralelizar la parte creativa de secciones grandes, pide a cada copia que
-   DEVUELVA el `.tsx` COMPLETO en su respuesta de texto (nada de "escribe el
-   archivo"); TÚ pegas ese texto en tu sandbox con `cat > … <<'EOF'` y lo
-   verificas. La copia solo razona/redacta; el archivo lo escribes TÚ, en TU
-   sandbox. `outputSchema` NO debe existir en la llamada (fuerza task mode y la
-   copia muere con SUBAGENT_EXECUTION_FAILED): responde en texto libre.
-   Cada mensaje es autocontenido (la copia nace sin tu contexto): la porción
-   del spec de esa sección (layout, ns, why) y el contrato (solo tokens del
-   theme, copy vía next-intl, motion con los primitives del motor, AA, cero
-   deps nuevas). En la práctica, con 4-8 customs el fan-out de texto rara vez
-   gana a escribirlas tú en lotes y añade el riesgo de que la copia envuelva el
-   código en fences o se desvíe — **ante la duda, escríbelas tú.**
-   **Verificación OBLIGATORIA:** después de escribir CADA custom (tú o pegada
-   de una copia), `read_file` el archivo en TU sandbox y confirma que existe y
-   compila con su layout — nunca registres en el registry algo que no leíste.
+   **Paraleliza la escritura de customs con la tool `agent` (built-in) — es lo
+   más lento del build (~17 customs en serie = ~17 round-trips de Sonnet).** En
+   UN turno emite VARIAS llamadas `agent`, cada una encargada de escribir UN
+   GRUPO de customs (agrupa por página: home / servicios / equipo / nosotros /
+   contacto). Corren CONCURRENTES y, por ser COPIAS tuyas (subagente `agent`),
+   COMPARTEN tu sandbox `/workspace/site`: lo que escriben te queda VISIBLE (eve
+   0.19.0: la copia `agent` hereda `parentSandboxState` y apunta a la sesión de
+   sandbox del padre — verificado en el runtime). **NO pongas `outputSchema`**
+   en la llamada (fuerza task-mode y la copia muere con
+   SUBAGENT_EXECUTION_FAILED — responde en texto libre).
+   **Coherencia — el riesgo real de paralelizar diseño:** los hijos son CIEGOS
+   entre sí; sin guía clonarían el mismo molde → monotonía. Por eso:
+   - ANTES de fánear, TÚ asignas el ARQUETIPO de cada sección (del menú de
+     arriba / del `why` del spec) y se lo DICTAS a cada hijo. Reparte
+     arquetipos DISTINTOS entre grupos — dos hijos nunca con el mismo esqueleto.
+   - Cada encargo es AUTOCONTENIDO (la copia nace sin tu contexto): el brief
+     compartido (concepto, tokens del theme, primitives Reveal/SmartImage/
+     useContactForm, reglas de taste + anti-generic, AA, cero deps nuevas) + la
+     porción del spec de cada sección (layout, ns, why) + su ARQUETIPO asignado
+     + la RUTA exacta `components/custom/<x>.tsx` que debe escribir.
+   - Write scopes SIN solapar: cada hijo escribe SOLO sus `.tsx`. NADIE toca
+     `registry.ts`, `site.config.ts` ni `es.json` — eso lo ensamblas TÚ después,
+     con los archivos de todos ya presentes.
+   **Verificación OBLIGATORIA (y red de seguridad del fan-out):** tras el
+   fan-out, `read_file` CADA custom en TU sandbox y confirma que existe con su
+   layout. Si alguna NO aparece (una copia no compartió el sandbox por lo que
+   sea), ESCRÍBELA TÚ directo — nunca registres en el registry algo que no
+   leíste. **Fallback fiable** si el fan-out falla, o con pocas customs (≤4):
+   escríbelas TÚ en LOTES (varias por comando, `cat > a.tsx <<'EOF' … EOF`
+   encadenados, 3-4 archivos por comando).
    El registry.ts lo editas TÚ al final y revisas cada componente antes
    del build. Al reescribirlo CONSERVA el tipo exacto del template
    (`export const customSections: Record<string, ComponentType<{ ns:
