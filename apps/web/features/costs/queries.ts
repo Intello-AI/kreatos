@@ -19,9 +19,18 @@ export interface CostStage extends CostTotal {
   model: string
 }
 
+/** Conteo de llamadas de una tool dentro de un subagente (tabla tool_calls). */
+export interface ToolCallStat {
+  agent: string
+  toolName: string
+  calls: number
+}
+
 export interface LeadCost {
   total: CostTotal | null
   stages: CostStage[]
+  /** Desglose por tool dentro de cada subagente (counts, no tokens). */
+  toolCalls: ToolCallStat[]
 }
 
 const ZERO: CostTotal = {
@@ -34,18 +43,24 @@ const ZERO: CostTotal = {
 /** Costo total + desglose por etapa de un lead. */
 export async function getLeadCost(leadId: string): Promise<LeadCost> {
   const supabase = getAdminClient()
-  const [{ data: totalRow }, { data: stageRows }] = await Promise.all([
-    supabase
-      .from("lead_cost_total")
-      .select("*")
-      .eq("lead_id", leadId)
-      .maybeSingle(),
-    supabase
-      .from("lead_cost_by_stage")
-      .select("*")
-      .eq("lead_id", leadId)
-      .order("cost_usd", { ascending: false }),
-  ])
+  const [{ data: totalRow }, { data: stageRows }, { data: toolRows }] =
+    await Promise.all([
+      supabase
+        .from("lead_cost_total")
+        .select("*")
+        .eq("lead_id", leadId)
+        .maybeSingle(),
+      supabase
+        .from("lead_cost_by_stage")
+        .select("*")
+        .eq("lead_id", leadId)
+        .order("cost_usd", { ascending: false }),
+      supabase
+        .from("lead_tool_calls")
+        .select("*")
+        .eq("lead_id", leadId)
+        .order("calls", { ascending: false }),
+    ])
 
   const total: CostTotal | null = totalRow
     ? {
@@ -65,7 +80,13 @@ export async function getLeadCost(leadId: string): Promise<LeadCost> {
     cacheReadTokens: r.cache_read_tokens ?? 0,
   }))
 
-  return { total, stages }
+  const toolCalls: ToolCallStat[] = (toolRows ?? []).map((r) => ({
+    agent: r.agent ?? "—",
+    toolName: r.tool_name ?? "—",
+    calls: Number(r.calls ?? 0),
+  }))
+
+  return { total, stages, toolCalls }
 }
 
 /** Mapa lead_id → costo USD, para pintar la columna Costo en la tabla de leads. */
@@ -94,7 +115,7 @@ export async function getSiteCost(siteId: string): Promise<LeadCost> {
     .select("lead_id")
     .eq("id", siteId)
     .maybeSingle()
-  if (!data?.lead_id) return { total: null, stages: [] }
+  if (!data?.lead_id) return { total: null, stages: [], toolCalls: [] }
   return getLeadCost(data.lead_id)
 }
 

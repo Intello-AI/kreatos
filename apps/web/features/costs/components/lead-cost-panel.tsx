@@ -1,6 +1,6 @@
-import { CoinsIcon } from "@phosphor-icons/react/ssr"
+import { CaretRightIcon, CoinsIcon } from "@phosphor-icons/react/ssr"
 
-import type { LeadCost } from "@/features/costs/queries"
+import type { LeadCost, ToolCallStat } from "@/features/costs/queries"
 import { formatTokens, formatUsd } from "@/lib/format"
 import { ClaudeAI, OpenAI } from "@/components/icons"
 import {
@@ -42,13 +42,34 @@ function ProviderIcon({ model }: { model: string }) {
   )
 }
 
+/** Agrupa las tool-calls por subagente, orden por total desc. */
+function toolsByAgent(
+  toolCalls: ToolCallStat[],
+): { agent: string; tools: ToolCallStat[]; total: number }[] {
+  const map = new Map<string, ToolCallStat[]>()
+  for (const tc of toolCalls) {
+    const arr = map.get(tc.agent) ?? []
+    arr.push(tc)
+    map.set(tc.agent, arr)
+  }
+  return [...map.entries()]
+    .map(([agent, tools]) => ({
+      agent,
+      tools: [...tools].sort((a, b) => b.calls - a.calls),
+      total: tools.reduce((sum, t) => sum + t.calls, 0),
+    }))
+    .sort((a, b) => b.total - a.total)
+}
+
 /**
- * Costo de IA de un lead/sitio: total en USD + desglose por etapa y modelo.
- * Server component — recibe el resultado de getLeadCost/getSiteCost.
+ * Costo de IA de un lead/sitio: total en USD + desglose por etapa y modelo,
+ * más el desglose de llamadas por tool DENTRO de cada subagente (tabla
+ * tool_calls). Server component — recibe el resultado de getLeadCost/getSiteCost.
  * "Estimado" porque parte de model_pricing (editable) y del cache_read.
  */
 export function LeadCostPanel({ cost }: { cost: LeadCost }) {
-  const { total, stages } = cost
+  const { total, stages, toolCalls } = cost
+  const toolGroups = toolsByAgent(toolCalls)
 
   return (
     <div className="space-y-3">
@@ -110,6 +131,43 @@ export function LeadCostPanel({ cost }: { cost: LeadCost }) {
               ))}
             </TableBody>
           </Table>
+        </div>
+      )}
+
+      {toolGroups.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-xs font-medium text-muted-foreground">
+            Llamadas por herramienta
+          </p>
+          <div className="divide-y border">
+            {toolGroups.map(({ agent, tools, total: agentTotal }) => (
+              <details key={agent} className="group">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-xs hover:bg-sidebar">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <CaretRightIcon className="size-3 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
+                    {agentLabel(agent)}
+                  </span>
+                  <span className="tabular-nums text-muted-foreground">
+                    {agentTotal} llamadas · {tools.length}{" "}
+                    {tools.length === 1 ? "tool" : "tools"}
+                  </span>
+                </summary>
+                <div className="divide-y bg-sidebar/40">
+                  {tools.map((t) => (
+                    <div
+                      key={t.toolName}
+                      className="flex items-center justify-between gap-2 py-1.5 pr-3 pl-8 text-xs"
+                    >
+                      <span className="truncate font-mono text-muted-foreground">
+                        {t.toolName}
+                      </span>
+                      <span className="shrink-0 tabular-nums">{t.calls}</span>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            ))}
+          </div>
         </div>
       )}
     </div>

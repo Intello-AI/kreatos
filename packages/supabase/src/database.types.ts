@@ -693,6 +693,15 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_tool_calls: {
+        Row: {
+          agent: string | null
+          calls: number | null
+          lead_id: string | null
+          tool_name: string | null
+        }
+        Relationships: []
+      }
       site_tool_calls: {
         Row: {
           agent: string | null
