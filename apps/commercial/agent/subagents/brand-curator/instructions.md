@@ -32,12 +32,18 @@ en la ficha de marca — que site-builder consume al generar el sitio.
    traducción a tokens (mismo sistema que design-scout: background/
    foreground/primary/muted/border...). Para screenshots de una marca
    existente, extrae la paleta como lo haría design-scout con un sitio.
-3. **Decide como diseñador y di por qué en una frase**: cuál es el mejor
+3. **Carga el skill `brand-extraction`** (criterio de logo, paleta→tokens,
+   curaduría de fotos) antes de decidir. Si es un rediseño, corre
+   `extract_css_palette` sobre el sitio: te da la paleta DURA (custom props
+   `--primary`/`--brand`/`--accent` + colores por frecuencia), más exacta que
+   estimarla de un screenshot; crúzala con el `theme-color` del scrape.
+   **Decide como diseñador y di por qué en una frase**: cuál es el mejor
    logo (vectorial > foto del rótulo; fondo transparente > fondo blanco),
    qué fotos sirven para el sitio (reales del negocio > genéricas) y cuáles
    descartas.
 4. `save_brand_profile` — guarda TODO lo decidido de una vez: shortName,
-   colores (hex, el dominante primero), tagline, servicios, notas, el logo
+   colores (hex, el dominante primero), fuentes (de `scrape_brand_site.fonts`),
+   tagline, servicios, notas, el logo
    elegido (`logoSourcePath` = su ruta en el inbox; la tool lo promueve a
    `<leadId>/logo.<ext>`) y las imágenes aprobadas (se promueven a
    `<leadId>/images/`). **Por cada imagen aprobada pasa su descripción en

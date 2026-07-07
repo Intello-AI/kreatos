@@ -14,6 +14,12 @@ export default defineTool({
       .array(z.string().regex(/^#[0-9a-fA-F]{6}$/))
       .optional()
       .describe("Hex, el dominante de la marca PRIMERO."),
+    fonts: z
+      .array(z.string())
+      .optional()
+      .describe(
+        "Fuentes de la marca (de scrape_brand_site.fonts): el par tipográfico REAL del sitio. Referencia para el site-builder, no mandato.",
+      ),
     services: z
       .array(z.object({ name: z.string(), description: z.string() }))
       .optional(),
@@ -145,6 +151,11 @@ export default defineTool({
         short_name: input.shortName ?? existing?.short_name ?? null,
         tagline: input.tagline ?? existing?.tagline ?? null,
         colors: (input.colors ?? existing?.colors ?? []) as never,
+        // `fonts` es columna nueva (migración 20260707160000); el cast evita el
+        // error de tipo hasta que se regeneren los types con `pnpm db:types`.
+        fonts: (input.fonts ??
+          (existing as { fonts?: string[] } | null)?.fonts ??
+          []) as never,
         services: (input.services ?? existing?.services ?? []) as never,
         differentiators:
           input.differentiators ?? existing?.differentiators ?? null,
