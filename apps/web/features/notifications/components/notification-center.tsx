@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -211,25 +212,29 @@ function NotifRow({
   accent?: boolean
 }) {
   return (
-    <Link
-      href={href}
-      className={cn(
-        "flex items-start gap-2.5 rounded-sm px-2 py-2 outline-none transition-colors hover:bg-accent focus-visible:bg-accent",
-        accent && "bg-warning/5",
-      )}
-    >
-      {icon}
-      <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="line-clamp-2 text-xs leading-snug">{title}</span>
-        <span className="text-[10px] text-muted-foreground">{meta}</span>
-      </span>
-      {unread && (
-        <span
-          aria-hidden
-          className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary"
-        />
-      )}
-    </Link>
+    // asChild → la fila ES el menuitem (role, roving focus, arrow-nav, cierra al
+    // seleccionar). Antes era un <a> suelto dentro de role="menu": teclado roto.
+    <DropdownMenuItem asChild>
+      <Link
+        href={href}
+        className={cn(
+          "flex items-start gap-2.5 rounded-sm px-2 py-2",
+          accent && "bg-warning/5 focus:bg-warning/10",
+        )}
+      >
+        {icon}
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <span className="line-clamp-2 text-xs leading-snug">{title}</span>
+          <span className="text-[10px] text-muted-foreground">{meta}</span>
+        </span>
+        {unread && (
+          <span
+            aria-hidden
+            className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary"
+          />
+        )}
+      </Link>
+    </DropdownMenuItem>
   )
 }
 

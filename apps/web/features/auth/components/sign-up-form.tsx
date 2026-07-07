@@ -111,7 +111,7 @@ export function SignUpForm() {
         </Field>
 
         {serverError && (
-          <FieldDescription className="text-destructive">
+          <FieldDescription role="alert" className="text-destructive">
             {serverError}
           </FieldDescription>
         )}

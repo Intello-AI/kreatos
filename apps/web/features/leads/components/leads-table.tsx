@@ -34,9 +34,9 @@ function WebsiteQualityBadge({ quality }: { quality: string | null }) {
   // decent/unknown: apagado (outline).
   const className =
     quality === "none" || quality === "broken"
-      ? "border-destructive/40 bg-destructive/10 text-destructive"
+      ? "border-destructive/40 bg-destructive/10"
       : quality === "outdated" || quality === "weak"
-        ? "border-warning/40 bg-warning/10 text-warning"
+        ? "border-warning/40 bg-warning/10"
         : undefined
   return (
     <Badge variant="outline" className={cn(className)}>
@@ -51,10 +51,10 @@ function RatingBadge({ rating }: { rating: string | null }) {
   const label = MANUAL_RATING_LABELS[rating as ManualRating] ?? rating
   const className =
     rating === "good"
-      ? "border-success/40 bg-success/10 text-success"
+      ? "border-success/40 bg-success/10"
       : rating === "regular"
-        ? "border-warning/40 bg-warning/10 text-warning"
-        : "border-destructive/40 bg-destructive/10 text-destructive"
+        ? "border-warning/40 bg-warning/10"
+        : "border-destructive/40 bg-destructive/10"
   return (
     <Badge variant="outline" className={cn(className)}>
       {label}
