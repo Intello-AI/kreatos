@@ -100,7 +100,16 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
    (nada de páginas de relleno que repitan la home). Igual con las secciones de
    cada página: tantas como el material merezca, ni una de paja. Cada sección
    lleva su `why`.
-4. `save_site_version` con el spec COMPLETO y `changelog`. El tool valida
+4. **Primero `compose_spec`(siteId)** — te devuelve el andamiaje MECÁNICO ya en
+   la forma EXACTA del spec: `business` (name, shortName, phone, email, el `maps`
+   de Google, rutas `/images/logo.png` e `/images/icon.png`), `flags` y
+   `seo.domain`. CÓPIALOS VERBATIM al spec: es el bloque que más se mis-serializa
+   al escribirlo a mano (por eso `save_site_version` trae reparación y se queja de
+   shortName/logo/icon). Completa con tu criterio SOLO lo que liste su `todo`:
+   `business.address` (parsea el string del lead a {street,colonia,city,state,zip}),
+   `business.geo`, `business.category` legible, `seo.title/description/keywords`, y
+   todo `design` + `sections` + `pages`. compose_spec NO decide diseño ni persiste.
+   Luego `save_site_version` con el spec COMPLETO y `changelog`. El tool valida
    pensamiento de diseño (concepto, whys, takeaways, anti-clon estructural,
    marca usada, anti-convergencia de giro): si rechaza, lee TODOS los
    motivos y corrige en UNA pasada. La estructura exacta del spec:
