@@ -1,8 +1,8 @@
-import { openai } from "@ai-sdk/openai"
 import { generateText } from "ai"
 import { defineTool } from "eve/tools"
 import { z } from "zod"
 
+import { toolModel, toolModelLabel } from "../../../lib/tool-models"
 import { recordToolUsage } from "../../../lib/tool-usage"
 
 /**
@@ -206,18 +206,22 @@ ${brief}
 
 Devuelve ÚNICAMENTE el contenido completo y final del archivo .tsx. Sin markdown fences, sin explicación, sin comentarios de proceso.`
 
-    let modelUsed = "gpt-5-mini"
-    const first = await generateText({ model: openai("gpt-5-mini"), prompt })
-    await recordToolUsage(ctx, "site-builder", "gpt-5-mini", first.usage)
+    // Codegen barato por tarea (router central): default qwen3.7-plus. Es
+    // single-shot + validado abajo, así que la debilidad de qwen (adherencia en
+    // loops largos) no aplica. A/B por env TOOL_MODEL_CODEGEN.
+    const model = toolModel("codegen")
+    const modelUsed = toolModelLabel("codegen")
+    const first = await generateText({ model, prompt })
+    await recordToolUsage(ctx, "site-builder", modelUsed, first.usage)
     let result = stripFences(first.text)
     let problem = await validate(result, { isSlot: !!isSlot, ns })
     if (problem) {
       // Reintento informándole el defecto (mismo modelo: es capaz, solo resbaló).
       const retry = await generateText({
-        model: openai("gpt-5-mini"),
+        model,
         prompt: `${prompt}\n\nOJO: un intento anterior falló la validación por: ${problem}. Corrígelo sin romper lo demás.`,
       })
-      await recordToolUsage(ctx, "site-builder", "gpt-5-mini", retry.usage)
+      await recordToolUsage(ctx, "site-builder", modelUsed, retry.usage)
       result = stripFences(retry.text)
       problem = await validate(result, { isSlot: !!isSlot, ns })
       if (problem) {

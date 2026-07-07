@@ -1,8 +1,9 @@
 import { openai } from "@ai-sdk/openai"
-import { generateText } from "ai"
+import { generateText, type LanguageModel } from "ai"
 import { defineTool } from "eve/tools"
 import { z } from "zod"
 
+import { toolModel, toolModelLabel } from "../../../lib/tool-models"
 import { recordToolUsage } from "../../../lib/tool-usage"
 
 /**
@@ -76,9 +77,12 @@ export default defineTool({
     }
     const sourcePaths = leafPaths(sourceJson)
 
-    const attempt = async (model: string): Promise<string | null> => {
+    const attempt = async (
+      model: LanguageModel,
+      label: string,
+    ): Promise<string | null> => {
       const res = await generateText({
-        model: openai(model),
+        model,
         messages: [
           {
             role: "user",
@@ -86,7 +90,7 @@ export default defineTool({
           },
         ],
       })
-      await recordToolUsage(ctx, "site-builder", model, res.usage)
+      await recordToolUsage(ctx, "site-builder", label, res.usage)
       const out = stripFences(res.text)
       let parsed: unknown
       try {
@@ -101,7 +105,11 @@ export default defineTool({
       return JSON.stringify(parsed, null, 2)
     }
 
-    const result = (await attempt("gpt-5-mini")) ?? (await attempt("gpt-5.1"))
+    // Traducción barata (router central): default qwen3.7-plus; fallback
+    // gpt-5-mini si qwen no conserva la paridad de keys del JSON.
+    const result =
+      (await attempt(toolModel("translate"), toolModelLabel("translate"))) ??
+      (await attempt(openai("gpt-5-mini"), "gpt-5-mini"))
     if (!result) {
       throw new Error(
         `La traducción a ${targetLanguageName} no conservó las keys de ${sourceLocale}.json tras 2 intentos. Revisa el es.json (¿keys raras?) o escribe messages/${targetLocale}.json a mano con las mismas keys.`,

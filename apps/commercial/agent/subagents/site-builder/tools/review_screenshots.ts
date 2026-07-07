@@ -1,8 +1,8 @@
-import { anthropic } from "@ai-sdk/anthropic"
 import { generateText } from "ai"
 import { defineTool } from "eve/tools"
 import { z } from "zod"
 
+import { toolModel, toolModelLabel } from "../../../lib/tool-models"
 import { recordToolUsage } from "../../../lib/tool-usage"
 
 /**
@@ -200,7 +200,7 @@ export default defineTool({
     }
 
     const result = await generateText({
-      model: anthropic("claude-sonnet-5"),
+      model: toolModel("vision-judge"),
       messages: [
         {
           role: "user",
@@ -231,7 +231,7 @@ export default defineTool({
         },
       ],
     })
-    await recordToolUsage(ctx, "site-builder", "claude-sonnet-5", result.usage)
+    await recordToolUsage(ctx, "site-builder", toolModelLabel("vision-judge"), result.usage)
 
     const raw = result.text.trim().replace(/^```(?:json)?\n?|```$/g, "")
     // Persistir el veredicto en site/.qa/review.json: push_site_version lo lee

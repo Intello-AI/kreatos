@@ -1,9 +1,9 @@
-import { openai } from "@ai-sdk/openai"
 import { generateText } from "ai"
 import { defineTool } from "eve/tools"
 import { z } from "zod"
 
 import { getSupabaseClient } from "../../../lib/supabase"
+import { toolModel, toolModelLabel } from "../../../lib/tool-models"
 import { recordToolUsage } from "../../../lib/tool-usage"
 
 // Copia literal del CHROMIUM_BOOTSTRAP de ../sandbox/sandbox.ts (un import
@@ -206,7 +206,7 @@ export default defineTool({
     let visualAnalysis: string | null = null
     if (reviewImages.length > 0) {
       const result = await generateText({
-        model: openai("gpt-5.1"),
+        model: toolModel("vision-extract"),
         messages: [
           {
             role: "user",
@@ -224,7 +224,7 @@ export default defineTool({
           },
         ],
       })
-      await recordToolUsage(ctx, "design-scout", "gpt-5.1", result.usage)
+      await recordToolUsage(ctx, "design-scout", toolModelLabel("vision-extract"), result.usage)
       visualAnalysis = result.text
     }
 

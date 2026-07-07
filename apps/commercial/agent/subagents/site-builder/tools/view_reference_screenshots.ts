@@ -1,8 +1,8 @@
-import { openai } from "@ai-sdk/openai"
 import { generateText } from "ai"
 import { defineTool } from "eve/tools"
 import { z } from "zod"
 
+import { toolModel, toolModelLabel } from "../../../lib/tool-models"
 import { recordToolUsage } from "../../../lib/tool-usage"
 
 /**
@@ -61,7 +61,7 @@ export default defineTool({
 
     const numbered = questions.map((q, i) => `${i + 1}. ${q}`).join("\n")
     const result = await generateText({
-      model: openai("gpt-5.1"),
+      model: toolModel("vision-extract"),
       messages: [
         {
           role: "user",
@@ -79,7 +79,7 @@ export default defineTool({
         },
       ],
     })
-    await recordToolUsage(ctx, "site-builder", "gpt-5.1", result.usage)
+    await recordToolUsage(ctx, "site-builder", toolModelLabel("vision-extract"), result.usage)
     return { answers: result.text }
   },
 })
