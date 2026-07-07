@@ -32,6 +32,102 @@ export function artDirectorModel(): string {
   return process.env.ART_DIRECTOR_MODEL === "gpt" ? "gpt-5.4" : "claude-sonnet-5"
 }
 
+// Subagentes TERMINALES: su session.completed = la TAREA del usuario terminó.
+// (La raíz es persistente — se parquea entre mensajes — así que su fin NO sirve
+// como señal.) Cierran la fila 'task' 'running' del sujeto → dispara sonido+correo.
+const TERMINAL_AGENTS: Record<string, { kind: string; title: string }> = {
+  "site-builder": { kind: "site_build", title: "Sitio listo" },
+  "brand-curator": { kind: "brand_curate", title: "Marca lista" },
+  proposal: { kind: "proposal", title: "Propuesta lista" },
+}
+// Subagentes cuyo fin es un HITO visible (in-app, sin correo).
+const MILESTONE_TITLES: Record<string, string> = {
+  "art-director": "Spec de diseño listo",
+}
+
+/**
+ * Notificación durable al terminar un SUBAGENTE (session.completed/failed). La
+ * UI abrió una fila 'task' 'running' para el sujeto al arrancar (con user_id =
+ * atribución); aquí:
+ *  - agente TERMINAL → cierra esa tarea (done/failed). Si no hay fila (arranque
+ *    por chat, donde el sujeto lo descubre el agente), inserta una standalone.
+ *  - agente de HITO → inserta una fila 'milestone' bajo la tarea del sujeto.
+ * Best-effort: nunca lanza (tumbaría el turn).
+ */
+async function recordCompletion(
+  agent: string,
+  sessionId: string,
+  status: "done" | "failed",
+): Promise<void> {
+  if (agent === "root") return
+  const terminal = TERMINAL_AGENTS[agent]
+  const milestoneTitle = MILESTONE_TITLES[agent]
+  if (!terminal && !milestoneTitle) return
+
+  const supabase = getSupabaseClient()
+  const { data: ctxRow } = await supabase
+    .from("session_context")
+    .select("lead_id, site_id, user_id")
+    .eq("session_id", sessionId)
+    .maybeSingle()
+  const subjectType = ctxRow?.site_id ? "site" : ctxRow?.lead_id ? "lead" : null
+  const subjectId = ctxRow?.site_id ?? ctxRow?.lead_id ?? null
+  if (!subjectType || !subjectId) return
+  const href =
+    subjectType === "site"
+      ? `/dashboard/sites/${subjectId}`
+      : `/dashboard/leads/${subjectId}`
+
+  const { data: task } = await supabase
+    .from("agent_notifications")
+    .select("id, user_id, root_session_id")
+    .eq("level", "task")
+    .eq("status", "running")
+    .eq("subject_type", subjectType)
+    .eq("subject_id", subjectId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (terminal) {
+    if (task) {
+      await supabase
+        .from("agent_notifications")
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq("id", task.id)
+    } else {
+      await supabase.from("agent_notifications").insert({
+        user_id: ctxRow?.user_id ?? null,
+        session_id: sessionId,
+        root_session_id: sessionId,
+        level: "task",
+        status,
+        kind: terminal.kind,
+        title: terminal.title,
+        subject_type: subjectType,
+        subject_id: subjectId,
+        href,
+      })
+    }
+    return
+  }
+
+  // Hito: solo bajo una tarea del sujeto ya abierta.
+  if (!task) return
+  await supabase.from("agent_notifications").insert({
+    user_id: task.user_id,
+    session_id: sessionId,
+    root_session_id: task.root_session_id,
+    level: "milestone",
+    status,
+    kind: agent,
+    title: status === "done" ? milestoneTitle : `El ${agent} falló`,
+    subject_type: subjectType,
+    subject_id: subjectId,
+    href,
+  })
+}
+
 export function makeUsageHook(agent: string, model: string) {
   return defineHook({
     events: {
@@ -110,6 +206,22 @@ export function makeUsageHook(agent: string, model: string) {
             step_index: event.data.stepIndex ?? null,
           }))
           await getSupabaseClient().from("tool_calls").insert(rows)
+        } catch {
+          // best-effort
+        }
+      },
+      // Notificación durable de tarea/hito: el fin de un SUBAGENTE terminal
+      // cierra la tarea del usuario (sonido+correo); un intermedio, un hito.
+      async "session.completed"(_event, ctx) {
+        try {
+          await recordCompletion(agent, ctx.session.id, "done")
+        } catch {
+          // best-effort
+        }
+      },
+      async "session.failed"(_event, ctx) {
+        try {
+          await recordCompletion(agent, ctx.session.id, "failed")
         } catch {
           // best-effort
         }

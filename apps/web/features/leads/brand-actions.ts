@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { getAdminClient } from "@/lib/supabase/admin"
+import { startAgentTask } from "@/lib/agent-tasks"
 import { getEveClient } from "@/lib/eve"
 
 export interface BrandActionState {
@@ -147,6 +148,21 @@ export async function sendBrandMessage(
       `[Contexto: lead ${leadId}] ${trimmed}`,
     )
     await persistBrandSession(leadId, brand.eve_run_ids ?? [], response)
+    // Capa 0: la tarea de curación la cierra el hook del brand-curator al
+    // terminar (campana/sonido/correo). Best-effort.
+    const { data: lead } = await getAdminClient()
+      .from("leads")
+      .select("name")
+      .eq("id", leadId)
+      .maybeSingle()
+    await startAgentTask({
+      sessionId: response.sessionId,
+      kind: "brand_curate",
+      title: `Marca de ${lead?.name ?? "lead"}`,
+      subjectType: "lead",
+      subjectId: leadId,
+      href: `/dashboard/leads/${leadId}`,
+    })
   } catch (err) {
     return {
       formError: `No se pudo contactar al agente: ${err instanceof Error ? err.message : "error desconocido"}`,

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { getAdminClient } from "@/lib/supabase/admin"
 import { getEveClient } from "@/lib/eve"
+import { startAgentTask } from "@/lib/agent-tasks"
 import {
   siteBriefSchema,
   type SiteActionState,
@@ -104,6 +105,16 @@ export async function createSiteBrief(
         eve_run_ids: [response.sessionId],
       })
       .eq("id", site.id)
+    // Capa 0: registra la tarea (atribución + fila 'running' que el hook del
+    // site-builder cerrará al terminar → campana/sonido/correo). Best-effort.
+    await startAgentTask({
+      sessionId: response.sessionId,
+      kind: "site_build",
+      title: `Sitio de ${lead.name ?? slug}`,
+      subjectType: "site",
+      subjectId: site.id,
+      href: `/dashboard/sites/${site.id}`,
+    })
   } catch (error) {
     // El brief quedó guardado; la generación se puede relanzar desde el detalle.
     await supabase
@@ -130,7 +141,7 @@ async function sendFollowUp(
   const supabase = getAdminClient()
   const { data: site, error } = await supabase
     .from("sites")
-    .select("id, eve_session_id, eve_run_ids")
+    .select("id, slug, eve_session_id, eve_run_ids, leads(name)")
     .eq("id", siteId)
     .maybeSingle()
   if (error || !site) return { formError: "Sitio no encontrado." }
@@ -153,6 +164,15 @@ async function sendFollowUp(
         eve_run_ids: [...(site.eve_run_ids ?? []), response.sessionId],
       })
       .eq("id", siteId)
+    const leadName = (site.leads as { name?: string } | null)?.name
+    await startAgentTask({
+      sessionId: response.sessionId,
+      kind: "site_build",
+      title: `Sitio de ${leadName ?? site.slug ?? "cliente"}`,
+      subjectType: "site",
+      subjectId: siteId,
+      href: `/dashboard/sites/${siteId}`,
+    })
   } catch (err) {
     return {
       formError: `No se pudo contactar al agente: ${err instanceof Error ? err.message : "error desconocido"}`,

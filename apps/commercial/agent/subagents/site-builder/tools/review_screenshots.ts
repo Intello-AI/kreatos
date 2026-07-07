@@ -150,8 +150,12 @@ export default defineTool({
     const images: Array<{ name: string; bytes: Uint8Array }> = []
     for (const file of selected) {
       const jpg = file.replace(/\.png$/, ".review.jpg")
+      // Cap ANCHO ≤1100 y ALTO ≤7600: un fullpage muy largo tras capar solo el
+      // ancho seguía pasando el límite de 8000px/lado de la API de visión (que
+      // rechaza el mensaje entero). El segundo scale acota el alto conservando
+      // aspecto.
       await sandbox.run({
-        command: `ffmpeg -y -i "${file}" -vf "scale='min(1100,iw)':-2" -q:v 6 "${jpg}" 2>/dev/null || cp "${file}" "${jpg}"`,
+        command: `ffmpeg -y -i "${file}" -vf "scale='min(1100,iw)':-2,scale=-2:'min(7600,ih)'" -q:v 6 "${jpg}" 2>/dev/null || cp "${file}" "${jpg}"`,
       })
       const bytes = await sandbox.readBinaryFile({ path: jpg })
       if (!bytes || bytes.byteLength > 8 * 1024 * 1024) continue
@@ -169,8 +173,26 @@ export default defineTool({
       try {
         const res = await fetch(referenceScreenshotUrl)
         if (res.ok) {
-          const bytes = new Uint8Array(await res.arrayBuffer())
-          if (bytes.byteLength <= 12 * 1024 * 1024) referenceImage = bytes
+          const raw = new Uint8Array(await res.arrayBuffer())
+          // Las referencias son capturas fullpage y suelen exceder el límite de
+          // 8000px/lado de la API de visión (p. ej. flexport = 1440×8705 → la
+          // API rechaza el mensaje ENTERO). Downscale en el sandbox con el MISMO
+          // cap que los screenshots (≤1100 ancho, ≤7600 alto) antes de mandarla.
+          if (raw.byteLength <= 12 * 1024 * 1024) {
+            await sandbox.writeBinaryFile({
+              path: "site/.qa/reference.src",
+              content: raw,
+            })
+            await sandbox.run({
+              command: `rm -f site/.qa/reference.jpg && ffmpeg -y -i site/.qa/reference.src -vf "scale='min(1100,iw)':-2,scale=-2:'min(7600,ih)'" -q:v 6 site/.qa/reference.jpg 2>/dev/null`,
+            })
+            const jpg = await sandbox.readBinaryFile({
+              path: "site/.qa/reference.jpg",
+            })
+            if (jpg && jpg.byteLength > 0 && jpg.byteLength <= 8 * 1024 * 1024) {
+              referenceImage = jpg
+            }
+          }
         }
       } catch {
         // sin referencia: el review procede igual
@@ -201,7 +223,7 @@ export default defineTool({
                   {
                     type: "image" as const,
                     image: referenceImage,
-                    mediaType: "image/png" as const,
+                    mediaType: "image/jpeg" as const,
                   },
                 ]
               : []),

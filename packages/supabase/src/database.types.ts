@@ -9,6 +9,60 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      agent_notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          href: string | null
+          id: string
+          kind: string
+          level: string
+          read_at: string | null
+          root_session_id: string | null
+          session_id: string | null
+          status: string
+          subject_id: string | null
+          subject_type: string | null
+          title: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          href?: string | null
+          id?: string
+          kind: string
+          level?: string
+          read_at?: string | null
+          root_session_id?: string | null
+          session_id?: string | null
+          status: string
+          subject_id?: string | null
+          subject_type?: string | null
+          title: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          href?: string | null
+          id?: string
+          kind?: string
+          level?: string
+          read_at?: string | null
+          root_session_id?: string | null
+          session_id?: string | null
+          status?: string
+          subject_id?: string | null
+          subject_type?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       chat_conversations: {
         Row: {
           created_at: string
@@ -412,18 +466,21 @@ export type Database = {
           session_id: string
           site_id: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           lead_id?: string | null
           session_id: string
           site_id?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           lead_id?: string | null
           session_id?: string
           site_id?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
