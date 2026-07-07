@@ -1,7 +1,7 @@
 import { Resend } from "resend"
 
 import { getSupabaseClient } from "./supabase"
-import { TaskCompleteEmail } from "./emails/task-complete-email"
+import { TaskCompleteEmail } from "../emails/task-complete-email"
 
 // Base del dashboard para los links del correo (mismo dominio que el logo del
 // template de Supabase). Override con DASHBOARD_URL si cambia.
