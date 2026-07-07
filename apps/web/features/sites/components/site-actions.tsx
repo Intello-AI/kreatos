@@ -8,12 +8,14 @@ import {
   CheckIcon,
   PaperPlaneRightIcon,
   RocketLaunchIcon,
+  SparkleIcon,
   StopIcon,
 } from "@phosphor-icons/react"
 
 import {
   approveSite,
   publishSite,
+  regenerateSite,
   requestSiteChanges,
   stopSite,
 } from "@/features/sites/actions"
@@ -149,7 +151,51 @@ export function SiteActions({
       )}
 
       {showComposer && (
-        <div className="space-y-1.5">
+        <div className="space-y-3">
+          {/* Desde cero: re-corre TODO el pipeline (arte + build) en una rama
+              nueva. Distinto de "Pedir una nueva versión" (edit con
+              instrucciones): sirve para comparar direcciones o modelos. */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border bg-muted/30 px-3 py-2.5">
+            <div className="min-w-0 space-y-0.5">
+              <p className="text-sm font-medium">
+                Generar una versión nueva desde cero
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Re-corre dirección de arte y build en una rama nueva para
+                comparar. Las versiones actuales no se tocan.
+              </p>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" disabled={pending}>
+                  {pending ? <Spinner /> : <SparkleIcon />}
+                  Desde cero
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    ¿Generar una versión nueva desde cero?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    El agente re-corre todo el pipeline (dirección de arte +
+                    build) en una rama nueva. Las versiones actuales no se
+                    modifican. Consume un build completo.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => run(() => regenerateSite(siteId))}
+                  >
+                    Generar desde cero
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+
+          <div className="space-y-1.5">
           <label
             htmlFor="site-changes"
             className="text-xs font-medium text-muted-foreground"
@@ -199,6 +245,7 @@ export function SiteActions({
               </InputGroupButton>
             </InputGroupAddon>
           </InputGroup>
+          </div>
         </div>
       )}
     </div>

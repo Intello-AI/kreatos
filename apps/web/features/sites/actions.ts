@@ -407,3 +407,53 @@ export async function requestSiteChanges(
     `Itera el site ${siteId} con estos cambios pedidos por el humano: ${trimmed}. Genera nueva versión del spec y nuevo preview.`,
   )
 }
+
+/**
+ * Genera una versión NUEVA desde cero (A/B): re-corre el pipeline COMPLETO
+ * (art-director compone un spec + site-builder lo materializa en modo BUILD
+ * desde el template) en una rama v{N+1) nueva, SIN tocar las versiones
+ * existentes. A diferencia de `requestSiteChanges` (modo edit: parte del código
+ * real y exige describir cambios), esto arranca limpio — sirve para comparar
+ * direcciones de diseño o modelos del site-builder sobre el mismo brief.
+ *
+ * Fija `generating` de inmediato para feedback en la UI; si el agente no
+ * arranca, revierte al estado anterior (el pipeline lo maneja el agente:
+ * save_site_version auto-incrementa version_n y bumpea current_version).
+ */
+export async function regenerateSite(
+  siteId: string,
+): Promise<SiteActionState> {
+  const supabase = getAdminClient()
+  const { data: site, error } = await supabase
+    .from("sites")
+    .select("id, status")
+    .eq("id", siteId)
+    .maybeSingle()
+  if (error || !site) return { formError: "Sitio no encontrado." }
+  if (site.status === "brief" || site.status === "generating") {
+    return { formError: "Ya hay una generación en curso." }
+  }
+
+  const previousStatus = site.status
+  await supabase
+    .from("sites")
+    .update({ status: "generating" })
+    .eq("id", siteId)
+
+  const result = await sendFollowUp(
+    siteId,
+    `Genera una versión NUEVA del site ${siteId} DESDE CERO — es un A/B para comparar, NO una edición del código actual. Re-corre el pipeline COMPLETO: delega a art-director para componer el spec y luego a site-builder en modo BUILD para materializarlo desde el template en una rama v nueva (save_site_version auto-incrementa la versión). NO partas del código de la versión actual ni la modifiques; deja su preview intacto. Al terminar deja el preview de la versión nueva junto a las existentes (no publiques).`,
+  )
+
+  if (result.formError) {
+    // El agente no arrancó: revierte para no dejar el sitio colgado en generating.
+    await supabase
+      .from("sites")
+      .update({ status: previousStatus })
+      .eq("id", siteId)
+    return result
+  }
+
+  revalidatePath(`/dashboard/sites/${siteId}`)
+  return {}
+}
