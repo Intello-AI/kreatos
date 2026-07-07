@@ -451,23 +451,21 @@ materializas:
    preguntar si lo arreglas ES abandonar el paso 8 — arréglalo y sigue.
    `failed` + detenerse queda SOLO para bloqueos de configuración
    (token/API key faltante).
-9. **Screenshots por PASOS** (cada comando corto — el QA monolítico moría
-   en "terminated"). SOLO con `pnpm build` verde previo:
-   a. `pnpm screenshots:serve` — arranca el server de QA persistente (queda
-      vivo entre comandos).
-   b. UNA página por comando: `pnpm screenshots:page -- --route /`, luego
-      `pnpm screenshots:page -- --route /servicios`, etc. — cada ruta del
-      sitio (los modos salen solos: home desktop light+dark+mobile;
-      interiores desktop+mobile).
-   c. `pnpm screenshots:stop` — mata el server.
-   d. `pnpm qa --skip-build --skip-screenshots` — consolida el reporte
-      reutilizando build y capturas ya hechos (dura segundos). Lee
-      `.qa/qa-report.json` y pásalo a `save_qa_report`; aplica el skill
-      `quality-checklist` antes de continuar.
+9. **QA visual — UNA sola llamada: `run_visual_qa`.** SOLO con `pnpm build`
+   verde previo. El tool hace TODO el baile internamente (arranca el server
+   persistente, captura cada ruta en desktop/mobile + dark en la home si hay
+   toggle, lo detiene y consolida `.qa/qa-report.json`) en un solo paso. **NO
+   corras `screenshots:serve`/`screenshots:page`/`screenshots:stop`/`pnpm qa` a
+   mano** — eran 4-6 comandos en steps separados (el monolítico moría "en
+   terminated"; esos comandos cortos ahora viven DENTRO del tool). Lee el
+   `ok`/`validateConfigOk`/`steps`/`screenshots` que devuelve y pásalo a
+   `save_qa_report`; aplica el skill `quality-checklist` antes de continuar. Si
+   `validateConfigOk=false`, arregla la config/keys con `edit_file` y re-corre
+   `run_visual_qa`.
    Con el build rojo nada de esto aporta: el ciclo de reparación es build →
-   corrige → build, y los screenshots UNA vez al final.
+   corrige → build, y el QA visual UNA vez al final.
 9b. **Revisión visual obligatoria — el sitio se vende por lo que se VE.**
-   `pnpm qa` dejó screenshots reales en `.qa/screenshots/`; pásalos por
+   `run_visual_qa` dejó screenshots reales en `.qa/screenshots/`; pásalos por
    `review_screenshots` (dale el `design.concept` del spec y, si la
    referencia guía trae `screenshotUrl`, pásala en
    `referenceScreenshotUrl` — el revisor compara la dirección de arte
@@ -493,12 +491,9 @@ materializas:
      review sigue sin aprobar por CRITERIO (no por algo estructuralmente roto),
      pushea con `overrideReview:true` — queda anotado. No lo uses en el primer
      intento.
-   - **Re-QA parcial (NO re-corras `pnpm qa` monolítico en iteración):** tras
-     un fix, re-captura SOLO la(s) ruta(s) afectada(s) con
-     `pnpm screenshots:page -- --route <ruta>` (el server sigue vivo; si hubo
-     rebuild, `screenshots:stop`+`serve` primero) y luego
-     `pnpm qa --skip-build --skip-screenshots` para reconsolidar. Solo si el
-     cambio fue GLOBAL (theme.css/fonts.ts/navbar/footer) re-capturas home + 1
+   - **Re-QA parcial:** tras un fix, llama `run_visual_qa` con el input
+     `routes` = SOLO la(s) ruta(s) afectada(s) (la home '/' entra sola). Solo si
+     el cambio fue GLOBAL (theme.css/fonts.ts/navbar/footer) pasa home + 1
      interior. Recapturar las 7 rutas por un fix de una sección es tiempo tirado.
      En la RE-review, pásale a `review_screenshots` el input `routes` con las
      rutas que tocaste (p. ej. `["/servicios"]`) — juzga solo esas + home, sin
@@ -790,9 +785,10 @@ cubre.
   prioridad: no avances a otras secciones/archivos con el build roto (cada
   build corre completo — ignorar el error lo re-paga en cada intento).
 - **Un comando de sandbox = UN paso.** NUNCA encadenes pasos largos con `&&`
-  (`pnpm install && pnpm build && pnpm qa`): un comando que rebasa varios
-  minutos muere con `TypeError: terminated` y pierdes todo el progreso del
-  paso. Corre `pnpm install`, `pnpm build` y `pnpm qa` como comandos
-  SEPARADOS, verificando el resultado de cada uno antes del siguiente. Si
-  aun separado `pnpm qa` se corta (la primera vez descarga el navegador),
-  reintenta UNA vez — el cache ya quedó caliente.
+  (`pnpm install && pnpm build`): un comando que rebasa varios minutos muere
+  con `TypeError: terminated` y pierdes todo el progreso del paso. Corre
+  `pnpm install` y `pnpm build` como comandos SEPARADOS, verificando cada uno
+  antes del siguiente. El QA visual va por `run_visual_qa` (corre sus comandos
+  cortos internamente, uno por ruta — no lo encadenes ni corras `pnpm qa` a
+  mano); si truena la primera vez por la descarga del navegador, reintenta UNA
+  vez — el cache ya quedó caliente.
