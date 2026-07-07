@@ -1602,30 +1602,37 @@ function DiffBlock({ diff }: { diff: NonNullable<ActivityItem["diff"]> }) {
         )}
       </p>
       <pre className="overflow-x-auto border bg-background font-mono text-[10px] leading-relaxed">
-        {oldLines.map((line, i) => (
-          <div
-            key={`o${i}`}
-            className="w-fit min-w-full bg-destructive/10 px-2 text-destructive"
-          >
-            <span aria-hidden className="mr-1 opacity-50 select-none">
-              −
-            </span>
-            {line || " "}
-          </div>
-        ))}
-        {newLines.map((line, i) => (
-          <div key={`n${i}`} className="w-fit min-w-full bg-success/10 px-2 text-success">
-            <span aria-hidden className="mr-1 opacity-50 select-none">
-              +
-            </span>
-            {line || " "}
-          </div>
-        ))}
-        {newLines.length === 0 && (
-          <div className="px-2 text-muted-foreground/60 italic">
-            (fragmento eliminado)
-          </div>
-        )}
+        {/* Wrapper w-max: se estira al ancho de la línea MÁS LARGA (min 100% del
+            visible); cada línea (block) llena ESE ancho, así el fondo rojo/verde
+            abarca todo el scroll horizontal en vez de cortarse a la derecha.
+            (min-w-full en cada línea no basta: resuelve al ancho VISIBLE del
+            pre, no al del scroll.) */}
+        <div className="w-max min-w-full">
+          {oldLines.map((line, i) => (
+            <div
+              key={`o${i}`}
+              className="bg-destructive/10 px-2 text-destructive"
+            >
+              <span aria-hidden className="mr-1 opacity-50 select-none">
+                −
+              </span>
+              {line || " "}
+            </div>
+          ))}
+          {newLines.map((line, i) => (
+            <div key={`n${i}`} className="bg-success/10 px-2 text-success">
+              <span aria-hidden className="mr-1 opacity-50 select-none">
+                +
+              </span>
+              {line || " "}
+            </div>
+          ))}
+          {newLines.length === 0 && (
+            <div className="px-2 text-muted-foreground/60 italic">
+              (fragmento eliminado)
+            </div>
+          )}
+        </div>
       </pre>
     </div>
   )
