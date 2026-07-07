@@ -234,6 +234,7 @@ export type Database = {
           differentiators: string | null
           eve_run_ids: string[]
           eve_session_id: string | null
+          fonts: string[]
           icon_path: string | null
           image_meta: Json
           images: Json
@@ -252,6 +253,7 @@ export type Database = {
           differentiators?: string | null
           eve_run_ids?: string[]
           eve_session_id?: string | null
+          fonts?: string[]
           icon_path?: string | null
           image_meta?: Json
           images?: Json
@@ -270,6 +272,7 @@ export type Database = {
           differentiators?: string | null
           eve_run_ids?: string[]
           eve_session_id?: string | null
+          fonts?: string[]
           icon_path?: string | null
           image_meta?: Json
           images?: Json

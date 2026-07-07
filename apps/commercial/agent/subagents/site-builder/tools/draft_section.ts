@@ -249,9 +249,10 @@ ${brief}
 
 Devuelve ÚNICAMENTE el contenido completo y final del archivo .tsx. Sin markdown fences, sin explicación, sin comentarios de proceso.`
 
-    // Codegen barato por tarea (router central): default qwen3.7-plus. Es
-    // single-shot + validado abajo, así que la debilidad de qwen (adherencia en
-    // loops largos) no aplica. A/B por env TOOL_MODEL_CODEGEN.
+    // Codegen por tarea (router central): default claude-sonnet-5 (calidad de
+    // sección → menos ciclos de build-repair). A/B a un modelo barato (qwen/
+    // gpt-mini) por env TOOL_MODEL_CODEGEN — es single-shot + validado abajo, así
+    // que un modelo barato ahí no arrastra la debilidad de adherencia.
     const model = toolModel("codegen")
     const modelUsed = toolModelLabel("codegen")
     const first = await generateText({ model, prompt })

@@ -393,7 +393,7 @@ function ModelBadge({ model }: { model?: string }) {
 // las tools con modelo interno; el resto muestra el del orquestador (item.model).
 // Si cambias un override por env (TOOL_MODEL_*), actualízalo aquí.
 const TOOL_MODEL: Record<string, string> = {
-  draft_section: "qwen3.7-plus",
+  draft_section: "claude-sonnet-5",
   translate_copy: "qwen3.7-plus",
   draft_surface: "gpt-5-nano",
   view_reference_screenshots: "gpt-5-mini",

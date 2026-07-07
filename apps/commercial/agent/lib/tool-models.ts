@@ -28,7 +28,7 @@ export type ToolTask =
 
 const DEFAULTS: Record<ToolTask, string> = {
   transcribe: "openai:gpt-5-nano",
-  codegen: "alibaba:qwen3.7-plus",
+  codegen: "anthropic:claude-sonnet-5",
   translate: "alibaba:qwen3.7-plus",
   "vision-extract": "openai:gpt-5-mini",
   "vision-judge": "anthropic:claude-sonnet-5",

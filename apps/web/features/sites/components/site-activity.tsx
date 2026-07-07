@@ -258,7 +258,7 @@ function ToolIcon({
 // no muestran nada. Si cambias un override por env (TOOL_MODEL_*), actualízalo aquí.
 // Las strings llevan el keyword de proveedor para que ModelBadge elija el logo.
 const TOOL_MODEL: Record<string, string> = {
-  draft_section: "qwen3.7-plus",
+  draft_section: "claude-sonnet-5",
   translate_copy: "qwen3.7-plus",
   draft_surface: "gpt-5-nano",
   view_reference_screenshots: "gpt-5-mini",

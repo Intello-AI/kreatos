@@ -151,11 +151,7 @@ export default defineTool({
         short_name: input.shortName ?? existing?.short_name ?? null,
         tagline: input.tagline ?? existing?.tagline ?? null,
         colors: (input.colors ?? existing?.colors ?? []) as never,
-        // `fonts` es columna nueva (migración 20260707160000); el cast evita el
-        // error de tipo hasta que se regeneren los types con `pnpm db:types`.
-        fonts: (input.fonts ??
-          (existing as { fonts?: string[] } | null)?.fonts ??
-          []) as never,
+        fonts: (input.fonts ?? existing?.fonts ?? []) as never,
         services: (input.services ?? existing?.services ?? []) as never,
         differentiators:
           input.differentiators ?? existing?.differentiators ?? null,
