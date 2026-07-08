@@ -283,7 +283,17 @@ build, normal), un validate-config/typecheck/build rojo (se arregla con
 `build-repair`), un checkpoint, o un sandbox perdido (se reanuda). Ante
 cualquiera de esos SIGUES en `generating` y resuelves.
 
-5. **En el MISMO turno** dispara `update_site_status`(generating) +
+5. **PREFLIGHT antes de abrir el sandbox — no arranques el reloj en balde.**
+   `clone_site_repo` es lo que CREA el sandbox (es lazy: la microVM nace en ese
+   primer `getSandbox`, no antes) y con él arranca la **ventana FIJA de ~35 min
+   que se cobra corra o esté idle**. Así que TODO lo que NO necesita sandbox va
+   ANTES del clone: `latestSpec` presente y COMPLETO (secciones + páginas + theme
+   + copy), ficha de marca leída (`get_site_brief`), imágenes identificadas, y
+   `create_site_repo` + `create_vercel_project` (son API de GitHub/Vercel, NO
+   tocan el sandbox). **Si el spec falta o está a medias, resuélvelo AQUÍ, con el
+   sandbox aún cerrado** — nunca clones "para ver" y te pongas a pensar el spec
+   con el reloj corriendo. Solo cuando ya tienes el spec en mano y el repo creado,
+   **En el MISMO turno** dispara `update_site_status`(generating) +
    `create_site_repo` + `create_vercel_project` + `clone_site_repo` — se
    auto-sincronizan por `repo_url` (waitForRepoUrl); NO los serialices en
    turnos separados. Solo `fetch_brand_assets` espera al clone (necesita el
