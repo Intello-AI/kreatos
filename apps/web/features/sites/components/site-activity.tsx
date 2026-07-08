@@ -266,7 +266,10 @@ function ToolIcon({
 // no muestran nada. Si cambias un override por env (TOOL_MODEL_*), actualízalo aquí.
 // Las strings llevan el keyword de proveedor para que ModelBadge elija el logo.
 const TOOL_MODEL: Record<string, string> = {
-  draft_section: "deepseek-v4-pro",
+  // codegen (draft_section/draft_sections) sigue el override TOOL_MODEL_CODEGEN;
+  // hoy = glm-5.2 (A/B). Si vuelves a deepseek-v4-pro, actualízalo aquí.
+  draft_section: "glm-5.2",
+  draft_sections: "glm-5.2",
   translate_copy: "qwen3.7-plus",
   draft_surface: "gpt-5-nano",
   view_reference_screenshots: "gpt-5-mini",
