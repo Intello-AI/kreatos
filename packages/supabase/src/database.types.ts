@@ -765,6 +765,64 @@ export type Database = {
       }
     }
     Views: {
+      build_cost_by_model: {
+        Row: {
+          approved_pct: number | null
+          build_cycles_p50: number | null
+          builds: number | null
+          cost_usd_p50: number | null
+          dominant_model: string | null
+          review_rounds_p50: number | null
+          steps_p50: number | null
+          wall_min_p50: number | null
+        }
+        Relationships: []
+      }
+      build_quality_by_codegen: {
+        Row: {
+          approved_pct: number | null
+          builds: number | null
+          codegen_model: string | null
+          cost_usd_p50: number | null
+          review_rounds_p50: number | null
+          section_ms_p50: number | null
+          section_retries_p50: number | null
+        }
+        Relationships: []
+      }
+      build_summary: {
+        Row: {
+          approved_final: boolean | null
+          build_cycles: number | null
+          build_ms_p50: number | null
+          build_ms_total: number | null
+          cache_read_pct: number | null
+          codegen_model: string | null
+          cost_usd: number | null
+          critical_issues: number | null
+          dominant_model: string | null
+          draft_section_ms_p50: number | null
+          draft_section_retries: number | null
+          draft_sections: number | null
+          ended_at: string | null
+          major_issues: number | null
+          review_rounds: number | null
+          session_id: string | null
+          site_id: string | null
+          started_at: string | null
+          steps: number | null
+          wall_min: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_context_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cache_health: {
         Row: {
           agent: string | null
@@ -819,6 +877,18 @@ export type Database = {
           lead_id: string | null
           output_tokens: number | null
           tool_name: string | null
+        }
+        Relationships: []
+      }
+      model_usage: {
+        Row: {
+          cache_read_tokens: number | null
+          calls: number | null
+          cost_usd: number | null
+          input_tokens: number | null
+          last_used: string | null
+          model: string | null
+          output_tokens: number | null
         }
         Relationships: []
       }

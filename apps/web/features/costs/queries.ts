@@ -130,6 +130,35 @@ export async function getSiteCost(siteId: string): Promise<LeadCost> {
   return getLeadCost(data.lead_id)
 }
 
+/** Gasto y tokens de UN modelo (vista model_usage). */
+export interface ModelUsage {
+  model: string
+  calls: number
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  costUsd: number
+  lastUsed: string | null
+}
+
+/** Gasto por modelo (todos los configurados; $0 si aún no se usan). */
+export async function getModelUsage(): Promise<ModelUsage[]> {
+  const supabase = getAdminClient()
+  const { data } = await supabase
+    .from("model_usage")
+    .select("*")
+    .order("cost_usd", { ascending: false })
+  return (data ?? []).map((r) => ({
+    model: r.model ?? "—",
+    calls: Number(r.calls ?? 0),
+    inputTokens: Number(r.input_tokens ?? 0),
+    outputTokens: Number(r.output_tokens ?? 0),
+    cacheReadTokens: Number(r.cache_read_tokens ?? 0),
+    costUsd: Number(r.cost_usd ?? 0),
+    lastUsed: r.last_used ?? null,
+  }))
+}
+
 export interface CostOverview {
   /** Costo total atribuido a leads (suma de lead_cost_total). */
   total: CostTotal

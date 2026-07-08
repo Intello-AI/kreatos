@@ -10,8 +10,9 @@ import {
   UsersThreeIcon,
 } from "@phosphor-icons/react/ssr"
 
-import { getCostOverview } from "@/features/costs/queries"
+import { getCostOverview, getModelUsage } from "@/features/costs/queries"
 import { CostChart } from "@/features/costs/components/cost-chart"
+import { ModelUsageCard } from "@/features/costs/components/model-usage-card"
 import { getDashboardStats } from "@/features/dashboard/queries"
 import { ActivityChart } from "@/features/dashboard/components/activity-chart"
 import { DashboardSkeleton } from "@/features/dashboard/components/dashboard-skeleton"
@@ -87,9 +88,10 @@ export default function DashboardPage() {
 }
 
 async function DashboardContent() {
-  const [stats, costOverview] = await Promise.all([
+  const [stats, costOverview, modelUsage] = await Promise.all([
     getDashboardStats(),
     getCostOverview(),
+    getModelUsage(),
   ])
 
   if (stats.error) {
@@ -242,6 +244,9 @@ async function DashboardContent() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Gasto por modelo — TODOS los modelos del catálogo (0 si no se usan) */}
+      <ModelUsageCard models={modelUsage} />
 
       {/* Sitios recientes + top categorías */}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
