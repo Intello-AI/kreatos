@@ -62,8 +62,10 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
    cifras, contacto split, cierre CTA…) pero MATERIALÍZALOS a la medida de ESTE
    negocio, no como una plantilla.
    **`reference/` del template = corpus de inspiración, NO catálogo montable.**
-   `reference/sections/` (15 arquetipos) y `reference/blocks/` (52 patrones) son
-   ejemplos probados para ROBAR composición/estructura/técnica y luego DIVERGIR.
+   `reference/sections/` (15 arquetipos) y `reference/blocks/` (~530 patrones
+   agrupados POR FAMILIA en `reference/blocks/catalog.md`) son ejemplos probados
+   para ROBAR composición/estructura/técnica y luego DIVERGIR; ojea la familia que
+   cada sección necesita.
    site-builder los lee como referencia; nunca los monta. En el spec no existen
    `id: "block"` ni ids de motor — solo customs con su `why` (qué pregunta del
    visitante responde + qué gesto de composición usa).

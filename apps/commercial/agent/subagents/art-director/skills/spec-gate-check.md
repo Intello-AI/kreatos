@@ -36,9 +36,11 @@ error a reportar al humano: es formato tuyo, corriges y reintentas.
 - [ ] Páginas interiores no son TODAS la plantilla `page-header + 1 sección +
   cta-band`: al menos una con estructura propia (4+ secciones o una custom).
 
-## Ritmo (si usas bloques de biblioteca, `id:"block"`)
+## Ritmo (aplica a TODA sección custom)
 
-- [ ] No 3 bloques seguidos de la misma familia de arquetipo.
-- [ ] ≥ 50% de familias distintas entre los bloques.
+- [ ] No 3 secciones seguidas del mismo arquetipo/familia (hero, cifras, features,
+  galería, proceso, reseñas…). Alterna arquetipo, densidad (aireado/denso) y fondo
+  (`background`/`card`/`secondary`/banda `primary`) entre secciones vecinas.
+- [ ] ≥ 50% de familias de arquetipo distintas entre las secciones de la home.
 
 Si algo no lo cumples, ARRÉGLALO antes de llamar `save_site_version`.

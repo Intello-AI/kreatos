@@ -1,7 +1,8 @@
 import { alibaba } from "@ai-sdk/alibaba"
 import { anthropic } from "@ai-sdk/anthropic"
+import { deepseek } from "@ai-sdk/deepseek"
 import { openai } from "@ai-sdk/openai"
-import type { LanguageModel } from "ai"
+import { gateway, type LanguageModel } from "ai"
 import { defineAgent } from "eve"
 
 // Toggle de modelo del site-builder (experimento de costo/calidad):
@@ -13,6 +14,32 @@ import { defineAgent } from "eve"
 //                                 function calling). Requiere ALIBABA_API_KEY
 //                                 (dev: .env.local; prod: env de kreatos-agent
 //                                 en Vercel).
+//   SITE_BUILDER_MODEL=glm      → zai/glm-5.2 vía Vercel AI Gateway (Z.ai,
+//                                 $1.4/$4.4 in/out list, cache $0.26; ctx 1M;
+//                                 open-weights que gana a gpt-5.5 en coding
+//                                 long-horizon a ~1/6 del costo). Ruteo default
+//                                 del gateway = Z.ai; hay proveedores más
+//                                 baratos (Novita/OpenRouter ~$0.9 in) si se
+//                                 fija provider. Requiere AI_GATEWAY_API_KEY
+//                                 (dev: .env.local; prod: OIDC automático de
+//                                 Vercel en kreatos-agent — no hace falta key).
+//     CACHING: GLM NO es provider "anthropic" → la auto-cache de eve (abajo)
+//     NO aplica (mismo caso que qwen). El gateway expone el cache implícito de
+//     Z.ai si el endpoint lo reporta (cache_read $0.26 = 0.19x del input);
+//     pésalo en el A/B igual que con qwen.
+//   SITE_BUILDER_MODEL=deepseek  → deepseek-v4-pro vía provider NATIVO
+//                                 @ai-sdk/deepseek (API directa de DeepSeek, NO
+//                                 gateway). $0.435/$0.87 in/out — input base ~7x
+//                                 más barato que Sonnet; ctx 1M; hybrid-attention,
+//                                 reasoning/agentic. Requiere DEEPSEEK_API_KEY
+//                                 (dev: .env.local; prod: env de kreatos-agent).
+//                                 Los alias legacy deepseek-chat/deepseek-reasoner
+//                                 se retiran 2026-07-24; usamos el id vigente.
+//     CACHING: tampoco es "anthropic" → auto-cache de eve NO aplica. PERO el
+//     cache implícito de DeepSeek (context caching, automático server-side) es
+//     EXTREMO: cache_read $0.003625 = 0.008x del input (vs 0.1x de Sonnet/GPT).
+//     Si el prefijo es estable, el input efectivo se desploma — el gran
+//     atractivo de costo de esta opción.
 //     CACHING: qwen SÍ cachea, pero solo el IMPLÍCITO automático del endpoint
 //     (server-side, bloques de 2048 tok, cache_read $0.08 = 0.2x del input).
 //     NO recibe los breakpoints explícitos de Anthropic: la auto-cache de eve
@@ -25,13 +52,24 @@ import { defineAgent } from "eve"
 //     pásalo a defineAgent({model}). Probado que dispara write/read — PERO el
 //     read de qwen es intermitente (write,write,read) y el write cuesta más
 //     ($0.4/1M), así que para el A/B nos quedamos en el implícito automático.
-//   sin definir / "sonnet"      → claude-sonnet-5 (default)
+//   SITE_BUILDER_MODEL=sonnet   → claude-sonnet-5 (era el DEFAULT; ahora opt-in)
+//   sin definir                 → gpt-5.4 (DEFAULT desde 2026-07-07). MEDIDO en
+//     prod (35 builds reales): el ORQUESTADOR es el multiplicador #1 de costo/
+//     tiempo — builds dominados por Sonnet median $9.95/37min vs gpt-5.4-mini
+//     $0.90/9.8min (~11x costo, ~4x wall, MISMO trabajo). El loop agéntico
+//     (bash/edit/read/write) = 76.8% de pasos y 74.8% del costo → abaratar el
+//     orquestador es LA palanca. El juez visual (review_screenshots) sigue en
+//     Sonnet: NO se abarata. A/B siguiente: SITE_BUILDER_MODEL=deepseek (aún más
+//     barato) — pero valida adherencia en 55-147 pasos (riesgo tipo qwen).
 // Se evalúa al compilar el agente: en dev, cambia .env.local y reinicia;
 // en prod, cambia la env en Vercel (kreatos-agent) y redeploy.
 const MODEL_TOGGLE: Record<string, LanguageModel> = {
+  sonnet: anthropic("claude-sonnet-5"),
   gpt: openai("gpt-5.4"),
   "gpt-mini": openai("gpt-5.4-mini"),
   qwen: alibaba("qwen3.7-plus"),
+  glm: gateway("zai/glm-5.2"),
+  deepseek: deepseek("deepseek-v4-pro"),
 }
 const toggledModel = MODEL_TOGGLE[process.env.SITE_BUILDER_MODEL ?? ""]
 
@@ -51,10 +89,10 @@ const toggledModel = MODEL_TOGGLE[process.env.SITE_BUILDER_MODEL ?? ""]
 export default defineAgent({
   description:
     "Materializa, itera y PUBLICA el sitio web de un lead — el ciclo de vida completo en tres modos: (build) toma el spec vigente de art-director y genera el código en su sandbox desde el template, pasa QA visual y despliega un PREVIEW; (edit) aplica cambios post-venta sobre sitios ya construidos partiendo del CÓDIGO REAL del repo (no del spec: el humano pudo editar a mano) y completa placeholders del demo con material real; (publish) el ÚNICO que publica a producción (merge a main) cuando el humano lo pide sobre un sitio aprobado. Delegar aquí: 'materializa/genera/itera el sitio del site <uuid>', 'cámbiale/mejora X al sitio', 'publica el sitio X'.",
-  // Sonnet 5: sobrado para materializar specs con el andamiaje actual
-  // (skills + referencias + ficha + guards + review visual). La familia
-  // gpt-5.4 es el contendiente — comparar previews del mismo giro.
-  model: toggledModel ?? anthropic("claude-sonnet-5"),
+  // Default = gpt-5.4 (ver toggle arriba: dato de prod — Sonnet-orquestador ~11x
+  // costo / ~4x tiempo por el MISMO build). Sonnet sigue disponible con
+  // SITE_BUILDER_MODEL=sonnet para A/B de calidad; el juez visual queda en Sonnet.
+  model: toggledModel ?? openai("gpt-5.4"),
   // Compactar temprano: menos contexto por llamada = builds largos no
   // acumulan input tan rápido y el modelo no trabaja al borde de la ventana.
   compaction: {

@@ -116,15 +116,24 @@ template de kreatos; tú lo personalizas, no lo reinventas.
    `components/custom/registry.ts`, declarado en config como
    `{ id: "custom", component, ns, slot? }`). En el flujo normal el spec del
    art-director YA definió la composición (qué secciones, cuántas, en qué orden,
-   con qué slot); TÚ escribes cada `.tsx` a la medida de ESTE negocio, robando
-   composición de las referencias del brief — nunca clonando. Dos sitios jamás
-   comparten layout.
-   - **`reference/` = corpus de INSPIRACIÓN, no se monta.** `reference/sections/`
-     (15 arquetipos) y `reference/blocks/` (52 patrones) son ejemplos probados
-     para robar composición/estructura/técnica y luego DIVERGIR. Léelos como
-     referencia; NUNCA los importes, montes ni copies verbatim a `components/custom/`
-     (copiar uno tal cual es reúso disfrazado y traiciona el objetivo). En config
-     no existen `id: "block"` ni ids de motor — solo `custom`.
+   con qué slot); TÚ escribes cada `.tsx` a la medida de ESTE negocio, partiendo
+   de las referencias (del brief y de `reference/`) y ADAPTÁNDOLAS — nunca
+   clonando. Dos sitios jamás comparten layout.
+   - **`reference/` = MATERIAL DE PARTIDA (no solo inspiración).** `reference/sections/`
+     (15 arquetipos) y `reference/blocks/` (biblioteca GRANDE — ~530 patrones
+     agrupados POR FAMILIA en `reference/blocks/catalog.md` (heroes, cifras,
+     galerías, precios, reseñas, proceso, contacto, footers, catálogo, hospitality,
+     inmobiliaria, salud…); `registry.ts` + `catalog.md` = lista viva, NO asumas un
+     número fijo — ojea la FAMILIA que tu sección necesita) son componentes PROBADOS
+     que YA respetan el contrato
+     del template. Puedes VERLOS y, cuando uno encaje,
+     COPIARLO a `components/custom/` y MODIFICARLO para ajustarlo a ESTE sitio:
+     marca (tokens/theme), copy (ns + next-intl), contenido real del inventario,
+     estructura. Partir de un componente probado y adaptarlo es PREFERIBLE a
+     inventar a ciegas (menos build-repair, más taste). PERO **adaptar ≠ pegar
+     verbatim**: cambia lo suficiente para que dos sitios JAMÁS queden idénticos
+     — un copy-paste sin adaptar es reúso disfrazado y traiciona el objetivo. En
+     config no existen `id: "block"` ni ids de motor — solo `custom`.
    - **Slots (landmarks del motor)**: la sección con `slot: "header"` la envuelve
      el motor en `<header>`; `slot: "footer"` en `<footer>` + le INYECTA el
      crédito de agencia (no lo escribas tú); sin slot va en `<main>`. A lo más
@@ -162,7 +171,9 @@ template de kreatos; tú lo personalizas, no lo reinventas.
    fundirse con el overlay. NUNCA dejes el texto caer al `foreground`/
    `muted-foreground` del tema: en light son oscuros y desaparecen sobre la
    foto (el titular queda invisible — el bug de contraste #1). Espeja el patrón
-   de `reference/blocks/banner-image`/`cta-bg-image`/`image-fullbleed-caption`;
+   de los bloques `*-fullbleed-image-dark-overlay` de `reference/blocks/` (hay uno
+   por familia: hero/cta/feature/gallery/clinic/contact…, todos con overlay + texto
+   `background` a contraste AA);
    el reviewer marca texto ilegible sobre imagen como **structural** (bloquea
    el push). Las
    referencias analizadas (`designReferences[].analysis`) son tu catálogo de
@@ -292,10 +303,12 @@ cualquiera de esos SIGUES en `generating` y resuelves.
      contrato está en AGENT.md, y la plomería headless (`useContactForm`,
      `MapEmbed`, `Reveal`, `SmartImage`…) se USA por su import, no leyendo su
      código. Abrirlo no aporta y quema minutos.
-   - **`reference/` (sections + blocks) es INSPIRACIÓN, léelo con criterio**: NO
-     lo explores entero cada corrida; ábrelo puntualmente cuando quieras robar la
-     composición de un arquetipo concreto, y luego DIVERGE. Nunca lo importes,
-     montes ni copies verbatim a `components/custom/`.
+   - **`reference/` (sections + blocks) = material de partida, léelo con criterio**:
+     NO lo explores entero cada corrida; ábrelo puntualmente cuando un arquetipo
+     encaje. Cuando lo uses de base, CÓPIALO a `components/custom/` y ADÁPTALO
+     (marca, copy/ns, contenido, estructura) hasta que sea de ESTE sitio,
+     divergiendo lo suficiente — nunca un verbatim que clone otro sitio. (Para
+     que `draft_section` parta de él, pégalo en su `brief` como "BASE A ADAPTAR".)
    - **PROHIBIDO leer `scripts/*` y `themes/*`**: corre `pnpm validate-config`
      y lee su SALIDA (más corta y accionable que el script). El contrato del
      theme (3 bloques :root/.dark/@theme) ya lo sabes.
@@ -310,7 +323,7 @@ cualquiera de esos SIGUES en `generating` y resuelves.
    |---|---|---|
    | `messages/es.json`, `app/theme.css`, `app/fonts.ts` | **`draft_surface`** (transcribe, sin guard) | write_file |
    | `site.config.ts` | **`draft_surface` surface `"site-config"`** (pass-through verbatim, sin modelo, sin guard) | write_file |
-   | una **sección custom** `components/custom/*.tsx` (NUEVA) | **`draft_section`** (le dictas arquetipo+brief → gpt-5-mini transcribe y SIEMPRE devuelve un .tsx válido; no depende de tu modelo ni del fan-out) | write_file a mano (solo fallback) |
+   | una **sección custom** `components/custom/*.tsx` (NUEVA) | **`draft_section`** (le dictas arquetipo+brief → un modelo de coding dedicado escribe y SIEMPRE devuelve un .tsx válido; no depende de tu modelo ni del fan-out) | write_file a mano (solo fallback) |
    | `components/custom/registry.ts` | **`assemble_registry`** (determinista, sin modelo: lo deriva del config + los exports) | editarlo/escribirlo a mano |
    | `DEMO.md`, iconos nuevos (archivo NUEVO) | **`write_file`** (archivo nuevo, sin guard) | — |
    | parche puntual a un archivo EXISTENTE (una custom ya escrita, un import, una clase) | **`edit_file`** (diff str_replace: `oldString`→`newString`) | write_file / heredoc del archivo COMPLETO |

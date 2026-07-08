@@ -3,13 +3,14 @@ import { defineTool } from "eve/tools"
 import { z } from "zod"
 
 import { toolModel, toolModelLabel } from "../../../lib/tool-models"
-import { recordToolUsage } from "../../../lib/tool-usage"
+import { recordToolTiming, recordToolUsage } from "../../../lib/tool-usage"
 
 /**
- * Escribe UNA sección custom (`components/custom/<key>.tsx`) con un modelo
- * capaz-pero-barato (gpt-5-mini), a partir del ARQUETIPO + el brief de diseño
- * que le dictas. Es la Palanca 2: desacopla la escritura de secciones del
- * modelo del site-builder y del fan-out de copias.
+ * Escribe UNA sección custom (`components/custom/<key>.tsx`) con el modelo del
+ * router `codegen` (lib/tool-models — default deepseek-v4-pro), a partir del
+ * ARQUETIPO + el brief de diseño que le dictas (o adaptando un componente de
+ * reference/ que le pases como base). Es la Palanca 2: desacopla la escritura
+ * de secciones del modelo del site-builder y del fan-out de copias.
  *
  * Por qué un tool y no el fan-out de `agent`:
  *  - El fan-out son COPIAS del site-builder → corren SU modelo. Con un modelo
@@ -17,8 +18,9 @@ import { recordToolUsage } from "../../../lib/tool-usage"
  *    (task-mode roto) o improvisa. Este tool SIEMPRE deposita un .tsx válido o
  *    lanza claro — nada de huecos silenciosos.
  *  - El costo de un build vive en el bulk de secciones. Aquí ese bulk corre en
- *    gpt-5-mini pase lo que pase el orquestador; el orquestador solo dicta el
- *    arquetipo y el brief (pocos tokens) → puede ser un modelo obediente barato.
+ *    el modelo del router `codegen` pase lo que pase el orquestador; el
+ *    orquestador solo dicta el arquetipo y el brief (pocos tokens) → puede ser
+ *    un modelo obediente barato.
  *
  * NO decide diseño de la nada: el ARQUETIPO y el contenido los fijas TÚ (con
  * taste + anti-generic cargados). El tool transcribe ese criterio a código que
@@ -173,7 +175,7 @@ async function validate(
 
 export default defineTool({
   description:
-    "Escribe UNA sección custom (components/custom/<key>.tsx) con gpt-5-mini a partir del ARQUETIPO y el brief de diseño que le dictas. Úsalo en el paso 7 para materializar cada sección en vez del fan-out de `agent` (que corre el modelo del site-builder y a veces no devuelve el archivo): este tool SIEMPRE deposita un .tsx válido o lanza claro. TÚ decides diseño (arquetipo + layout + qué contenido, con taste/anti-generic cargados); el tool lo transcribe respetando el contrato del template (Section, tokens semánticos, Reveal, SmartImage, next-intl). Llama uno por sección (puedes emitir varias llamadas en el mismo turno). Después ensambla con assemble_registry. NO es para las 4 superficies mecánicas (usa draft_surface) ni para parches puntuales (usa edit_file).",
+    "Escribe UNA sección custom (components/custom/<key>.tsx) con un modelo de coding dedicado a partir del ARQUETIPO y el brief de diseño que le dictas — o ADAPTA un componente de reference/ que le pases como BASE en el brief. Úsalo en el paso 7 para materializar cada sección en vez del fan-out de `agent` (que corre el modelo del site-builder y a veces no devuelve el archivo): este tool SIEMPRE deposita un .tsx válido o lanza claro. TÚ decides diseño (arquetipo + layout + qué contenido, con taste/anti-generic cargados); el tool lo transcribe respetando el contrato del template (Section, tokens semánticos, Reveal, SmartImage, next-intl). Llama uno por sección (puedes emitir varias llamadas en el mismo turno). Después ensambla con assemble_registry. NO es para las 4 superficies mecánicas (usa draft_surface) ni para parches puntuales (usa edit_file).",
   inputSchema: z.object({
     path: z
       .string()
@@ -201,7 +203,7 @@ export default defineTool({
       .string()
       .min(40)
       .describe(
-        "El diseño CONCRETO de ESTA sección: layout exacto, qué muestra cada parte, qué keys de copy usa del ns (t('title'), t.raw('items')…), qué imágenes (rutas en /images/…) y su encuadre, jerarquía, gestos. Cuanto más concreto, mejor sale. El tool no inventa contenido: lo que no esté aquí no existe.",
+        "El diseño CONCRETO de ESTA sección: layout exacto, qué muestra cada parte, qué keys de copy usa del ns (t('title'), t.raw('items')…), qué imágenes (rutas en /images/…) y su encuadre, jerarquía, gestos. Cuanto más concreto, mejor sale. El tool no inventa contenido: lo que no esté aquí no existe. Si ADAPTAS un arquetipo de reference/, pega su código aquí como 'BASE A ADAPTAR:' y di qué cambiar (marca, copy/ns, contenido, estructura) — el tool parte de él, no de cero (adaptar ≠ pegar verbatim).",
       ),
     isSlot: z
       .boolean()
@@ -247,19 +249,28 @@ ${isSlot ? "- Es SLOT (header/footer): emite el contenido INTERIOR, NO uses <Sec
 BRIEF DE DISEÑO DE ESTA SECCIÓN (única fuente del contenido y el layout):
 ${brief}
 
+Si el brief incluye un "COMPONENTE BASE" / "BASE A ADAPTAR", PARTE de él y adáptalo (no reescribas de cero): conserva lo que sirva y cambia marca, copy (a t()/ns), contenido y estructura para ESTE sitio, divergiendo lo suficiente (nunca un verbatim). En cualquier caso cumple TODAS las REGLAS DURAS.
+
 Devuelve ÚNICAMENTE el contenido completo y final del archivo .tsx. Sin markdown fences, sin explicación, sin comentarios de proceso.`
 
-    // Codegen por tarea (router central): default claude-sonnet-5 (calidad de
-    // sección → menos ciclos de build-repair). A/B a un modelo barato (qwen/
-    // gpt-mini) por env TOOL_MODEL_CODEGEN — es single-shot + validado abajo, así
-    // que un modelo barato ahí no arrastra la debilidad de adherencia.
+    // Codegen por tarea (router central): default deepseek-v4-pro (coding fuerte
+    // a ~1/7 del input de Sonnet → menos costo por sección; el gate visual
+    // review_screenshots SIGUE en Sonnet y caza la sección fea). A/B por env
+    // TOOL_MODEL_CODEGEN (p. ej. anthropic:claude-sonnet-5 para volver) — es
+    // single-shot + validado abajo, así que un modelo barato ahí no arrastra la
+    // debilidad de adherencia.
     const model = toolModel("codegen")
     const modelUsed = toolModelLabel("codegen")
+    // Instrumentación (Fase 0): latencia por sección → decide si vale
+    // paralelizar (draft_sections plural). retried marca si hubo 2º generateText.
+    const t0 = Date.now()
+    let retried = false
     const first = await generateText({ model, prompt })
     await recordToolUsage(ctx, "site-builder", modelUsed, first.usage)
     let result = stripFences(first.text)
     let problem = await validate(result, { isSlot: !!isSlot, ns })
     if (problem) {
+      retried = true
       // Reintento informándole el defecto (mismo modelo: es capaz, solo resbaló).
       const retry = await generateText({
         model,
@@ -277,6 +288,10 @@ Devuelve ÚNICAMENTE el contenido completo y final del archivo .tsx. Sin markdow
 
     const sandbox = await ctx.getSandbox()
     await sandbox.writeTextFile({ path: `site/${path}`, content: result })
+    void recordToolTiming(ctx, "site-builder", "draft_section", Date.now() - t0, {
+      ok: true,
+      meta: { archetype, model: modelUsed, retried, bytes: result.length, isSlot: !!isSlot },
+    })
     return {
       path: `site/${path}`,
       component,

@@ -1,6 +1,8 @@
 import { defineTool } from "eve/tools"
 import { z } from "zod"
 
+import { recordToolTiming } from "../../../lib/tool-usage"
+
 /**
  * Corre la escalera de verificación BARATO→CARO en UNA llamada y se detiene en
  * el primer rung rojo, devolviendo los errores YA PARSEADOS por archivo.
@@ -82,6 +84,19 @@ export default defineTool({
       ),
   }),
   async execute({ skipInstall }, ctx) {
+    // Instrumentación (Fase 0): duración total + por-rung. Una fila por llamada
+    // = un ciclo build-repair; los rungMs revelan cuánto pesa `pnpm build`.
+    const t0 = Date.now()
+    const rungMs: Record<string, number> = {}
+    const finish = async <T extends { ok: boolean; rung?: string }>(
+      result: T,
+    ): Promise<T> => {
+      void recordToolTiming(ctx, "site-builder", "build_check", Date.now() - t0, {
+        ok: result.ok,
+        meta: { rung: result.rung ?? (result.ok ? "ok" : "unknown"), rungMs },
+      })
+      return result
+    }
     const sandbox = await ctx.getSandbox()
 
     // Confirma que el repo está clonado.
@@ -99,7 +114,7 @@ export default defineTool({
     // solo tunea el hero. Falla temprano y barato, forzando re-materializar.
     const cfg = await sandbox.readTextFile({ path: "site/site.config.ts" })
     if (cfg && /l[óo]pez y asociados/i.test(cfg)) {
-      return {
+      return finish({
         ok: false,
         rung: "demo",
         errors: [
@@ -108,7 +123,7 @@ export default defineTool({
         files: ["site.config.ts", "messages/es.json", "components/custom/"],
         hint:
           "NO estás materializado: el repo trae el DEMO del template, no tu cliente (clonaste el template pelón y no reescribiste sus superficies). RE-MATERIALIZA COMPLETO desde el spec (.agent/spec.json / latestSpec): reescribe site.config.ts, messages/es.json, TODAS las custom sections y su registry con el contenido REAL del cliente, BORRANDO el demo — NUNCA parches el demo con replaces de nombre (dejaría el NAP/rating/social del despacho ficticio con otro nombre encima). Tunear el hero del demo NO es materializar. Luego re-llama build_check.",
-      }
+      })
     }
 
     // install solo si hace falta (barato: evita re-instalar en cada llamada).
@@ -117,9 +132,11 @@ export default defineTool({
         command: "test -d site/node_modules && echo yes || echo no",
       })
       if (hasModules.stdout.trim() === "no") {
+        const it0 = Date.now()
         const install = await sandbox.run({ command: "cd site && pnpm install" })
+        rungMs.install = Date.now() - it0
         if (install.exitCode !== 0) {
-          return {
+          return finish({
             ok: false,
             rung: "install",
             errors: parseErrors(
@@ -128,17 +145,19 @@ export default defineTool({
             ),
             raw: `${install.stdout}\n${install.stderr}`.slice(-2000),
             hint: "`pnpm install` falló. Revisa el error (lockfile/registro) y re-llama build_check. No es fin de turno.",
-          }
+          })
         }
       }
     }
 
     for (const rung of RUNGS) {
+      const rt = Date.now()
       const res = await sandbox.run({ command: `cd site && ${rung.cmd}` })
+      rungMs[rung.id] = Date.now() - rt
       if (res.exitCode !== 0) {
         const combined = `${res.stdout}\n${res.stderr}`
         const errors = parseErrors(rung.id, combined)
-        return {
+        return finish({
           ok: false,
           rung: rung.id,
           errors: errors.length > 0 ? errors : ["(sin líneas parseadas — ver raw)"],
@@ -148,13 +167,13 @@ export default defineTool({
             `Rung "${rung.id}" ROJO. Parcha con edit_file los archivos de \`files\` (son TUS superficies: config/es.json/theme/custom), re-llama build_check. ` +
             `Un rung rojo es TU trabajo, NUNCA una pregunta al humano ni un fin de turno. ` +
             `Errores de TU config/copy/custom no tienen tope de reintentos; el tope de 2 aplica SOLO a errores de tipos que apunten al MOTOR (realinea tu config al schema, no edites motor).`,
-        }
+        })
       }
     }
 
-    return {
+    return finish({
       ok: true,
       hint: "Escalera verde (validate-config + typecheck + build). Sigue a run_visual_qa (paso 9). Si editas algo después, re-llama build_check antes del push final.",
-    }
+    })
   },
 })

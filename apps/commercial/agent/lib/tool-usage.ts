@@ -1,3 +1,5 @@
+import type { Json } from "@repo/supabase"
+
 import { getSupabaseClient } from "./supabase"
 
 /**
@@ -45,5 +47,37 @@ export async function recordToolUsage(
     })
   } catch {
     // best-effort: la telemetría nunca rompe el pipeline
+  }
+}
+
+/**
+ * Registra la DURACIÓN (wall-clock) de una tool en `tool_timing`. Fase 0 del
+ * plan de eficiencia (2026-07-07): el conteo de ciclos build-repair y los steps
+ * ya son derivables de token_usage/tool_calls, pero la LATENCIA por
+ * draft_section y por build_check (¿cuánto pesa `pnpm build`?) NO se medía —
+ * y de eso dependen las apuestas de paralelizar draft_section (lever 8) y de
+ * iterar contra `next dev` en vez de `next build` de prod (lever 10). Sin este
+ * dato esas palancas son fe. Best-effort SIEMPRE: nunca tumba la tool.
+ */
+export async function recordToolTiming(
+  ctx: { session: { id: string } },
+  agent: string,
+  tool: string,
+  durationMs: number,
+  extra?: { ok?: boolean; meta?: Json },
+): Promise<void> {
+  try {
+    await getSupabaseClient()
+      .from("tool_timing")
+      .insert({
+        session_id: ctx.session.id,
+        agent,
+        tool,
+        duration_ms: Math.round(durationMs),
+        ok: extra?.ok ?? null,
+        meta: extra?.meta ?? null,
+      })
+  } catch {
+    // best-effort
   }
 }

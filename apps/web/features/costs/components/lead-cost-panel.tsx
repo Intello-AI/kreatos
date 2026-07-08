@@ -2,7 +2,7 @@ import { CaretRightIcon, CoinsIcon } from "@phosphor-icons/react/ssr"
 
 import type { CostStage, LeadCost, ToolCostStat } from "@/features/costs/queries"
 import { formatTokens, formatUsd } from "@/lib/format"
-import { ClaudeAI, OpenAI, Qwen } from "@/components/icons"
+import { ClaudeAI, DeepSeek, GLM, OpenAI, Qwen } from "@/components/icons"
 
 /** Etiqueta legible por agente (las stages guardan el nombre técnico). */
 const AGENT_LABELS: Record<string, string> = {
@@ -22,13 +22,31 @@ function agentLabel(agent: string): string {
   return AGENT_LABELS[agent] ?? agent
 }
 
-/** Icono del proveedor: Claude (Anthropic) · Qwen (Alibaba) · OpenAI (gpt/o). */
+/** Icono del proveedor: Claude · Qwen · GLM (Z.ai) · DeepSeek · OpenAI (gpt/o). */
 function ProviderIcon({ model }: { model: string }) {
   const m = model.toLowerCase()
   const isClaude = m.startsWith("claude")
   const isQwen = m.startsWith("qwen")
-  const Logo = isClaude ? ClaudeAI : isQwen ? Qwen : OpenAI
-  const label = isClaude ? "Anthropic" : isQwen ? "Qwen (Alibaba)" : "OpenAI"
+  const isGLM = m.startsWith("glm") || m.startsWith("zai")
+  const isDeepSeek = m.startsWith("deepseek")
+  const Logo = isClaude
+    ? ClaudeAI
+    : isQwen
+      ? Qwen
+      : isGLM
+        ? GLM
+        : isDeepSeek
+          ? DeepSeek
+          : OpenAI
+  const label = isClaude
+    ? "Anthropic"
+    : isQwen
+      ? "Qwen (Alibaba)"
+      : isGLM
+        ? "GLM (Z.ai)"
+        : isDeepSeek
+          ? "DeepSeek"
+          : "OpenAI"
   return <Logo aria-label={label} className="size-3.5 shrink-0" />
 }
 

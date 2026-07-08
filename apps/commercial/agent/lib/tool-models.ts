@@ -1,7 +1,8 @@
 import { alibaba } from "@ai-sdk/alibaba"
 import { anthropic } from "@ai-sdk/anthropic"
+import { deepseek } from "@ai-sdk/deepseek"
 import { openai } from "@ai-sdk/openai"
-import type { LanguageModel } from "ai"
+import { gateway, type LanguageModel } from "ai"
 
 /**
  * Router de modelo por TIPO DE TAREA de los tools — NO del orquestador (ese es
@@ -17,6 +18,13 @@ import type { LanguageModel } from "ai"
  *
  * Override por env (una palanca por tarea, formato "provider:model"):
  *   TOOL_MODEL_CODEGEN=openai:gpt-5.4-mini   # A/B qwen ↔ gpt-5.4-mini
+ *   TOOL_MODEL_CODEGEN=zai:glm-5.2           # GLM 5.2 vía Vercel AI Gateway
+ *   TOOL_MODEL_CODEGEN=deepseek:deepseek-v4-pro  # DeepSeek V4 Pro vía gateway
+ * Providers: openai (default) | anthropic | alibaba | deepseek (nativo
+ * @ai-sdk/deepseek, DEEPSEEK_API_KEY) | zai (→ Vercel AI Gateway, slug
+ * "zai/<model>", AI_GATEWAY_API_KEY en dev / OIDC en prod) | gateway (slug
+ * completo). El label del modelo = la parte tras ":" (p. ej. "glm-5.2"), así
+ * casa con la llave de model_pricing.
  */
 export type ToolTask =
   | "transcribe" // draft_surface: theme.css/fonts.ts, pura transcripción
@@ -28,7 +36,13 @@ export type ToolTask =
 
 const DEFAULTS: Record<ToolTask, string> = {
   transcribe: "openai:gpt-5-nano",
-  codegen: "anthropic:claude-sonnet-5",
+  // draft_section (escribe cada custom .tsx) → DeepSeek V4 Pro (2026-07-07,
+  // decisión de José). Modelo de coding fuerte (gana a gpt-5.5 en benchmarks
+  // long-horizon) a ~1/7 del input de Sonnet + cache implícito extremo. Revierte
+  // el default anterior (claude-sonnet-5, commit f9c5ed9). El gate visual
+  // review_screenshots SIGUE en Sonnet (vision-judge) — caza componente feo.
+  // Revertible sin deploy: TOOL_MODEL_CODEGEN=anthropic:claude-sonnet-5.
+  codegen: "deepseek:deepseek-v4-pro",
   translate: "alibaba:qwen3.7-plus",
   "vision-extract": "openai:gpt-5-mini",
   "vision-judge": "anthropic:claude-sonnet-5",
@@ -58,6 +72,17 @@ function resolve(s: string): LanguageModel {
       return anthropic(model)
     case "alibaba":
       return alibaba(model)
+    // "zai:glm-5.2" → gateway("zai/glm-5.2"). El label queda "glm-5.2" (parte
+    // tras ":"), así atribuye a la misma llave de model_pricing.
+    case "zai":
+      return gateway(`zai/${model}`)
+    // "deepseek:deepseek-v4-pro" → provider NATIVO @ai-sdk/deepseek (API
+    // directa, requiere DEEPSEEK_API_KEY). El label queda "deepseek-v4-pro".
+    case "deepseek":
+      return deepseek(model)
+    // Slug de gateway ya completo, p. ej. "gateway:zai/glm-5.2".
+    case "gateway":
+      return gateway(model)
     case "openai":
     default:
       return openai(model)

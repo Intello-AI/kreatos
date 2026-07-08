@@ -5,10 +5,14 @@ description: Recetario de secciones por giro — qué arquetipos usar, en qué o
 # Patrones de secciones por giro
 
 TODA sección es `custom` (`{ id: "custom", component: "<kebab>", ns: "<kebab>", why }`).
-No hay ids de motor ni variantes cerradas: TÚ inventas cada layout desde cero. Este
-recetario da ARQUETIPOS (moldes de composición) y un orden de arranque — punto de
-partida del que DIVERGES, nunca una plantilla. El orden en `spec.sections` es el
-orden de render. Menos secciones bien resueltas ganan a muchas a medias.
+No hay ids de motor ni variantes cerradas: TÚ inventas cada layout desde cero. Para
+inspirarte, `reference/blocks/` es una biblioteca GRANDE (~530 patrones) agrupada
+POR FAMILIA en `reference/blocks/catalog.md` (heroes, cifras, galerías, precios,
+reseñas, proceso, contacto, footers, catálogo, hospitality, inmobiliaria, salud…);
+ojea la familia de cada sección para robar composición y dictar su arquetipo en el
+`why`. Este recetario da ARQUETIPOS (moldes de composición) y un orden de arranque —
+punto de partida del que DIVERGES, nunca una plantilla. El orden en `spec.sections`
+es el orden de render. Menos secciones bien resueltas ganan a muchas a medias.
 
 ## Header, footer y contacto — customs con su plomería
 

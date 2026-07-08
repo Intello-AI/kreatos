@@ -4,8 +4,10 @@ import { useEffect, useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import {
   ArrowBendUpLeftIcon,
+  ArrowDownIcon,
   ArrowLeftIcon,
   ArrowsOutSimpleIcon,
+  ArrowUpIcon,
   CaretDownIcon,
   CaretRightIcon,
   CheckIcon,
@@ -30,7 +32,7 @@ import { toast } from "sonner"
 
 import { answerSiteInput, sendSiteMessage } from "@/features/sites/actions"
 import { Shimmer } from "@/components/ai-elements/shimmer"
-import { ClaudeAI, Icon, OpenAI, Qwen } from "@/components/icons"
+import { ClaudeAI, DeepSeek, GLM, Icon, OpenAI, Qwen } from "@/components/icons"
 import { formatTime as formatTimeInUserTz } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import {
@@ -122,6 +124,12 @@ interface ActivityItem {
   subagentName?: string
   /** modelId del runtime de la sesión que emitió el evento (session.started). */
   model?: string
+  /** `turnId:stepIndex` del step que generó este item — llave para pegarle el
+   *  usage de tokens cuando llegue su `step.completed` (mismo step). */
+  stepKey?: string
+  /** Tokens del STEP que produjo este item (una llamada al modelo). El input
+   *  YA incluye los leídos de caché; `cacheRead` los desglosa para el tooltip. */
+  tokens?: { input: number; output: number; cacheRead: number }
 }
 
 interface StreamEvent {
@@ -258,7 +266,7 @@ function ToolIcon({
 // no muestran nada. Si cambias un override por env (TOOL_MODEL_*), actualízalo aquí.
 // Las strings llevan el keyword de proveedor para que ModelBadge elija el logo.
 const TOOL_MODEL: Record<string, string> = {
-  draft_section: "claude-sonnet-5",
+  draft_section: "deepseek-v4-pro",
   translate_copy: "qwen3.7-plus",
   draft_surface: "gpt-5-nano",
   view_reference_screenshots: "gpt-5-mini",
@@ -393,6 +401,8 @@ function ModelBadge({ model }: { model?: string }) {
   const short = model.split("/").pop() ?? model
   const isClaude = /claude/i.test(model)
   const isQwen = /qwen/i.test(model)
+  const isGLM = /glm|zai/i.test(model)
+  const isDeepSeek = /deepseek/i.test(model)
   const isOpenAI = /gpt|openai|o\d/i.test(model)
   return (
     <span className="flex items-center gap-1 text-[10px] font-normal text-muted-foreground/70">
@@ -400,10 +410,44 @@ function ModelBadge({ model }: { model?: string }) {
         <ClaudeAI className="size-3 shrink-0" />
       ) : isQwen ? (
         <Qwen className="size-3 shrink-0" />
+      ) : isGLM ? (
+        <GLM className="size-3 shrink-0" />
+      ) : isDeepSeek ? (
+        <DeepSeek className="size-3 shrink-0" />
       ) : isOpenAI ? (
         <OpenAI className="size-3 shrink-0 fill-current" />
       ) : null}
       {short}
+    </span>
+  )
+}
+
+/** 1234 → "1.2k", 45678 → "46k", 1.2e6 → "1.2M". Compacto para el badge. */
+function formatTokens(n: number): string {
+  if (n < 1000) return String(n)
+  if (n < 1_000_000) return `${(n / 1000).toFixed(n < 10_000 ? 1 : 0)}k`
+  return `${(n / 1_000_000).toFixed(1)}M`
+}
+
+/**
+ * Tokens de UN step (una llamada al modelo), estilo Claude Code: ↑ entrada
+ * ↓ salida. El input incluye el contexto cacheado; el tooltip lo desglosa.
+ */
+function TokenBadge({ tokens }: { tokens?: ActivityItem["tokens"] }) {
+  if (!tokens) return null
+  const { input, output, cacheRead } = tokens
+  if (!input && !output) return null
+  return (
+    <span
+      className="flex items-center gap-0.5 text-[10px] font-normal tabular-nums text-muted-foreground/60"
+      title={`Entrada ${input.toLocaleString("es-MX")} tok${
+        cacheRead ? ` (${cacheRead.toLocaleString("es-MX")} de caché)` : ""
+      } · Salida ${output.toLocaleString("es-MX")} tok`}
+    >
+      <ArrowUpIcon className="size-2.5 shrink-0" weight="bold" />
+      {formatTokens(input)}
+      <ArrowDownIcon className="ml-0.5 size-2.5 shrink-0" weight="bold" />
+      {formatTokens(output)}
     </span>
   )
 }
@@ -560,6 +604,14 @@ export function SiteActivity({
   ) => {
     const d = event.data ?? {}
     const at = event.meta?.at ?? ""
+    // Llave del step (turnId:stepIndex): correlaciona los items que este step
+    // generó (actions.requested / message.completed) con su usage de tokens,
+    // que llega aparte en step.completed del MISMO step. depth entra en la
+    // llave porque root y subagente numeran sus steps por separado.
+    const stepKey =
+      d["turnId"] != null && d["stepIndex"] != null
+        ? `${depth}:${d["turnId"]}:${d["stepIndex"]}`
+        : undefined
     if (event.type === "session.started") {
       const runtime = (d["runtime"] ?? {}) as Record<string, unknown>
       if (runtime["modelId"]) sessionMeta.model = String(runtime["modelId"])
@@ -640,8 +692,37 @@ export function SiteActivity({
             diff,
             callId: action["callId"] ? String(action["callId"]) : undefined,
             done: false,
+            stepKey,
           })
         }
+        break
+      }
+      case "step.completed": {
+        // Usage del step (una llamada al modelo). Se lo pega al PRIMER item que
+        // generó este step (mismo stepKey) — típicamente su tool row. Un step
+        // secuencial = 1 tool = 1 fila con sus tokens; un step con varias tools
+        // en paralelo carga el costo en la primera (fue la misma inferencia).
+        const usage = d["usage"] as
+          | {
+              inputTokens?: number
+              outputTokens?: number
+              cacheReadTokens?: number
+            }
+          | undefined
+        if (!usage || !stepKey) break
+        const input = usage.inputTokens ?? 0
+        const output = usage.outputTokens ?? 0
+        if (input === 0 && output === 0) break
+        const tokens = {
+          input,
+          output,
+          cacheRead: usage.cacheReadTokens ?? 0,
+        }
+        setItems((prev) => {
+          const idx = prev.findIndex((it) => it.stepKey === stepKey && !it.tokens)
+          if (idx === -1) return prev
+          return prev.map((it, i) => (i === idx ? { ...it, tokens } : it))
+        })
         break
       }
       case "action.result": {
@@ -727,6 +808,7 @@ export function SiteActivity({
             label: String(d["message"])
               .replace(/<sugerencias>[\s\S]*?<\/sugerencias>\s*$/i, "")
               .trim(),
+            stepKey,
           })
         }
         break
@@ -748,6 +830,7 @@ export function SiteActivity({
           depth,
           kind: "report",
           label: `\`\`\`json\n${pretty.slice(0, 4000)}\n\`\`\``,
+          stepKey,
         })
         break
       }
@@ -1690,6 +1773,8 @@ function ActionRow({ item }: { item: ActivityItem }) {
         </span>
         <span className="flex shrink-0 items-center gap-1.5 text-[10px] text-muted-foreground/70 tabular-nums">
           {formatTime(item.at)}
+          {/* Tokens del step que generó esta fila (una llamada al modelo). */}
+          <TokenBadge tokens={item.tokens} />
           {/* Modelo que usa la tool (solo las que llaman a un modelo por dentro),
               pegado al chevron del colapsable. */}
           <ModelBadge model={model} />
@@ -1764,8 +1849,9 @@ function ReportItem({ item }: { item: ActivityItem }) {
             {item.label}
           </p>
         </span>
-        <span className="flex shrink-0 items-center gap-1 self-start pt-0.5 text-[10px] text-muted-foreground/70 tabular-nums">
+        <span className="flex shrink-0 items-center gap-1.5 self-start pt-0.5 text-[10px] text-muted-foreground/70 tabular-nums">
           {formatTime(item.at)}
+          <TokenBadge tokens={item.tokens} />
           <CaretRightIcon className="size-3 opacity-0 transition-all group-hover/report:opacity-100 group-data-[state=open]/report:rotate-90 group-data-[state=open]/report:opacity-100" />
         </span>
       </CollapsibleTrigger>
@@ -2049,7 +2135,10 @@ function BlockItem({
                 <Icon className="size-3" />
                 Kreatos AI
               </div>
-              <ModelBadge model={item.model} />
+              <div className="flex items-center gap-2">
+                <TokenBadge tokens={item.tokens} />
+                <ModelBadge model={item.model} />
+              </div>
             </MessageHeader>
             <Bubble variant="muted">
               <BubbleContent>
