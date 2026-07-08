@@ -13,18 +13,11 @@ import {
   CheckIcon,
   CopyIcon,
   FileTextIcon,
-  GlobeIcon,
-  ListChecksIcon,
-  MagnifyingGlassIcon,
   PaperclipIcon,
   PaperPlaneRightIcon,
-  PencilSimpleIcon,
   QuestionIcon,
   AirTrafficControlIcon,
-  SparkleIcon,
-  TerminalWindowIcon,
   WarningIcon,
-  WrenchIcon,
   XIcon,
 } from "@phosphor-icons/react"
 
@@ -142,140 +135,10 @@ interface StreamEvent {
 // (recortar durante el replay hacía "bailar" los items).
 const MAX_ITEMS = 600
 
-/** Labels amigables por tool; detail extrae lo útil del input. */
-const TOOL_LABELS: Record<
-  string,
-  {
-    label: string
-    detail?: (input: Record<string, unknown>) => string | undefined
-  }
-> = {
-  get_site_brief: { label: "Leyendo brief, lead y referencias de diseño" },
-  save_site_version: {
-    label: "Guardando versión del spec",
-    detail: (i) =>
-      i["changelog"] ? String(i["changelog"]).slice(0, 100) : undefined,
-  },
-  create_site_repo: { label: "Creando repo GitHub del cliente" },
-  clone_site_repo: { label: "Clonando repo en el sandbox" },
-  push_site_version: { label: "Subiendo código al repo" },
-  create_vercel_project: { label: "Creando proyecto en Vercel" },
-  await_preview_deployment: { label: "Esperando deployment preview" },
-  save_qa_report: { label: "Guardando reporte de QA" },
-  publish_site: { label: "Publicando a producción" },
-  update_site_status: {
-    label: "Actualizando status",
-    detail: (i) => (i["status"] ? `→ ${String(i["status"])}` : undefined),
-  },
-  bash: {
-    label: "Terminal",
-    detail: (i) =>
-      i["command"] ? String(i["command"]).slice(0, 100) : undefined,
-  },
-  read_file: {
-    label: "Leyendo archivo",
-    detail: (i) => (i["path"] ? String(i["path"]) : undefined),
-  },
-  write_file: {
-    label: "Escribiendo archivo",
-    detail: (i) => (i["path"] ? String(i["path"]) : undefined),
-  },
-  edit_file: {
-    label: "Editando por diff",
-    detail: (i) => (i["path"] ? String(i["path"]) : undefined),
-  },
-  glob: { label: "Buscando archivos" },
-  grep: { label: "Buscando en el código" },
-  load_skill: {
-    label: "Cargando skill",
-    detail: (i) => (i["skill"] ? String(i["skill"]) : undefined),
-  },
-  todo: {
-    label: "Plan de trabajo",
-    detail: (i) => {
-      const todos = i["todos"] as Array<Record<string, unknown>> | undefined
-      if (!todos?.length) return undefined
-      const active = todos.find((t) => t["status"] === "in_progress")
-      return active
-        ? `${String(active["content"])} (${todos.length} pasos)`
-        : `${todos.length} pasos`
-    },
-  },
-  web_fetch: {
-    label: "Consultando página",
-    detail: (i) => (i["url"] ? String(i["url"]) : undefined),
-  },
-  web_search: {
-    label: "Buscando en la web",
-    detail: (i) => (i["query"] ? String(i["query"]) : undefined),
-  },
-}
-
-export function describeAction(action: Record<string, unknown>): {
-  label: string
-  detail?: string
-  toolName?: string
-  subagentName?: string
-} {
-  if (action["kind"] === "subagent-call") {
-    const name = String(action["subagentName"] ?? action["name"] ?? "subagente")
-    return { label: `Delegando a ${name}`, subagentName: name }
-  }
-  const toolName = String(action["toolName"] ?? action["name"] ?? "herramienta")
-  const input = (action["input"] ?? {}) as Record<string, unknown>
-  const known = TOOL_LABELS[toolName]
-  if (known)
-    return { label: known.label, detail: known.detail?.(input), toolName }
-  return {
-    label: toolName,
-    detail: JSON.stringify(input).slice(0, 80),
-    toolName,
-  }
-}
-
-/** Icono por tool, estilo Claude Code. */
-function ToolIcon({
-  toolName,
-  className,
-}: {
-  toolName?: string
-  className?: string
-}) {
-  const Icon =
-    toolName === "load_skill"
-      ? SparkleIcon
-      : toolName === "bash"
-        ? TerminalWindowIcon
-        : toolName === "edit_file"
-          ? PencilSimpleIcon
-          : toolName === "read_file" || toolName === "write_file"
-            ? FileTextIcon
-            : toolName === "glob" || toolName === "grep"
-              ? MagnifyingGlassIcon
-              : toolName === "web_fetch" || toolName === "web_search"
-                ? GlobeIcon
-                : toolName === "todo"
-                  ? ListChecksIcon
-                  : WrenchIcon
-  return <Icon className={className} />
-}
-
-// Modelo interno que usa cada tool (espeja lib/tool-models.ts del agente). Solo
-// las tools que llaman a un modelo por dentro llevan badge; el resto (bash,
-// edit_file, build_check, assemble_registry, compose_spec…) corren código puro y
-// no muestran nada. Si cambias un override por env (TOOL_MODEL_*), actualízalo aquí.
-// Las strings llevan el keyword de proveedor para que ModelBadge elija el logo.
-const TOOL_MODEL: Record<string, string> = {
-  // codegen (draft_section/draft_sections) sigue el override TOOL_MODEL_CODEGEN;
-  // hoy = glm-5.2 (A/B). Si vuelves a deepseek-v4-pro, actualízalo aquí.
-  draft_section: "glm-5.2",
-  draft_sections: "glm-5.2",
-  translate_copy: "qwen3.7-plus",
-  draft_surface: "gpt-5-nano",
-  view_reference_screenshots: "gpt-5-mini",
-  capture_screenshots: "gpt-5-mini",
-  review_screenshots: "claude-sonnet-5",
-}
+// Labels, iconos y badges de modelo viven en el módulo COMPARTIDO
+// lib/tool-activity (una sola fuente para site-activity y chat-activity).
+export { describeAction } from "@/lib/tool-activity"
+import { describeAction, ToolIcon, TOOL_MODEL } from "@/lib/tool-activity"
 
 /**
  * Detecta el formato de respuesta-a-pregunta que genera answerSiteInput
