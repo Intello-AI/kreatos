@@ -271,13 +271,25 @@ export default defineTool({
           headers: { "user-agent": UA },
           signal: AbortSignal.timeout(8000),
         })
+        if (!imgRes.ok) continue
         const type = imgRes.headers.get("content-type") ?? ""
-        if (!imgRes.ok || !type.startsWith("image/")) continue
         const bytes = new Uint8Array(await imgRes.arrayBuffer())
-        // Fuera iconitos y tracking pixels; fuera gigantes.
-        if (bytes.byteLength < 12 * 1024 || bytes.byteLength > 8 * 1024 * 1024)
+        // SVG por content-type O por extensión + sniff del markup: muchos
+        // servers sirven .svg como text/xml o text/plain y se perdían LOGOS
+        // vectoriales (la mejor calidad posible de logo).
+        const looksSvg =
+          type.includes("svg") ||
+          (/\.svg($|\?)/i.test(imgUrl) &&
+            /^\s*(?:<\?xml|<svg)/i.test(
+              new TextDecoder().decode(bytes.slice(0, 200)),
+            ))
+        if (!type.startsWith("image/") && !looksSvg) continue
+        // Fuera iconitos raster y tracking pixels; fuera gigantes. Los SVG se
+        // EXENTAN del piso de 12KB: un logo vectorial pesa 1-10KB y se botaba.
+        const minBytes = looksSvg ? 300 : 12 * 1024
+        if (bytes.byteLength < minBytes || bytes.byteLength > 8 * 1024 * 1024)
           continue
-        const ext = type.includes("svg")
+        const ext = looksSvg
           ? "svg"
           : type.includes("webp")
             ? "webp"
@@ -288,7 +300,9 @@ export default defineTool({
         const path = `${leadId}/inbox/${name}`
         const { error } = await supabase.storage
           .from("brand-assets")
-          .upload(path, bytes, { contentType: type })
+          .upload(path, bytes, {
+            contentType: looksSvg ? "image/svg+xml" : type,
+          })
         if (error) continue
         stored.push({
           source: imgUrl,
@@ -297,6 +311,54 @@ export default defineTool({
         })
       } catch {
         continue
+      }
+    }
+
+    // ——— SVG INLINE: los logos modernos NO son <img>, son <svg> en el DOM ———
+    // Se extraen los bloques <svg>…</svg> del HTML y se suben al inbox como
+    // archivos .svg. Prioridad a los que huelen a LOGO (contexto/atributos con
+    // logo|brand, o viven en el header/nav); dedupe por contenido.
+    const inlineSvgs: Array<{
+      path: string
+      url: string
+      bytes: number
+      logoLikely: boolean
+    }> = []
+    {
+      const seen = new Set<string>()
+      const found: Array<{ markup: string; logoLikely: boolean }> = []
+      for (const m of html.matchAll(/<svg[\s>][\s\S]*?<\/svg>/gi)) {
+        const markup = m[0]
+        // Fuera decoraciones triviales (chevrons, iconitos de 1 path corto).
+        if (markup.length < 400 || markup.length > 300_000) continue
+        const key = markup.replace(/\s+/g, " ").slice(0, 500)
+        if (seen.has(key)) continue
+        seen.add(key)
+        const at = m.index ?? 0
+        const before = html.slice(Math.max(0, at - 400), at)
+        const logoLikely =
+          /logo|brand|marca|isotipo/i.test(markup.slice(0, 300)) ||
+          /logo|brand|marca|navbar|site-header/i.test(before) ||
+          /<(header|nav)[\s>][^]*$/i.test(before)
+        found.push({ markup, logoLikely })
+      }
+      // Logos primero; cap 8 (una página normal trae 1-3 SVG relevantes).
+      found.sort((a, b) => Number(b.logoLikely) - Number(a.logoLikely))
+      for (const [i, svg] of found.slice(0, 8).entries()) {
+        const path = `${leadId}/inbox/inline-svg-${Date.now()}-${i}${svg.logoLikely ? "-logo" : ""}.svg`
+        const { error } = await supabase.storage
+          .from("brand-assets")
+          .upload(path, new TextEncoder().encode(svg.markup), {
+            contentType: "image/svg+xml",
+            upsert: true,
+          })
+        if (error) continue
+        inlineSvgs.push({
+          path,
+          url: `${supabaseUrl}/storage/v1/object/public/brand-assets/${path}`,
+          bytes: svg.markup.length,
+          logoLikely: svg.logoLikely,
+        })
       }
     }
 
@@ -363,6 +425,7 @@ export default defineTool({
       meta: headMeta,
       fonts,
       icons,
+      inlineSvgs,
       documents,
       sitemapUrls,
       images: stored,
@@ -372,6 +435,9 @@ export default defineTool({
       socials,
       internalLinks,
       hint: [
+        inlineSvgs.some((s) => s.logoLikely)
+          ? "`inlineSvgs` con logoLikely:true son candidatos FUERTES a logo VECTORIAL (máxima calidad; mejor que cualquier PNG). Analízalos con analyze_brand_image y promueve el bueno con save_brand_profile.logoSourcePath."
+          : null,
         icons.length > 0
           ? "`icons` son los candidatos a isotipo: prefiere SVG o el PNG más grande (apple-touch/manifest); el .ico solo como último recurso. Promuévelo con save_brand_profile.iconSourcePath."
           : null,

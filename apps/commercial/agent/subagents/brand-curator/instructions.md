@@ -64,7 +64,11 @@ Una URL de sitio web en el mensaje ES la orden: ejecuta el buitre completo
 sin preguntar ni pedir confirmación — José espera el botín, no un plan.
 
 1. `scrape_brand_site` sobre la página principal: descarga las imágenes
-   útiles al inbox, los **iconos del `<head>`** (`icons`: favicon,
+   útiles al inbox (incluye SVG — se exentan del filtro de peso), los
+   **SVG inline del DOM** (`inlineSvgs`: los logos modernos NO son `<img>`,
+   son `<svg>` en el HTML; los `logoLikely:true` son candidatos FUERTES a
+   logo vectorial — la máxima calidad posible, siempre mejor que un PNG),
+   los **iconos del `<head>`** (`icons`: favicon,
    apple-touch-icon, manifest — candidatos directos a isotipo), los
    **metadatos** (`meta`: title, description, og:site_name → pista del
    nombre corto; `theme-color` → color de marca declarado por el propio
@@ -101,11 +105,21 @@ sin preguntar ni pedir confirmación — José espera el botín, no un plan.
    dominio): pon además el nombre REAL del negocio (og:site_name, title,
    © del footer), la categoría/giro deducida y la dirección si aparece —
    ese lead nació vacío y tú lo completas.
-5. La voz de marca sale del copy de esas mismas páginas (sección siguiente).
+5. **`describe_current_site` — SIEMPRE que el lead tenga sitio web.** Pásale
+   el home + hasta 3 páginas clave (de `sitemapUrls`/`internalLinks`:
+   servicios/nosotros/menú/catálogo). Extrae la ESTRUCTURA del sitio actual
+   (páginas → secciones en orden → qué cuenta cada una) y la guarda en la
+   ficha (`site_structure`) — el art-director la recibe en el brief y la usa
+   como referencia de composición del negocio real: qué narra hoy, qué
+   secciones son irrenunciables (menú, catálogo, certificaciones), qué
+   contenido único existe. No describe diseño (eso lo decide el
+   art-director): describe CONTENIDO y ORDEN.
+6. La voz de marca sale del copy de esas mismas páginas (sección siguiente).
 
 Todo lo anterior es UNA pasada: al final haces un solo `save_brand_profile`
 con lo decidido y reportas el botín — qué fotos sirven, qué icono/colores
-quedaron, qué contactos nuevos guardaste al lead y qué descartaste.
+quedaron, qué contactos nuevos guardaste al lead, la estructura del sitio
+actual que dejaste guardada, y qué descartaste.
 
 ## Voz de marca (cuando José pasa un sitio, Instagram, Facebook o screenshots)
 

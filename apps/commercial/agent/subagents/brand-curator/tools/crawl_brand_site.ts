@@ -144,12 +144,23 @@ export default defineTool({
           headers: { "user-agent": UA },
           signal: AbortSignal.timeout(8000),
         })
+        if (!r.ok) continue
         const type = r.headers.get("content-type") ?? ""
-        if (!r.ok || !type.startsWith("image/")) continue
         const bytes = new Uint8Array(await r.arrayBuffer())
-        if (bytes.byteLength < 12 * 1024 || bytes.byteLength > 8 * 1024 * 1024)
+        // SVG por content-type O extensión + sniff (servers los sirven como
+        // text/xml). Los SVG se exentan del piso de 12KB: un logo vectorial
+        // pesa 1-10KB y se botaba junto con los tracking pixels.
+        const looksSvg =
+          type.includes("svg") ||
+          (/\.svg($|\?)/i.test(imgUrl) &&
+            /^\s*(?:<\?xml|<svg)/i.test(
+              new TextDecoder().decode(bytes.slice(0, 200)),
+            ))
+        if (!type.startsWith("image/") && !looksSvg) continue
+        const minBytes = looksSvg ? 300 : 12 * 1024
+        if (bytes.byteLength < minBytes || bytes.byteLength > 8 * 1024 * 1024)
           continue
-        const ext = type.includes("svg")
+        const ext = looksSvg
           ? "svg"
           : type.includes("webp")
             ? "webp"
@@ -159,7 +170,10 @@ export default defineTool({
         const path = `${leadId}/inbox/crawl-${stored.length}-${Date.now()}.${ext}`
         const { error } = await supabase.storage
           .from("brand-assets")
-          .upload(path, bytes, { contentType: type, upsert: true })
+          .upload(path, bytes, {
+            contentType: looksSvg ? "image/svg+xml" : type,
+            upsert: true,
+          })
         if (error) continue
         stored.push({
           source: imgUrl,

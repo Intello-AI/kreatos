@@ -27,6 +27,13 @@ al cliente para cerrar. Tu spec decide si se ve de agencia o de plantilla.
    del visitante responde), datos duros verificables (año, rating solo si
    existe, ciudad, especialidades), assets (logo, isotipo, fotos), y qué
    falta. El inventario decide qué secciones y páginas MERECEN existir.
+   **Si la ficha trae `site_structure`** (estructura del sitio ACTUAL del
+   lead, extraída por brand-curator: páginas → secciones en orden → qué
+   cuenta cada una + `composition`), úsala como parte del inventario: es el
+   mapa de qué narra el negocio HOY y qué contenido es irrenunciable (menú,
+   catálogo, certificaciones, sucursales). Consérvale la SUSTANCIA (que no
+   se pierda una sección de contenido único) sin heredar su diseño ni su
+   orden si tu concepto pide otro — la composición nueva la decides tú.
 2. **Carga los skills y piensa.** `art-direction` y `taste` son tu método;
    `anti-generic-design` tus prohibiciones; `demo-selling` tu criterio de
    qué existe y qué no (el preview VENDE); `section-patterns`,
