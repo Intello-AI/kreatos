@@ -82,8 +82,14 @@ export default defineTool({
       .describe(
         "true = no intentes `pnpm install` aunque falte node_modules (si ya lo corriste en este turno). Por defecto instala solo si node_modules no existe.",
       ),
+    skipBuild: z
+      .boolean()
+      .optional()
+      .describe(
+        "true = corre SOLO validate-config + typecheck (segundos) y salta `pnpm build` (minutos). ÚSALO en los ciclos de corrección pre-QA: el QA visual ya no necesita build (sirve con next dev) y el build real corre UNA vez dentro de deploy_preview. Omite (false) solo si necesitas el build completo explícitamente.",
+      ),
   }),
-  async execute({ skipInstall }, ctx) {
+  async execute({ skipInstall, skipBuild }, ctx) {
     // Instrumentación (Fase 0): duración total + por-rung. Una fila por llamada
     // = un ciclo build-repair; los rungMs revelan cuánto pesa `pnpm build`.
     const t0 = Date.now()
@@ -150,7 +156,8 @@ export default defineTool({
       }
     }
 
-    for (const rung of RUNGS) {
+    const rungs = skipBuild ? RUNGS.filter((r) => r.id !== "build") : RUNGS
+    for (const rung of rungs) {
       const rt = Date.now()
       const res = await sandbox.run({ command: `cd site && ${rung.cmd}` })
       rungMs[rung.id] = Date.now() - rt
@@ -173,7 +180,9 @@ export default defineTool({
 
     return finish({
       ok: true,
-      hint: "Escalera verde (validate-config + typecheck + build). Sigue a run_visual_qa (paso 9). Si editas algo después, re-llama build_check antes del push final.",
+      hint: skipBuild
+        ? "Escalera rápida verde (validate-config + typecheck; build saltado). Sigue a run_visual_qa (sirve con next dev, sin build). El build completo corre dentro de deploy_preview."
+        : "Escalera verde (validate-config + typecheck + build). Sigue a run_visual_qa (paso 9). Si editas algo después, re-llama build_check antes del push final.",
     })
   },
 })

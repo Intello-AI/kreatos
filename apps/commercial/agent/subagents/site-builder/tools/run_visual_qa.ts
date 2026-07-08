@@ -13,7 +13,7 @@ import { z } from "zod"
  */
 export default defineTool({
   description:
-    "Corre TODO el QA visual del sitio en UNA llamada: arranca el server persistente, captura cada ruta (desktop/mobile + dark en home si hay toggle), lo detiene y consolida .qa/qa-report.json. Reemplaza la secuencia manual screenshots:serve → screenshots:page × N → screenshots:stop → qa (4-6 comandos). REQUIERE `pnpm build` verde previo (usa .next). Devuelve ok/rutas/capturas + fallas de validate-config. Después: pásalo por `review_screenshots` (visión, GATE) con el design.concept, y `save_qa_report`.",
+    "Corre TODO el QA visual del sitio en UNA llamada: arranca el server persistente, captura cada ruta (desktop/mobile + dark en home si hay toggle), lo detiene y consolida .qa/qa-report.json. Reemplaza la secuencia manual screenshots:serve → screenshots:page × N → screenshots:stop → qa (4-6 comandos). NO requiere `pnpm build`: sin .next sirve con `next dev` (el build real corre UNA vez dentro de deploy_preview) — solo necesita build_check {skipBuild:true} verde (validate+typecheck). Devuelve ok/serveMode/rutas/capturas + fallas de validate-config. Después: pásalo por `review_screenshots` (visión, GATE) con el design.concept, y `save_qa_report`.",
   inputSchema: z.object({
     routes: z
       .array(z.string().startsWith("/"))
@@ -41,15 +41,25 @@ export default defineTool({
       return r
     }
 
-    // Pre-check: el build debe existir (el flujo del agente garantiza un
-    // `pnpm build` verde antes de QA). Sin .next, `next start` no arranca.
+    // Modo de servido: con .next/BUILD_ID el script sirve `next start` (build
+    // real); sin build cae a `next dev` — el QA visual YA NO exige pagar
+    // `pnpm build` por ciclo (el build corre UNA vez, dentro de deploy_preview).
+    // Precondición mínima: typecheck+validate verdes (build_check skipBuild).
     const built = await sandbox.run({
       command: `test -f site/.next/BUILD_ID && echo __BUILT__ || echo __NOBUILD__`,
     })
-    if (!built.stdout.includes("__BUILT__")) {
-      throw new Error(
-        "No hay build (site/.next/BUILD_ID ausente). Corre `pnpm build` verde ANTES de run_visual_qa — el QA visual necesita `next start`.",
-      )
+    let serveMode = built.stdout.includes("__BUILT__") ? "start" : "dev"
+    if (serveMode === "dev") {
+      // Compat con MOTOR VIEJO: clones anteriores traen un screenshots.ts sin
+      // dev-fallback (`next start` sin .next muere). Si el script del clone no
+      // soporta dev, se paga el build completo UNA vez (comportamiento previo).
+      const devCapable = await sandbox.run({
+        command: `grep -q '"next", "dev"' site/scripts/screenshots.ts 2>/dev/null && echo __DEV_OK__ || echo __NO_DEV__`,
+      })
+      if (!devCapable.stdout.includes("__DEV_OK__")) {
+        await run("pnpm build")
+        serveMode = "start"
+      }
     }
 
     // QA completo: capturas limpias (quita PNG stale de rutas que ya no existen,
@@ -133,6 +143,7 @@ export default defineTool({
     return {
       ok: report.ok ?? false,
       validateConfigOk: qaRes.exitCode === 0,
+      serveMode,
       routes,
       capturedRoutes: captured,
       ...(failed.length > 0 ? { failedRoutes: failed } : {}),

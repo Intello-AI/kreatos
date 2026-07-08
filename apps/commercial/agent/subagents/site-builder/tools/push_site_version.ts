@@ -52,7 +52,7 @@ export default defineTool({
       .boolean()
       .default(false)
       .describe(
-        "Escape hatch del gate de review visual: solo tras 2 rediseños REALES en los que review_screenshots siguió sin aprobar por CRITERIO subjetivo (approved:false o critical de axis 'aesthetic': contraste mejorable, estética). Entrega el sitio pese al veredicto y lo anota. NO salta criticals de axis 'structural' (algo ROTO: overflow, texto cortado, imagen faltante) — esos se corrigen siempre. Nunca en el primer intento.",
+        "Escape hatch del gate de review visual: solo tras UNA ronda de rediseño REAL en la que review_screenshots siguió sin aprobar por CRITERIO subjetivo (approved:false o critical de axis 'aesthetic': contraste mejorable, estética). Entrega el sitio pese al veredicto y lo anota (el humano decide). NO salta criticals de axis 'structural' (algo ROTO: overflow, texto cortado, imagen faltante) — esos se corrigen siempre. Nunca en el primer intento.",
       ),
     copyOnly: z
       .boolean()
@@ -384,7 +384,7 @@ export default defineTool({
           throw new Error(
             `Push rechazado: el review visual NO aprobó el sitio (${review.verdict ?? "sin veredicto"}). ${aesthetic.length} problema(s) de diseño:\n- ${aesthetic
               .map((i) => `${i.screen ?? "?"}: ${i.issue ?? ""}`)
-              .join("\n- ")}\nRecompón (rompe la monotonía, sube la jerarquía, mete una custom) y re-corre el flujo. Si YA hiciste 2 rediseños reales y el review sigue sin aprobar por CRITERIO (no por algo roto), pushea con overrideReview:true — queda anotado.`,
+              .join("\n- ")}\nRecompón (rompe la monotonía, sube la jerarquía, mete una custom) y re-corre el flujo. Si YA hiciste una ronda de rediseño real y el review sigue sin aprobar por CRITERIO (no por algo roto), pushea con overrideReview:true — queda anotado.`,
           )
         }
       } else if (structuralCriticals.length > 0) {

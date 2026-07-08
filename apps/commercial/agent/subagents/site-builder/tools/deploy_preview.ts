@@ -41,7 +41,7 @@ export default defineTool({
       .boolean()
       .default(false)
       .describe(
-        "Passthrough a push_site_version: solo tras 2 rediseños reales con review reprobado por criterio subjetivo. Nunca salta criticals estructurales.",
+        "Passthrough a push_site_version: solo tras UNA ronda de rediseño real con review reprobado por criterio subjetivo. Nunca salta criticals estructurales.",
       ),
     copyOnly: z
       .boolean()
