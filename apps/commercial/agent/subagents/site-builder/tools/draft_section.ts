@@ -1,5 +1,5 @@
 import { generateText } from "ai"
-import { defineTool } from "eve/tools"
+import { defineTool, type ToolContext } from "eve/tools"
 import { z } from "zod"
 
 import { toolModel, toolModelLabel } from "../../../lib/tool-models"
@@ -218,7 +218,31 @@ export default defineTool({
         'true si la sección necesita "use client" (estado real: menú móvil, useContactForm). Por defecto server component.',
       ),
   }),
-  async execute({ path, component, ns, archetype, brief, isSlot, useClient }, ctx) {
+  async execute(input, ctx) {
+    return draftOneSection(input, ctx)
+  },
+})
+
+export interface DraftSectionInput {
+  path: string
+  component: string
+  ns: string
+  archetype: string
+  brief: string
+  isSlot?: boolean
+  useClient?: boolean
+}
+
+/**
+ * Core reutilizable: dibuja UNA sección custom. Lo usan draft_section (single)
+ * y draft_sections (plural, en paralelo). Normaliza la ruta, arma el prompt,
+ * llama al modelo del router `codegen`, valida (con reintento) y escribe al
+ * sandbox. Lanza claro si no valida ni con reintento.
+ */
+export async function draftOneSection(
+  { path, component, ns, archetype, brief, isSlot, useClient }: DraftSectionInput,
+  ctx: ToolContext,
+) {
     for (const rootPrefix of ["/workspace/site/", "/workspace/", "site/"]) {
       if (path.startsWith(rootPrefix)) {
         path = path.slice(rootPrefix.length)
@@ -300,5 +324,4 @@ Devuelve ÚNICAMENTE el contenido completo y final del archivo .tsx. Sin markdow
       model: modelUsed,
       hint: "Sección escrita y validada (sintaxis, tokens, next-intl). Cuando tengas todas, corre assemble_registry (determinista) y luego build_check. Correcciones puntuales tras QA/build: edit_file, no re-generes la sección entera.",
     }
-  },
-})
+}

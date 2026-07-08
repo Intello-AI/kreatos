@@ -435,16 +435,22 @@ cualquiera de esos SIGUES en `generating` y resuelves.
    PROHIBIDO generar stubs idénticos en masa: una sección sin su layout propio
    del spec NO se escribe. El review visual marca "monotonía de layout" como
    major y te rebota.
-   **ESCRITOR POR DEFECTO de cada custom: `draft_section`.** Le dictas el
-   ARQUETIPO + un brief de diseño CONCRETO (layout, qué muestra, qué keys de
-   copy del ns, qué imágenes) y lo transcribe con gpt-5-mini respetando el
-   contrato del template (Section, tokens semánticos, Reveal, SmartImage,
-   next-intl) — SIEMPRE devuelve un .tsx válido o lanza claro, sin depender de
-   tu modelo ni de que una copia del fan-out no muera. TÚ sigues decidiendo el
-   diseño (arquetipo + composición, con taste/anti-generic cargados); el tool
-   solo escribe el código. Emite VARIAS llamadas `draft_section` en un turno
-   (una por sección) y corren en paralelo. Es la vía recomendada con CUALQUIER
-   modelo del site-builder, y la única fiable con modelos baratos.
+   **ESCRITOR POR DEFECTO en el build inicial: `draft_sections` (PLURAL).**
+   Materializa TODAS las secciones del sitio en UNA sola llamada, dibujándolas
+   EN PARALELO de forma DETERMINISTA (no depende de que emitas N tool-calls en un
+   turno — MEDIDO: en serie cada sección tarda ~60s, y un sitio de 9-17 secciones
+   son 9-17 min de puro dibujado; el plural lo colapsa a ~1-2 min). Pásale un
+   array `sections` con {path, component, ns, archetype, brief} por sección. Cada
+   una respeta el MISMO contrato que draft_section (Section, tokens, Reveal,
+   SmartImage, next-intl, export PascalCase) y valida con reintento. Te devuelve
+   `written` + `failed`: las que fallen, escríbelas a mano (write_file) o
+   re-llama `draft_section` una a una. Después assemble_registry + build_check.
+   TÚ sigues decidiendo el diseño (arquetipo + composición por sección, con
+   taste/anti-generic cargados); el tool solo escribe el código.
+   **`draft_section` (SINGULAR)** queda para casos de UNA sección (re-generar una
+   que falló, agregar una en un edit): mismo contrato, una sola. NO emitas N
+   `draft_section` sueltas en el build inicial — para eso está el plural, que
+   garantiza el paralelismo sin depender de que tu modelo batchee.
    **Alternativa (fan-out de copias):** si tu modelo es fuerte y prefieres
    delegar grupos enteros, la tool `agent` (built-in) también paraleliza — es lo
    más lento del build en serie (~17 customs = ~17 round-trips). En UN turno
