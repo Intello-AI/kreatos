@@ -16,6 +16,31 @@ import { z } from "zod"
  * Sustitución LITERAL vía indexOf/slice y split/join — nunca String.replace,
  * cuyos patrones `$&`/`$1` corromperían el código del sitio (lleno de `${…}`).
  */
+
+/**
+ * Serialización por archivo: el modelo dispara varios edit_file EN PARALELO
+ * sobre el mismo path (es.json es el caso típico) y cada uno hace
+ * read→patch→write del archivo COMPLETO — sin lock, el último write pisa a los
+ * demás (lost update). Medido en prod (Sixcal v2): el MISMO diff "aplicó con
+ * éxito" 3 veces porque los anteriores se perdían → 3 rondas de repair +
+ * re-traducciones (~12 min tirados). La cadena de promesas por key serializa
+ * los edits concurrentes al mismo archivo dentro del proceso del runtime
+ * (todas las tool-calls de una sesión corren aquí).
+ */
+const fileLocks = new Map<string, Promise<unknown>>()
+
+async function withFileLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const prev = fileLocks.get(key) ?? Promise.resolve()
+  // El siguiente corre cuando el anterior TERMINA (éxito o error, da igual).
+  const run = prev.then(fn, fn)
+  const settled = run.catch(() => {})
+  fileLocks.set(key, settled)
+  void settled.then(() => {
+    // Limpieza: si nadie se encoló detrás, suelta la entrada.
+    if (fileLocks.get(key) === settled) fileLocks.delete(key)
+  })
+  return run
+}
 export default defineTool({
   description:
     "Edita por DIFF un archivo EXISTENTE del sitio en el sandbox: sustituye `oldString` (fragmento textual EXACTO, con su indentación y saltos) por `newString`. ÚSALO SIEMPRE para cambios PUNTUALES sobre código/contenido ya escrito EN VEZ de re-emitir el archivo entero por heredoc/write_file/draft_surface — ahorra ~90% de tokens de salida. Sirve para CUALQUIER archivo existente: una sección components/custom, registry.ts, un import, una clase Tailwind, y también un valor puntual en messages/es.json o site.config.ts (p. ej. corregir un teléfono, un typo, una frase — el hot path de las ediciones copyOnly). `oldString` debe ser ÚNICO (añade líneas de contexto si el fragmento se repite) o pasa replaceAll:true. Falla si el archivo no existe (usa write_file), si `oldString` no aparece, o si aparece >1 vez sin replaceAll. Para COMPONER una superficie COMPLETA de cero (build inicial, o cambio estructural que toca muchas keys/namespaces del es.json) usa draft_surface, no esto: draft_surface valida el espejo config↔copy y que no sobreviva el demo. Tras editar es.json/config corre `pnpm validate-config`.",
@@ -63,41 +88,46 @@ export default defineTool({
     }
     const sandbox = await ctx.getSandbox()
     const full = `site/${path}`
-    const current = await sandbox.readTextFile({ path: full })
-    if (current == null) {
-      throw new Error(
-        `El archivo ${full} no existe: edit_file solo parcha archivos existentes. Para uno nuevo usa write_file.`,
-      )
-    }
+    // read→patch→write bajo lock por archivo: edits paralelos al mismo path
+    // se encolan en vez de pisarse (ver withFileLock arriba).
+    return withFileLock(`${sandbox.id}:${full}`, async () => {
+      const current = await sandbox.readTextFile({ path: full })
+      if (current == null) {
+        throw new Error(
+          `El archivo ${full} no existe: edit_file solo parcha archivos existentes. Para uno nuevo usa write_file.`,
+        )
+      }
 
-    // Conteo literal (split, no regex: oldString puede traer metacaracteres).
-    const occurrences = current.split(oldString).length - 1
-    if (occurrences === 0) {
-      throw new Error(
-        `No encontré oldString en ${full}. Debe ser un fragmento TEXTUAL exacto (misma indentación y saltos). Lee el archivo (read_file) y copia el fragmento verbatim.`,
-      )
-    }
-    if (occurrences > 1 && !replaceAll) {
-      throw new Error(
-        `oldString aparece ${occurrences} veces en ${full}: no es único. Añade líneas de contexto alrededor para desambiguar, o pasa replaceAll:true para cambiar todas.`,
-      )
-    }
+      // Conteo literal (split, no regex: oldString puede traer metacaracteres).
+      const occurrences = current.split(oldString).length - 1
+      if (occurrences === 0) {
+        throw new Error(
+          `No encontré oldString en ${full}. Debe ser un fragmento TEXTUAL exacto (misma indentación y saltos). Lee el archivo (read_file) y copia el fragmento verbatim.`,
+        )
+      }
+      if (occurrences > 1 && !replaceAll) {
+        throw new Error(
+          `oldString aparece ${occurrences} veces en ${full}: no es único. Añade líneas de contexto alrededor para desambiguar, o pasa replaceAll:true para cambiar todas.`,
+        )
+      }
 
-    // Reemplazo LITERAL (nunca String.replace: interpreta `$&`/`$1` en newString).
-    let next: string
-    if (replaceAll) {
-      next = current.split(oldString).join(newString)
-    } else {
-      const idx = current.indexOf(oldString)
-      next = current.slice(0, idx) + newString + current.slice(idx + oldString.length)
-    }
+      // Reemplazo LITERAL (nunca String.replace: interpreta `$&`/`$1` en newString).
+      let next: string
+      if (replaceAll) {
+        next = current.split(oldString).join(newString)
+      } else {
+        const idx = current.indexOf(oldString)
+        next =
+          current.slice(0, idx) + newString + current.slice(idx + oldString.length)
+      }
 
-    await sandbox.writeTextFile({ path: full, content: next })
-    return {
-      path: full,
-      replacements: replaceAll ? occurrences : 1,
-      bytes: next.length,
-      hint: "Parche aplicado por diff. Verifica con `pnpm build`/`pnpm validate-config`. Para más cambios en el mismo archivo, vuelve a llamar edit_file — NO re-emitas el archivo completo.",
-    }
+      await sandbox.writeTextFile({ path: full, content: next })
+      return {
+        path: full,
+        replacements: replaceAll ? occurrences : 1,
+        bytes: next.length,
+        hint: "Parche aplicado por diff. Verifica con `pnpm build`/`pnpm validate-config`. Para más cambios en el mismo archivo, vuelve a llamar edit_file — NO re-emitas el archivo completo.",
+      }
+    })
   },
 })

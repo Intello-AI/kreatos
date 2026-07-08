@@ -9,7 +9,7 @@ import { getSite } from "../lib/sites"
  * (components/sections, components/shared, lib/, scripts/, app/*.tsx...):
  * adaptarlo a una config inventada rompe el sitio y el contrato.
  */
-const EDITABLE_PATHS: RegExp[] = [
+export const EDITABLE_PATHS: RegExp[] = [
   /^site\.config\.ts$/,
   /^messages\//,
   /^app\/theme\.css$/,

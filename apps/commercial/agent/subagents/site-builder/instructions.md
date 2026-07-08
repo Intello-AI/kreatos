@@ -628,24 +628,27 @@ cualquiera de esos SIGUES en `generating` y resuelves.
    typo), re-corre `pnpm build` antes de pushear: "build local OK" de hace
    tres ediciones no vale — el deployment remoto compila lo pusheado, no lo
    que verificaste.
-9d-bis. **Auto-chequeo de límite de motor ANTES del push — cuesta segundos,
-   te ahorra la corrida.** Corre `cd site && git diff origin/main --name-only`
-   y revisa la lista: TODO lo que salga debe caer en tus superficies
-   editables (site.config.ts, messages/, app/theme.css, app/fonts.ts,
-   app/icon.*/apple-icon.*/favicon.*, public/, components/custom/ + registry,
-   DEMO.md, CHANGELOG). Si aparece CUALQUIER otro archivo
-   (components/sections/*, components/shared/*, components/ui/*, lib/*,
-   scripts/*, app/*.tsx que no sea icono), lo tocaste por error: reviértelo YA
-   con `git checkout origin/main -- <ese archivo>` y, si lo necesitabas por su
-   layout, créalo como custom. NO llegues al push final con motor tocado —
-   el guard lo rechaza igual pero después de todo el QA. Haz este chequeo
-   también tras cada lote grande de ediciones, no solo al final.
-10. `push_site_version` (rama `v{N}`) → `await_preview_deployment` usando el
-    `commitSha` EXACTO que devolvió push_site_version — jamás lo inventes ni
-    uses refs tipo HEAD. **Si push_site_version falla, DETENTE en ese paso**:
-    diagnostica (git status, ¿editaste algo?), corrige y reintenta el push;
-    nunca continúes a await sin un push exitoso. En READY tu trabajo terminó:
-    el sitio queda en `preview` esperando revisión humana.
+9d-bis. **Chequeo de límite de motor a MEDIA corrida (opcional pero barato).**
+   Tras un lote grande de ediciones corre `cd site && git diff origin/main
+   --name-only`: TODO debe caer en tus superficies editables (site.config.ts,
+   messages/, app/theme.css, app/fonts.ts, app/icon.*/apple-icon.*/favicon.*,
+   public/, components/custom/ + registry, DEMO.md, CHANGELOG). Si aparece
+   motor (components/sections/*, components/shared/*, components/ui/*, lib/*,
+   scripts/*, app/*.tsx que no sea icono), reviértelo con `git checkout
+   origin/main -- <archivo>` y, si necesitabas su layout, créalo como custom.
+   En el push final NO hace falta: `deploy_preview` sincroniza el motor
+   automáticamente antes de pushear.
+10. **DEPLOY — UNA sola llamada: `deploy_preview`** (`{siteId, versionN,
+    commitMessage}`). Hace TODO el tramo determinista: sincroniza el motor con
+    origin/main (revierte automáticamente cualquier archivo de motor tocado),
+    corre la escalera `build_check`, pushea la rama `v{N}` (con todos los
+    gates: qa-report + review visual siguen siendo obligatorios) y espera el
+    deployment. NO corras build_check→push_site_version→await_preview_deployment
+    por separado — eso es la vía vieja y lenta. Si devuelve `ok:false` con
+    `stage:"build_check"`, parcha con `edit_file` los archivos listados y
+    RE-LLAMA `deploy_preview` (con `skipInstall:true`) — un rojo aquí es TU
+    trabajo, no un fin de turno. En READY tu trabajo terminó: el sitio queda
+    en `preview` esperando revisión humana; reporta la `previewUrl`.
 11. **Checkpoints: tu seguro contra muertes a media corrida.** Tu sandbox
     NO sobrevive entre runs: cada vez que tu turno termina (pregunta al
     humano, reporte, error fatal), el siguiente run nace con sandbox nuevo
@@ -693,13 +696,14 @@ cualquiera de esos SIGUES en `generating` y resuelves.
        para es.json/theme.css/fonts + `site.config.ts` y las custom sections a
        mano.
     e. **Motor tocado por accidente (tú lo editaste) → revierte SELECTIVO,
-       jamás reset.** Si `push_site_version` rechaza por "archivos del MOTOR
-       modificados", el error te LISTA los archivos exactos. Revierte SOLO
-       esos a motor limpio —funciona aunque estén en un checkpoint— con
-       `cd site && git checkout origin/main -- <archivo1> <archivo2>`, re-corre
-       `pnpm build` y vuelve a pushear. Todo tu trabajo custom/config/copy
-       queda intacto. `git checkout -- <archivo>` (sin `origin/main`) NO
-       revierte lo ya commiteado en checkpoint: usa siempre `origin/main --`.
+       jamás reset.** `deploy_preview` ya hace esta reversión AUTOMÁTICAMENTE
+       antes de pushear (te reporta `motorSynced` con los archivos). Solo si
+       necesitas hacerlo a mano a media corrida: revierte SOLO esos archivos
+       a motor limpio —funciona aunque estén en un checkpoint— con
+       `cd site && git checkout origin/main -- <archivo1> <archivo2>`. Todo tu
+       trabajo custom/config/copy queda intacto. `git checkout -- <archivo>`
+       (sin `origin/main`) NO revierte lo ya commiteado en checkpoint: usa
+       siempre `origin/main --`.
        Si editaste PLOMERÍA del motor (`components/{shared,ui}/*`, el
        section-renderer, un helper de `lib/`) para forzar un layout, reviértelo:
        ese layout va en TU componente `components/custom/`, no en el motor. La
@@ -747,8 +751,9 @@ intención de la delegación + el `status` del site — no es un parámetro:
   config↔copy) y el tool VERIFICA el diff — si tocaste algo visual lo rechaza.
   NO uses `copyOnly` si agregaste/quitaste una sección o un ítem de lista (eso
   mueve el layout: corre el QA visual normal). En un edit de solo texto ni
-  siquiera necesitas `pnpm qa` ni screenshots: build → validate-config →
-  `push_site_version copyOnly:true`.
+  siquiera necesitas `pnpm qa` ni screenshots: llama directo
+  `deploy_preview` con `copyOnly:true` — corre la escalera, pushea saltando el
+  QA visual y espera el deployment, todo en una llamada.
 - **publish** (status `approved`, "publica el sitio X"): eres el ÚNICO que
   publica a producción, con `publish_site` (merge de la rama v{N} aprobada a
   `main`). SOLO cuando el humano lo pide explícitamente — nunca por iniciativa
