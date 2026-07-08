@@ -36,12 +36,16 @@ export type ToolTask =
 
 const DEFAULTS: Record<ToolTask, string> = {
   transcribe: "openai:gpt-5-nano",
-  // draft_section (escribe cada custom .tsx) → DeepSeek V4 Pro (2026-07-07,
-  // decisión de José). Modelo de coding fuerte (gana a gpt-5.5 en benchmarks
-  // long-horizon) a ~1/7 del input de Sonnet + cache implícito extremo. Revierte
-  // el default anterior (claude-sonnet-5, commit f9c5ed9). El gate visual
-  // review_screenshots SIGUE en Sonnet (vision-judge) — caza componente feo.
-  // Revertible sin deploy: TOOL_MODEL_CODEGEN=anthropic:claude-sonnet-5.
+  // draft_section (escribe cada custom .tsx). DEFAULT = DeepSeek V4 Pro (coding
+  // fuerte, ~1/7 del input de Sonnet + cache extremo). RETADOR en A/B = GLM 5.2
+  // (José cree que GLM > GPT en código; gana a gpt-5.5 en coding long-horizon):
+  //   TOOL_MODEL_CODEGEN=zai:glm-5.2      # probar GLM
+  //   TOOL_MODEL_CODEGEN=anthropic:claude-sonnet-5   # volver a Sonnet
+  // Es single-shot → sin riesgo de adherencia; codegen = ~1.8% del costo del
+  // build, así que aquí manda la CALIDAD del componente, no el precio. Compara
+  // previews del mismo giro; el label ("glm-5.2"/"deepseek-v4-pro") cae en
+  // build_summary para leer el costo real. El gate visual review_screenshots
+  // SIGUE en Sonnet (vision-judge) — caza el componente feo pase lo que pase.
   codegen: "deepseek:deepseek-v4-pro",
   translate: "alibaba:qwen3.7-plus",
   "vision-extract": "openai:gpt-5-mini",

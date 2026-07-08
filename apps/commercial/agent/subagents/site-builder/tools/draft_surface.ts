@@ -3,6 +3,7 @@ import { generateText } from "ai"
 import { defineTool } from "eve/tools"
 import { z } from "zod"
 
+import { toolModel, toolModelLabel } from "../../../lib/tool-models"
 import { recordToolUsage } from "../../../lib/tool-usage"
 
 /**
@@ -210,13 +211,17 @@ ${content}
 
 Devuelve ÚNICAMENTE el contenido completo y final del archivo. Sin markdown fences, sin explicación, sin comentarios de proceso.`
 
-    let modelUsed = "gpt-5-nano"
-    const nano = await generateText({
-      model: openai("gpt-5-nano"),
+    // Primario por el router de tareas (tarea "transcribe", default gpt-5-nano;
+    // toggle TOOL_MODEL_TRANSCRIBE). Antes hardcodeaba gpt-5-nano y la tarea del
+    // router estaba muerta. El fallback (gpt-5-mini) sigue fijo: es la escalación
+    // "si el barato falló, sube un peldaño", independiente del toggle.
+    let modelUsed = toolModelLabel("transcribe")
+    const primary = await generateText({
+      model: toolModel("transcribe"),
       prompt,
     })
-    await recordToolUsage(ctx, "site-builder", "gpt-5-nano", nano.usage)
-    let result = stripFences(nano.text)
+    await recordToolUsage(ctx, "site-builder", modelUsed, primary.usage)
+    let result = stripFences(primary.text)
     let problem = await validate(surface, result)
     if (problem) {
       // Fallback: una pasada con mini, informándole el defecto.

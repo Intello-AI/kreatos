@@ -3,7 +3,7 @@ import { defineTool } from "eve/tools"
 import { z } from "zod"
 
 import { toolModel, toolModelLabel } from "../../../lib/tool-models"
-import { recordToolUsage } from "../../../lib/tool-usage"
+import { recordToolTiming, recordToolUsage } from "../../../lib/tool-usage"
 
 /**
  * Director de arte con visión: revisa los screenshots que `pnpm qa` dejó en
@@ -249,14 +249,37 @@ export default defineTool({
       const review = JSON.parse(raw) as Record<string, unknown>
       // pass: contador determinista de pasadas de review sobre este sitio —
       // el gate/instrucciones lo usan para el techo de 2 rediseños.
-      await persist({ ...review, pass: priorPass + 1 })
+      const pass = priorPass + 1
+      // Telemetría de CALIDAD (Fase 0): el veredicto del juez a tool_timing para
+      // que el A/B de modelos vea si el barato hace sitios PEORES (más rondas de
+      // QA, no aprobado, más issues) — no solo si es más barato.
+      const issues = Array.isArray(review.issues) ? review.issues : []
+      const sev = (s: string) =>
+        issues.filter(
+          (i) => (i as { severity?: string })?.severity === s,
+        ).length
+      void recordToolTiming(ctx, "site-builder", "review_screenshots", 0, {
+        ok: review.approved === true,
+        meta: {
+          pass,
+          approved: review.approved === true,
+          critical: sev("critical"),
+          major: sev("major"),
+          model: toolModelLabel("vision-judge"),
+        },
+      })
+      await persist({ ...review, pass })
       return {
         screensReviewed: images.map((i) => i.name),
-        review: { ...review, pass: priorPass + 1 },
+        review: { ...review, pass },
       }
     } catch {
       // JSON ilegible: guardar un veredicto no-aprobado para que el gate exija
       // re-correr el review en vez de dejar pasar por ausencia de archivo.
+      void recordToolTiming(ctx, "site-builder", "review_screenshots", 0, {
+        ok: false,
+        meta: { pass: priorPass + 1, approved: false, parseFail: true },
+      })
       await persist({
         approved: false,
         verdict: "El review no devolvió JSON válido; re-córrelo.",
