@@ -123,7 +123,7 @@ function stripFences(text: string): string {
 
 export default defineTool({
   description:
-    "MATERIALIZA EL SITIO COMPLETO (pipeline en código; el modelo solo en las hojas). Le pasas TODO lo que ya decidiste leyendo el spec: las 4 superficies (site.config.ts y messages/<default>.json COMPLETOS — para el config LEE PRIMERO el site.config.ts del clone y ESPEJA su shape EXACTO: business.address.colonia, business.maps.uri, business.hours con open/close… NUNCA inventes campos), las traducciones, y el array de secciones con arquetipo+brief (cada una recupera SOLA su base de reference/blocks). Corre: superficies → secciones en paralelo → registry → traducciones → validate+typecheck con auto-repair → QA visual (next dev) → review de visión → save_qa_report. ES RESUMIBLE: cuando devuelve `resume:true` (presupuesto de la invocación agotado), RE-LLÁMALO INMEDIATAMENTE con el MISMO input — retoma en segundos donde quedó (lo ya escrito se salta); NO es un error ni un fin de turno. PRE-REQUISITOS: clone_site_repo + fetch_brand_assets ya corridos. NO despliega: con approved:true llama deploy_preview; con un stage FALLIDO (failed/errors, distinto de resume) corrige con las tools granulares y sigue el flujo granular. Reemplaza a: draft_surface×4 + draft_sections + assemble_registry + translate_copy + build_check + run_visual_qa + review_screenshots + save_qa_report.",
+    "MATERIALIZA EL SITIO (pipeline en código; el modelo solo en las hojas). FLUJO RECOMENDADO: (1) escribe las 4 superficies con draft_surface como siempre (config espejando el shape EXACTO del site.config.ts del clone: business.address.colonia, business.maps.uri, hours con open/close — NUNCA inventes campos), (2) llama materialize_site SIN `surfaces` — solo concept + defaultLocale + translations + el array de secciones con arquetipo+brief (cada una recupera SOLA su base de reference/blocks). NO re-emitas config/es.json dentro de este input: duplica minutos de streaming de tu salida (el tool verifica que las superficies existan en el sandbox). Corre: secciones en paralelo → registry → traducciones → validate+typecheck con auto-repair → QA visual (next dev) → review de visión → save_qa_report. ES RESUMIBLE: con `resume:true` (presupuesto de la invocación agotado) RE-LLÁMALO INMEDIATAMENTE con el MISMO input — retoma en segundos (lo ya escrito se salta); NO es error ni fin de turno. PRE-REQUISITOS: clone_site_repo + fetch_brand_assets + superficies escritas. NO despliega: con approved:true llama deploy_preview; con stage FALLIDO (failed/errors, distinto de resume) corrige con las tools granulares y sigue el flujo granular.",
   inputSchema: z.object({
     siteId: z.string().uuid(),
     versionN: z.number().int().min(1),
@@ -133,36 +133,41 @@ export default defineTool({
       .describe(
         "design.concept del spec + 1-2 frases del gesto visible — lo juzga el review de visión.",
       ),
-    surfaces: z.object({
-      siteConfig: z
-        .string()
-        .min(200)
-        .describe(
-          "site.config.ts COMPLETO (import type SiteConfig … export default config), ya compuesto por ti con los datos REALES del lead.",
-        ),
-      messagesJson: z
-        .string()
-        .min(200)
-        .describe(
-          "messages/<defaultLocale>.json COMPLETO (JSON válido, con namespace 'common' y TODOS los namespaces del sitio).",
-        ),
-      defaultLocale: z
-        .string()
-        .min(2)
-        .describe('Locale default del sitio (locales[0] del spec), p. ej. "es".'),
-      themeCss: z
-        .string()
-        .min(100)
-        .describe(
-          "Valores FINALES del theme (paleta oklch exacta, radius, overlay, og-*) o el theme.css completo — lo transcribe el modelo barato respetando la estructura del base.",
-        ),
-      fontsTs: z
-        .string()
-        .min(50)
-        .describe(
-          "Fuentes finales (familias display/body de next/font/google con sus axes/weights) o el fonts.ts completo.",
-        ),
-    }),
+    defaultLocale: z
+      .string()
+      .min(2)
+      .describe('Locale default del sitio (locales[0] del spec), p. ej. "es".'),
+    surfaces: z
+      .object({
+        siteConfig: z
+          .string()
+          .min(200)
+          .describe(
+            "site.config.ts COMPLETO (import type SiteConfig … export default config), ya compuesto por ti con los datos REALES del lead.",
+          ),
+        messagesJson: z
+          .string()
+          .min(200)
+          .describe(
+            "messages/<defaultLocale>.json COMPLETO (JSON válido, con namespace 'common' y TODOS los namespaces del sitio).",
+          ),
+        themeCss: z
+          .string()
+          .min(100)
+          .describe(
+            "Valores FINALES del theme (paleta oklch exacta, radius, overlay, og-*) o el theme.css completo — lo transcribe el modelo barato respetando la estructura del base.",
+          ),
+        fontsTs: z
+          .string()
+          .min(50)
+          .describe(
+            "Fuentes finales (familias display/body de next/font/google con sus axes/weights) o el fonts.ts completo.",
+          ),
+      })
+      .optional()
+      .describe(
+        "OMÍTELO si ya escribiste las 4 superficies con draft_surface (el camino RECOMENDADO: re-emitir aquí el es.json/config completos duplica MINUTOS de streaming de tu salida). Sin surfaces, el tool VERIFICA que existan en el sandbox y salta directo a las secciones.",
+      ),
     translations: z
       .array(
         z.object({
@@ -184,7 +189,7 @@ export default defineTool({
       .describe("TODAS las secciones custom del sitio (home + interiores)."),
   }),
   async execute(
-    { siteId, versionN, concept, surfaces, translations, sections },
+    { siteId, versionN, concept, defaultLocale, surfaces, translations, sections },
     ctx,
   ) {
     const t0 = Date.now()
@@ -222,32 +227,51 @@ export default defineTool({
     }
 
     // ── 1. SUPERFICIES ─────────────────────────────────────────────────────
-    // Reusa draft_surface: pass-through validado para config/es.json,
-    // transcriptor barato para theme/fonts. Config y copy primero (los guards
-    // anti-demo aplican); theme/fonts en paralelo después. Idempotente y
-    // barato (<1 min): en un resume simplemente se re-escriben igual.
-    await draftSurface.execute(
-      { surface: "site-config", path: "site.config.ts", content: surfaces.siteConfig },
-      ctx,
-    )
-    await draftSurface.execute(
-      {
-        surface: "es-json",
-        path: `messages/${surfaces.defaultLocale}.json`,
-        content: surfaces.messagesJson,
-      },
-      ctx,
-    )
-    await Promise.all([
-      draftSurface.execute(
-        { surface: "theme-css", path: "app/theme.css", content: surfaces.themeCss },
+    // Camino RECOMENDADO: el orquestador ya las escribió con draft_surface
+    // (streamear el es.json/config completos DENTRO de este input costaba
+    // minutos de salida del orquestador y los pagaba DOBLE). Sin `surfaces`,
+    // aquí solo se VERIFICA que existan y no sean el demo.
+    if (surfaces) {
+      await draftSurface.execute(
+        { surface: "site-config", path: "site.config.ts", content: surfaces.siteConfig },
         ctx,
-      ),
-      draftSurface.execute(
-        { surface: "fonts", path: "app/fonts.ts", content: surfaces.fontsTs },
+      )
+      await draftSurface.execute(
+        {
+          surface: "es-json",
+          path: `messages/${defaultLocale}.json`,
+          content: surfaces.messagesJson,
+        },
         ctx,
-      ),
-    ])
+      )
+      await Promise.all([
+        draftSurface.execute(
+          { surface: "theme-css", path: "app/theme.css", content: surfaces.themeCss },
+          ctx,
+        ),
+        draftSurface.execute(
+          { surface: "fonts", path: "app/fonts.ts", content: surfaces.fontsTs },
+          ctx,
+        ),
+      ])
+    } else {
+      const [config, messages] = await Promise.all([
+        sandbox.readTextFile({ path: "site/site.config.ts" }),
+        sandbox.readTextFile({ path: `site/messages/${defaultLocale}.json` }),
+      ])
+      const missing = [
+        !config ? "site.config.ts" : null,
+        config && /l[óo]pez y asociados/i.test(config)
+          ? "site.config.ts (sigue siendo el DEMO)"
+          : null,
+        !messages ? `messages/${defaultLocale}.json` : null,
+      ].filter((s): s is string => Boolean(s))
+      if (missing.length > 0) {
+        throw new Error(
+          `Omitiste \`surfaces\` pero el sandbox no tiene las superficies listas: ${missing.join(", ")}. Escríbelas primero con draft_surface (config, es.json, theme, fonts) y re-llama materialize_site sin surfaces — o pásalas en el input.`,
+        )
+      }
+    }
 
     // ── 2. SECCIONES EN PARALELO (con retrieval de reference/blocks) ──────
     // RESUME: una sección cuyo .tsx ya existe en el sandbox se salta — es lo
@@ -329,7 +353,7 @@ export default defineTool({
         {
           targetLocale: t.locale,
           targetLanguageName: t.languageName,
-          sourceLocale: surfaces.defaultLocale,
+          sourceLocale: defaultLocale,
         },
         ctx,
       )

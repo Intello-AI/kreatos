@@ -435,34 +435,33 @@ cualquiera de esos SIGUES en `generating` y resuelves.
    PROHIBIDO generar stubs idénticos en masa: una sección sin su layout propio
    del spec NO se escribe. El review visual marca "monotonía de layout" como
    major y te rebota.
-   **CAMINO POR DEFECTO del build inicial: `materialize_site`.**
-   Cuando ya corriste clone_site_repo + fetch_brand_assets y COMPUSISTE todo
-   (site.config.ts y messages/<default>.json completos, valores de theme/fonts,
-   y el array de secciones con arquetipo+brief), pásale TODO a
-   `materialize_site`: el pipeline corre EN CÓDIGO — superficies, secciones en
-   paralelo (cada una con su base de reference/blocks), registry, traducciones,
-   validate+typecheck con auto-repair, QA visual (next dev, sin build), review
-   de visión y save_qa_report.
-   **ANTES de componer el site.config.ts: LEE el site.config.ts ACTUAL del
-   clone (read_file) y ESPEJA su shape EXACTO** — todo cuelga de `business`
-   (address.colonia, maps.uri, hours con open/close), más seo/design/sections/
-   pages. NUNCA inventes campos (contact:/address:/hours: top-level NO
-   existen); el guard del tool lo rechaza.
+   **CAMINO POR DEFECTO del build inicial: superficies con `draft_surface`
+   (como dicta el paso 6) y LUEGO `materialize_site` SIN `surfaces`.**
+   Con las 4 superficies YA en el sandbox, llama `materialize_site` con SOLO
+   `{siteId, versionN, concept, defaultLocale, translations, sections}` — el
+   array de secciones con arquetipo+brief. **NO re-emitas el config ni el
+   es.json dentro del input de materialize_site**: re-streamear lo que ya
+   escribiste son MINUTOS de tu propia salida pagados doble (el tool verifica
+   que las superficies existan y truena claro si faltan). El pipeline corre EN
+   CÓDIGO: secciones en paralelo (cada una con su base de reference/blocks),
+   registry, traducciones, validate+typecheck con auto-repair, QA visual
+   (next dev, sin build), review de visión y save_qa_report.
    **`resume:true` NO es un error**: el tool corta trabajo cuando el
    presupuesto de la invocación se agota (techo de función de la plataforma) y
    te dice qué quedó hecho. RE-LLÁMALO INMEDIATAMENTE con el MISMO input: lo
    ya escrito se salta en segundos y retoma donde quedó. Un build normal son
    1-3 invocaciones seguidas de materialize_site — NUNCA cambies de camino ni
    preguntes por un resume.
-   Tu flujo completo: (1) brief+clone+assets, (2) componer y llamar
-   materialize_site (re-llamándolo mientras devuelva resume:true), (3)
-   deploy_preview. Si devuelve `approved:true` → deploy_preview y terminaste.
-   Si devuelve un stage FALLIDO (failed/errors — distinto de resume) → corrige
-   con las tools granulares de abajo y CONTINÚA el flujo granular desde ese
-   punto (NO re-llames materialize_site tras un fallo REAL: redibujaría).
-   Las tools granulares (draft_surface, draft_sections, assemble_registry,
-   build_check, run_visual_qa, review_screenshots) siguen siendo tu fallback
-   y el camino del modo edit.
+   Tu flujo completo: (1) brief+clone+assets, (2) superficies con
+   draft_surface, (3) materialize_site con los briefs (re-llamándolo mientras
+   devuelva resume:true), (4) deploy_preview. Si devuelve `approved:true` →
+   deploy_preview y terminaste. Si devuelve un stage FALLIDO (failed/errors —
+   distinto de resume) → corrige con las tools granulares de abajo y CONTINÚA
+   el flujo granular desde ese punto (NO re-llames materialize_site tras un
+   fallo REAL: redibujaría).
+   Las tools granulares (draft_sections, assemble_registry, build_check,
+   run_visual_qa, review_screenshots) siguen siendo tu fallback y el camino
+   del modo edit.
    **ESCRITOR GRANULAR (fallback/edit): `draft_sections` (PLURAL).**
    Materializa TODAS las secciones del sitio en UNA sola llamada, dibujándolas
    EN PARALELO de forma DETERMINISTA (no depende de que emitas N tool-calls en un
