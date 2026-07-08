@@ -447,6 +447,14 @@ cualquiera de esos SIGUES en `generating` y resuelves.
    re-llama `draft_section` una a una. Después assemble_registry + build_check.
    TÚ sigues decidiendo el diseño (arquetipo + composición por sección, con
    taste/anti-generic cargados); el tool solo escribe el código.
+   **El escritor recupera SOLO su base de reference/blocks**: por cada sección,
+   draft_section/draft_sections eligen el bloque más afín al `archetype` y lo
+   inyectan como BASE A ADAPTAR (con guard de densidad anti-plano) — ya NO
+   pegues código de reference/ en el brief ni gastes turnos leyéndolo para eso;
+   el campo `archetype` es la QUERY del retrieval, así que hazlo descriptivo
+   ("stat-wall diagonal con cifras enormes", no "sección 2"). Pega una base a
+   mano en el brief SOLO para forzar un bloque concreto (el retrieval se apaga
+   solo). El resultado trae `adaptedFrom` con el bloque usado.
    **`draft_section` (SINGULAR)** queda para casos de UNA sección (re-generar una
    que falló, agregar una en un edit): mismo contrato, una sola. NO emitas N
    `draft_section` sueltas en el build inicial — para eso está el plural, que

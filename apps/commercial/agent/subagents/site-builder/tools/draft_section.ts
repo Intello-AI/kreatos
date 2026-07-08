@@ -98,6 +98,157 @@ function stripFences(text: string): string {
   return match ? match[1] : trimmed
 }
 
+/* ── Retrieval de referencias (la práctica v0/Lovable) ─────────────────────
+ * El defecto medido de "genérico y corto": el modelo de codegen escribía cada
+ * sección DESDE CERO a partir de un brief de prosa — los ~530 bloques de
+ * reference/blocks (código real, denso, probado) solo llegaban si el
+ * orquestador pegaba uno a mano en el brief (en prod: nunca). Aquí el tool
+ * recupera SOLO el bloque más afín al arquetipo (matching léxico sobre los
+ * nombres descriptivos kebab-case, con puente es→en) y lo inyecta como BASE A
+ * ADAPTAR. El modelo parte de estructura rica en vez de inventar layout plano.
+ */
+
+const referenceIndexCache = new Map<string, string[]>()
+
+async function listReferenceBlocks(sandbox: {
+  id: string
+  run(input: { command: string }): PromiseLike<{ stdout: string }>
+}): Promise<string[]> {
+  const cached = referenceIndexCache.get(sandbox.id)
+  if (cached) return cached
+  const res = await sandbox.run({
+    command: `ls site/reference/blocks/ 2>/dev/null || true`,
+  })
+  const files = res.stdout
+    .split("\n")
+    .map((s) => s.trim())
+    .filter((f) => f.endsWith(".tsx"))
+  referenceIndexCache.set(sandbox.id, files)
+  return files
+}
+
+/** Puente léxico es→en: los briefs vienen en español, los archivos en inglés. */
+const SYNONYMS: Record<string, string[]> = {
+  servicio: ["services", "service"],
+  servicios: ["services", "service"],
+  precio: ["pricing", "price"],
+  precios: ["pricing", "plans"],
+  tarifas: ["pricing", "plans"],
+  planes: ["pricing", "plans"],
+  preguntas: ["faq"],
+  frecuentes: ["faq"],
+  acordeon: ["accordion", "faq"],
+  contacto: ["contact"],
+  formulario: ["contact", "form"],
+  equipo: ["team"],
+  nosotros: ["about"],
+  historia: ["about", "story", "timeline"],
+  valores: ["values", "about"],
+  proceso: ["process", "steps", "timeline"],
+  pasos: ["steps", "process", "timeline"],
+  alta: ["onboarding", "process", "steps"],
+  mosaico: ["bento", "mosaic", "masonry"],
+  bento: ["bento", "masonry"],
+  asimetrico: ["asymmetric", "bento"],
+  asimetrica: ["asymmetric", "bento"],
+  celdas: ["cell", "bento"],
+  foto: ["image", "photo"],
+  fotos: ["image", "photo", "gallery"],
+  imagen: ["image", "photo"],
+  sangre: ["fullbleed", "bleed"],
+  bleed: ["fullbleed"],
+  scrim: ["overlay", "dark"],
+  overlay: ["overlay"],
+  galeria: ["gallery"],
+  resenas: ["testimonials", "reviews"],
+  testimonios: ["testimonials"],
+  opiniones: ["testimonials", "reviews"],
+  cifras: ["stats", "metrics", "numbers"],
+  indicadores: ["stats", "metrics", "kpi"],
+  datos: ["stats", "metrics"],
+  estadisticas: ["stats", "metrics"],
+  kpi: ["stats", "metrics", "kpi"],
+  kpis: ["stats", "metrics", "kpi"],
+  banda: ["band", "banner", "cta"],
+  franja: ["band", "banner", "strip"],
+  zigzag: ["zigzag", "alternating", "feature"],
+  alterno: ["alternating", "zigzag"],
+  tablero: ["board", "sticky", "panel", "index"],
+  portada: ["hero"],
+  cabecera: ["header", "nav"],
+  menu: ["menu", "nav", "header"],
+  pie: ["footer"],
+  mapa: ["map", "contact"],
+  oscuro: ["dark"],
+  claro: ["light"],
+  ledger: ["ledger", "table", "list"],
+  tabla: ["table", "ledger", "list"],
+  lista: ["list"],
+  editorial: ["editorial", "prose", "narrative"],
+  prosa: ["prose", "narrative", "editorial"],
+  triada: ["three", "trio", "columns"],
+  columnas: ["columns"],
+  diagonal: ["diagonal"],
+  destacado: ["featured", "spotlight"],
+  logros: ["milestones", "awards"],
+  hito: ["milestone"],
+  hitos: ["milestones", "timeline"],
+}
+
+function tokenize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length > 2)
+}
+
+function expand(tokens: string[]): Set<string> {
+  const out = new Set<string>()
+  for (const t of tokens) {
+    out.add(t)
+    for (const syn of SYNONYMS[t] ?? []) out.add(syn)
+  }
+  return out
+}
+
+/**
+ * Selecciona el bloque de reference/blocks más afín. El arquetipo pesa más que
+ * el brief (define la ESTRUCTURA); el token de categoría del archivo (primer
+ * segmento del kebab-case) vale doble. Empates: menos tokens sobrantes gana
+ * (nombre más específico al query).
+ */
+export function pickReferenceBlock(
+  files: string[],
+  query: { archetype: string; brief: string; path: string; component: string },
+): string | null {
+  const strong = expand(tokenize(`${query.archetype} ${query.path} ${query.component}`))
+  const weak = expand(tokenize(query.brief))
+  let best: string | null = null
+  let bestScore = 0
+  for (const file of files) {
+    const tokens = tokenize(file.replace(/\.tsx$/, ""))
+    if (tokens.length === 0) continue
+    const category = tokens[0]
+    let score = 0
+    for (const [i, tok] of tokens.entries()) {
+      const catBonus = i === 0 ? 1 : 0
+      if (strong.has(tok)) score += 3 + catBonus * 2
+      else if (weak.has(tok)) score += 1 + catBonus
+    }
+    // Normaliza levemente por longitud: un nombre de 10 tokens con 2 matches
+    // no debe ganarle a uno de 4 tokens con 2 matches.
+    const normalized = score - tokens.length * 0.15
+    if (normalized > bestScore) {
+      bestScore = normalized
+      best = file
+    }
+  }
+  // Umbral: sin un match real de estructura (≥ un token fuerte), sin base.
+  return bestScore >= 3 ? best : null
+}
+
 /** Valida el .tsx generado; devuelve el problema o null. */
 async function validate(
   source: string,
@@ -258,6 +409,44 @@ export async function draftOneSection(
       )
     }
 
+    const sandbox = await ctx.getSandbox()
+
+    // Retrieval automático: el mejor bloque de reference/blocks como BASE. Se
+    // salta si el orquestador YA pegó una base en el brief (override manual).
+    let baseFile: string | null = null
+    let baseCode: string | null = null
+    if (!/BASE A ADAPTAR|COMPONENTE BASE/i.test(brief)) {
+      try {
+        const files = await listReferenceBlocks(sandbox)
+        baseFile = pickReferenceBlock(files, { archetype, brief, path, component })
+        if (baseFile) {
+          baseCode = await sandbox.readTextFile({
+            path: `site/reference/blocks/${baseFile}`,
+          })
+          // Bases desproporcionadas inflan el prompt sin aportar: cap 16KB.
+          if (baseCode && baseCode.length > 16_000) baseCode = null
+        }
+      } catch {
+        baseFile = null
+        baseCode = null
+      }
+    }
+
+    const baseBlock = baseCode
+      ? `
+COMPONENTE BASE DE LA BIBLIOTECA (código real y probado, el más afín al arquetipo — tu punto de PARTIDA obligado):
+--- reference/blocks/${baseFile} ---
+${baseCode}
+--- fin del base ---
+
+CÓMO ADAPTARLO (no negociable):
+- PARTE de su ESTRUCTURA: conserva la densidad, las capas, la jerarquía y los microdetalles (badges, rules, numeraciones, hovers) que lo hacen verse de agencia. PROHIBIDO resumirlo a una versión plana o más corta.
+- Cambia TODO el contenido al de este sitio: copy vía t()/t.raw() del ns, datos de config.business, imágenes del brief.
+- El base puede violar los contratos de ESTE template (otra librería de iconos, next/image, hex, py-* propios, textos hardcodeados): CORRÍGELO al adaptar — las REGLAS DURAS y los CONTRATOS de arriba SIEMPRE ganan.
+- Divergencia real: ajusta proporciones/composición a lo que pida el brief; nunca un verbatim.
+`
+      : ""
+
     const prompt = `Eres un ingeniero de front-end senior escribiendo UNA sección de un sitio Next.js (App Router, RSC, Tailwind v4, shadcn) hecho a la medida de una agencia. Materializas el criterio de diseño que se te dicta — sin improvisar contenido ni layout genérico.
 
 ${SECTION_RULES}
@@ -269,7 +458,7 @@ ARCHIVO A ESCRIBIR: components/custom/${path.split("/").pop()}
 - Namespace de copy (ns): "${ns}".
 - Arquetipo estructural: ${archetype}.
 ${isSlot ? "- Es SLOT (header/footer): emite el contenido INTERIOR, NO uses <Section> ni <header>/<footer> (los pone el motor)." : ""}
-
+${baseBlock}
 BRIEF DE DISEÑO DE ESTA SECCIÓN (única fuente del contenido y el layout):
 ${brief}
 
@@ -289,10 +478,19 @@ Devuelve ÚNICAMENTE el contenido completo y final del archivo .tsx. Sin markdow
     // paralelizar (draft_sections plural). retried marca si hubo 2º generateText.
     const t0 = Date.now()
     let retried = false
+    // Guard de densidad: con base inyectada, una adaptación no-slot que quede
+    // muy por debajo del base es el modelo APLANANDO (la causa del "corto").
+    const minBytes =
+      baseCode && !isSlot ? Math.max(2000, Math.floor(baseCode.length * 0.4)) : 0
+    const densityProblem = (source: string): string | null =>
+      minBytes > 0 && source.length < minBytes
+        ? `la adaptación quedó demasiado corta/plana (${source.length} bytes vs base de ${baseCode?.length}): conserva la densidad estructural del componente base, no lo resumas`
+        : null
     const first = await generateText({ model, prompt })
     await recordToolUsage(ctx, "site-builder", modelUsed, first.usage)
     let result = stripFences(first.text)
-    let problem = await validate(result, { isSlot: !!isSlot, ns })
+    let problem =
+      (await validate(result, { isSlot: !!isSlot, ns })) ?? densityProblem(result)
     if (problem) {
       retried = true
       // Reintento informándole el defecto (mismo modelo: es capaz, solo resbaló).
@@ -302,7 +500,8 @@ Devuelve ÚNICAMENTE el contenido completo y final del archivo .tsx. Sin markdow
       })
       await recordToolUsage(ctx, "site-builder", modelUsed, retry.usage)
       result = stripFences(retry.text)
-      problem = await validate(result, { isSlot: !!isSlot, ns })
+      problem =
+        (await validate(result, { isSlot: !!isSlot, ns })) ?? densityProblem(result)
       if (problem) {
         throw new Error(
           `La sección generada no validó ni con reintento (${problem}). Escríbela tú directo con las herramientas del sandbox (write_file) aplicando taste + anti-generic.`,
@@ -310,11 +509,17 @@ Devuelve ÚNICAMENTE el contenido completo y final del archivo .tsx. Sin markdow
       }
     }
 
-    const sandbox = await ctx.getSandbox()
     await sandbox.writeTextFile({ path: `site/${path}`, content: result })
     void recordToolTiming(ctx, "site-builder", "draft_section", Date.now() - t0, {
       ok: true,
-      meta: { archetype, model: modelUsed, retried, bytes: result.length, isSlot: !!isSlot },
+      meta: {
+        archetype,
+        model: modelUsed,
+        retried,
+        bytes: result.length,
+        isSlot: !!isSlot,
+        base: baseFile,
+      },
     })
     return {
       path: `site/${path}`,
@@ -322,6 +527,7 @@ Devuelve ÚNICAMENTE el contenido completo y final del archivo .tsx. Sin markdow
       ns,
       bytes: result.length,
       model: modelUsed,
+      ...(baseFile ? { adaptedFrom: `reference/blocks/${baseFile}` } : {}),
       hint: "Sección escrita y validada (sintaxis, tokens, next-intl). Cuando tengas todas, corre assemble_registry (determinista) y luego build_check. Correcciones puntuales tras QA/build: edit_file, no re-generes la sección entera.",
     }
 }
