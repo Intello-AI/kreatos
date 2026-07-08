@@ -8,7 +8,7 @@ import assembleRegistry from "./assemble_registry"
 import buildCheck from "./build_check"
 import { draftOneSection, type DraftSectionInput } from "./draft_section"
 import draftSurface from "./draft_surface"
-import { EDITABLE_PATHS } from "./push_site_version"
+import pushSiteVersion, { EDITABLE_PATHS } from "./push_site_version"
 import reviewScreenshots from "./review_screenshots"
 import runVisualQa from "./run_visual_qa"
 import saveQaReport from "./save_qa_report"
@@ -208,16 +208,42 @@ export default defineTool({
       })
       return result
     }
-    // Presupuesto agotado ANTES de un stage caro → resume (NO es error: el
-    // orquestador re-llama con el mismo input y este stage corre fresco).
-    const resumeAt = (stage: string, done: string[]) =>
-      finish({
+    // AUTO-CHECKPOINT (en CÓDIGO, no fe en el modelo): la clase de pérdida #1
+    // medida en prod es un run que muere/reporta sin checkpointear — TODO el
+    // trabajo del sandbox se va con él y el siguiente run reinicia de cero
+    // (Human Security: 3 arranques desde template virgen en una mañana). El
+    // pipeline checkpointea SOLO en cada hito; best-effort (no tumba el flujo).
+    const checkpoint = async (msg: string): Promise<void> => {
+      try {
+        await pushSiteVersion.execute(
+          {
+            siteId,
+            versionN,
+            commitMessage: msg,
+            checkpoint: true,
+            overrideReview: false,
+            copyOnly: false,
+          },
+          ctx,
+        )
+      } catch {
+        // best-effort: un checkpoint fallido no detiene la materialización
+      }
+    }
+
+    // Presupuesto agotado ANTES de un stage caro → checkpoint + resume (NO es
+    // error: el orquestador re-llama con el mismo input y el stage corre
+    // fresco; si el run muere en medio, el checkpoint preserva el sandbox).
+    const resumeAt = async (stage: string, done: string[]) => {
+      await checkpoint(`materialize_site: avance hasta ${done[done.length - 1] ?? "inicio"} (resume en ${stage})`)
+      return finish({
         ok: true as const,
         stage,
         resume: true as const,
         done,
         hint: `Presupuesto de esta invocación agotado ANTES de "${stage}" (techo de función de la plataforma). RE-LLAMA materialize_site AHORA MISMO con el MISMO input: lo ya hecho (${done.join(", ")}) se salta en segundos y retoma en "${stage}". No es un error ni un fin de turno.`,
       })
+    }
 
     const pkg = await sandbox.readTextFile({ path: "site/package.json" })
     if (pkg == null) {
@@ -316,6 +342,9 @@ export default defineTool({
     const pending = [...undispatched, ...budgetPending]
     if (pending.length > 0) {
       const drafted = settled.filter((s) => s.ok && s.res !== null).length
+      await checkpoint(
+        `materialize_site: superficies + ${drafted + already.length} sección(es) (faltan ${pending.length})`,
+      )
       return finish({
         ok: true as const,
         stage: "sections" as const,
@@ -331,6 +360,9 @@ export default defineTool({
         !s.ok,
     )
     if (failed.length > 0) {
+      await checkpoint(
+        `materialize_site: superficies + secciones parciales (${failed.length} fallidas)`,
+      )
       return finish({
         ok: false,
         stage: "sections" as const,
@@ -342,6 +374,8 @@ export default defineTool({
 
     // ── 3. REGISTRY (determinista) ─────────────────────────────────────────
     await assembleRegistry.execute({}, ctx)
+    // Hito mayor: superficies + TODAS las secciones + registry en el repo.
+    await checkpoint("materialize_site: superficies + secciones + registry completos")
 
     // ── 4. TRADUCCIONES (incrementales) ────────────────────────────────────
     // Primera corrida completa ≈ 3-4 min con el modelo barato: gate de budget.
@@ -430,6 +464,7 @@ Reglas: corrige la CAUSA (key faltante en el JSON de copy, tipo mal, token invá
       check = await buildCheck.execute({ skipInstall: true, skipBuild: true }, ctx)
     }
     if (!check.ok) {
+      await checkpoint("materialize_site: sitio completo, escalera roja (a reparar)")
       return finish({
         ...check,
         ok: false as const,
@@ -437,6 +472,8 @@ Reglas: corrige la CAUSA (key faltante en el JSON de copy, tipo mal, token invá
         hint: `El auto-repair no dejó verde la escalera (rung "${"rung" in check ? check.rung : "?"}"). Parcha con edit_file los archivos listados, re-llama build_check {skipBuild:true} y CONTINÚA con el flujo granular (run_visual_qa → review_screenshots → save_qa_report → deploy_preview). NO re-llames materialize_site.`,
       })
     }
+    // Escalera verde: el estado más valioso del build — asegurado.
+    await checkpoint("materialize_site: escalera verde (validate + typecheck)")
 
     // ── 6. QA VISUAL (next dev, sin build) ─────────────────────────────────
     // Server + compiles de dev + capturas ≈ 3-5 min: gate de budget.

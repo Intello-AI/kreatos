@@ -165,10 +165,12 @@ export default defineTool({
         // leyó el site.config.ts del clone INVENTA un shape (contact/address
         // top-level, maps.googleMapsUrl, address.neighborhood) que quema
         // rondas enteras de typecheck+repair. Señales baratas y obligatorias:
+        // Señales de SHAPE, no de datos: colonia es campo del schema (puede ir
+        // ""), pero maps.uri NO se exige — un lead manual sin ficha de Google
+        // legítimamente no tiene URI (falso positivo medido con Human Security).
         const shapeMisses = [
           !/business\s*:\s*{/.test(content) ? "business:{...}" : null,
           !/colonia\s*:/.test(content) ? "business.address.colonia" : null,
-          !/uri\s*:/.test(content) ? "business.maps.uri" : null,
         ].filter((s): s is string => Boolean(s))
         if (shapeMisses.length > 0) {
           throw new Error(
