@@ -160,6 +160,21 @@ export default defineTool({
             'site-config pass-through: el content debe ser el archivo completo — `import type { SiteConfig } from "@/lib/config"` + `const config: SiteConfig = {…}` + `export default config`.',
           )
         }
+        // Guard de SHAPE: el schema real cuelga TODO de `business` (address con
+        // `colonia`, maps con `uri`, hours con open/close). Un modelo que NO
+        // leyó el site.config.ts del clone INVENTA un shape (contact/address
+        // top-level, maps.googleMapsUrl, address.neighborhood) que quema
+        // rondas enteras de typecheck+repair. Señales baratas y obligatorias:
+        const shapeMisses = [
+          !/business\s*:\s*{/.test(content) ? "business:{...}" : null,
+          !/colonia\s*:/.test(content) ? "business.address.colonia" : null,
+          !/uri\s*:/.test(content) ? "business.maps.uri" : null,
+        ].filter((s): s is string => Boolean(s))
+        if (shapeMisses.length > 0) {
+          throw new Error(
+            `site-config pass-through: el shape NO es el del schema real (faltan: ${shapeMisses.join(", ")}). NO inventes el shape: LEE el site.config.ts ACTUAL del clone (read_file) y espeja EXACTAMENTE sus campos — todo cuelga de business (business.address.{street,colonia,city,state,zip}, business.maps.{uri,placeId,rating,reviewsCount}, business.hours[{days,dayOfWeek,open,close}], business.phone/whatsapp/email), seo.{domain,title,description}, design, sections, pages. Campos como contact:/address:/hours: en el TOP-LEVEL o maps.googleMapsUrl NO existen en el schema.`,
+          )
+        }
       } else {
         // es-json: JSON válido + tiene "common" (el motor lo exige) + sin demo.
         let parsed: unknown

@@ -382,6 +382,13 @@ export interface DraftSectionInput {
   brief: string
   isSlot?: boolean
   useClient?: boolean
+  /**
+   * Epoch ms: si la PRIMERA pasada falla la validación DESPUÉS de este
+   * instante, NO se reintenta (throw con marcador __BUDGET__) — lo usa
+   * materialize_site para no rebasar el techo de función de la plataforma;
+   * la sección se re-dibuja en la siguiente invocación con presupuesto fresco.
+   */
+  retryDeadline?: number
 }
 
 /**
@@ -391,7 +398,16 @@ export interface DraftSectionInput {
  * sandbox. Lanza claro si no valida ni con reintento.
  */
 export async function draftOneSection(
-  { path, component, ns, archetype, brief, isSlot, useClient }: DraftSectionInput,
+  {
+    path,
+    component,
+    ns,
+    archetype,
+    brief,
+    isSlot,
+    useClient,
+    retryDeadline,
+  }: DraftSectionInput,
   ctx: ToolContext,
 ) {
     for (const rootPrefix of ["/workspace/site/", "/workspace/", "site/"]) {
@@ -492,6 +508,11 @@ Devuelve ÚNICAMENTE el contenido completo y final del archivo .tsx. Sin markdow
     let problem =
       (await validate(result, { isSlot: !!isSlot, ns })) ?? densityProblem(result)
     if (problem) {
+      if (retryDeadline !== undefined && Date.now() > retryDeadline) {
+        throw new Error(
+          `__BUDGET__ la sección falló la validación (${problem}) y ya no hay presupuesto de invocación para reintentar — se re-dibuja en la siguiente llamada.`,
+        )
+      }
       retried = true
       // Reintento informándole el defecto (mismo modelo: es capaz, solo resbaló).
       const retry = await generateText({

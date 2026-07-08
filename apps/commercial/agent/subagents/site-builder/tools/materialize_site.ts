@@ -61,27 +61,58 @@ const SECTION_SHAPE = z.object({
   useClient: z.boolean().optional().describe('true si necesita "use client".'),
 })
 
-/** Concurrencia de dibujado (mismo tope que draft_sections). */
-const CONCURRENCY = 5
+/**
+ * PRESUPUESTO DE FUNCIÓN (regla dura de plataforma): el agente corre en
+ * Vercel Fluid con techo de 800s por invocación (el replay budget interno de
+ * eve es 780s) — un tool que planee >~13 min MUERE con la plataforma, no con
+ * un error propio (medido: materialize v1 murió a los ~16 min con glm-5.2 a
+ * 74-307s por sección). Por eso este tool es RESUMIBLE: corta trabajo cuando
+ * el presupuesto se acaba y devuelve `resume:true`; el orquestador lo
+ * RE-LLAMA con el MISMO input y retoma en segundos — el estado vive en el
+ *  SANDBOX (superficie escrita = no se reescribe; sección .tsx existente = se
+ * salta).
+ */
+const BUDGET_MS = 540_000 // 9 min de trabajo por invocación
+/**
+ * No despachar secciones NUEVAS pasado este punto. Aritmética contra el techo
+ * de 780s: cutoff (360s) + peor single-shot medido (~330s con glm-5.2) ≈ 690s
+ * — cabe SIN reintento. Por eso el reintento de una sección se OMITE si ya se
+ * pasó RETRY_DEADLINE (la sección vuelve como pendiente y la re-dibuja la
+ * siguiente invocación con presupuesto fresco).
+ */
+const DISPATCH_CUTOFF_MS = 360_000
+const RETRY_DEADLINE_MS = 400_000
+/** Concurrencia de dibujado: cada sección es un request independiente. */
+const CONCURRENCY = 12
 
-async function mapLimit<T, R>(
+/**
+ * mapLimit con corte por presupuesto: los workers dejan de TOMAR items nuevos
+ * pasado el cutoff; los no-despachados vuelven en `pending`.
+ */
+async function mapLimitBudget<T, R>(
   items: T[],
   limit: number,
+  t0: number,
   fn: (item: T, index: number) => Promise<R>,
-): Promise<R[]> {
-  const results = new Array<R>(items.length)
+): Promise<{ results: R[]; pending: T[] }> {
+  const results: R[] = []
+  const pending: T[] = []
   let next = 0
   async function worker(): Promise<void> {
     while (true) {
       const i = next++
       if (i >= items.length) return
-      results[i] = await fn(items[i], i)
+      if (Date.now() - t0 > DISPATCH_CUTOFF_MS) {
+        pending.push(items[i])
+        continue
+      }
+      results.push(await fn(items[i], i))
     }
   }
   await Promise.all(
     Array.from({ length: Math.min(limit, items.length) }, () => worker()),
   )
-  return results
+  return { results, pending }
 }
 
 function stripFences(text: string): string {
@@ -92,7 +123,7 @@ function stripFences(text: string): string {
 
 export default defineTool({
   description:
-    "MATERIALIZA EL SITIO COMPLETO EN UNA LLAMADA (pipeline en código; el modelo solo en las hojas). Le pasas TODO lo que ya decidiste leyendo el spec: las 4 superficies (site.config.ts y messages/<default>.json COMPLETOS; valores finales de theme/fonts), las traducciones, y el array de secciones con arquetipo+brief (cada una recupera SOLA su base de reference/blocks). El tool corre: superficies → secciones en paralelo → registry → traducciones → validate+typecheck con auto-repair acotado → QA visual (next dev, sin build) → review de visión → save_qa_report. PRE-REQUISITOS: clone_site_repo + fetch_brand_assets ya corridos (necesitas el imageManifest para componer los briefs). NO despliega: si devuelve approved:true, llama deploy_preview; si devuelve un stage fallido, corrige con las tools granulares (draft_section/edit_file) y retoma el flujo granular desde ese punto (NO re-llames materialize_site completo: redibujaría todo). Reemplaza a: draft_surface×4 + draft_sections + assemble_registry + translate_copy + build_check + run_visual_qa + review_screenshots + save_qa_report como llamadas separadas.",
+    "MATERIALIZA EL SITIO COMPLETO (pipeline en código; el modelo solo en las hojas). Le pasas TODO lo que ya decidiste leyendo el spec: las 4 superficies (site.config.ts y messages/<default>.json COMPLETOS — para el config LEE PRIMERO el site.config.ts del clone y ESPEJA su shape EXACTO: business.address.colonia, business.maps.uri, business.hours con open/close… NUNCA inventes campos), las traducciones, y el array de secciones con arquetipo+brief (cada una recupera SOLA su base de reference/blocks). Corre: superficies → secciones en paralelo → registry → traducciones → validate+typecheck con auto-repair → QA visual (next dev) → review de visión → save_qa_report. ES RESUMIBLE: cuando devuelve `resume:true` (presupuesto de la invocación agotado), RE-LLÁMALO INMEDIATAMENTE con el MISMO input — retoma en segundos donde quedó (lo ya escrito se salta); NO es un error ni un fin de turno. PRE-REQUISITOS: clone_site_repo + fetch_brand_assets ya corridos. NO despliega: con approved:true llama deploy_preview; con un stage FALLIDO (failed/errors, distinto de resume) corrige con las tools granulares y sigue el flujo granular. Reemplaza a: draft_surface×4 + draft_sections + assemble_registry + translate_copy + build_check + run_visual_qa + review_screenshots + save_qa_report.",
   inputSchema: z.object({
     siteId: z.string().uuid(),
     versionN: z.number().int().min(1),
@@ -157,16 +188,31 @@ export default defineTool({
     ctx,
   ) {
     const t0 = Date.now()
+    const timeLeft = () => BUDGET_MS - (Date.now() - t0)
     const sandbox = await ctx.getSandbox()
     const finish = async <T extends { stage: string; ok: boolean }>(
       result: T,
     ): Promise<T> => {
       void recordToolTiming(ctx, "site-builder", "materialize_site", Date.now() - t0, {
         ok: result.ok,
-        meta: { stage: result.stage, sections: sections.length },
+        meta: {
+          stage: result.stage,
+          sections: sections.length,
+          resume: "resume" in result ? Boolean((result as { resume?: boolean }).resume) : false,
+        },
       })
       return result
     }
+    // Presupuesto agotado ANTES de un stage caro → resume (NO es error: el
+    // orquestador re-llama con el mismo input y este stage corre fresco).
+    const resumeAt = (stage: string, done: string[]) =>
+      finish({
+        ok: true as const,
+        stage,
+        resume: true as const,
+        done,
+        hint: `Presupuesto de esta invocación agotado ANTES de "${stage}" (techo de función de la plataforma). RE-LLAMA materialize_site AHORA MISMO con el MISMO input: lo ya hecho (${done.join(", ")}) se salta en segundos y retoma en "${stage}". No es un error ni un fin de turno.`,
+      })
 
     const pkg = await sandbox.readTextFile({ path: "site/package.json" })
     if (pkg == null) {
@@ -178,7 +224,8 @@ export default defineTool({
     // ── 1. SUPERFICIES ─────────────────────────────────────────────────────
     // Reusa draft_surface: pass-through validado para config/es.json,
     // transcriptor barato para theme/fonts. Config y copy primero (los guards
-    // anti-demo aplican); theme/fonts en paralelo después.
+    // anti-demo aplican); theme/fonts en paralelo después. Idempotente y
+    // barato (<1 min): en un resume simplemente se re-escriben igual.
     await draftSurface.execute(
       { surface: "site-config", path: "site.config.ts", content: surfaces.siteConfig },
       ctx,
@@ -203,23 +250,58 @@ export default defineTool({
     ])
 
     // ── 2. SECCIONES EN PARALELO (con retrieval de reference/blocks) ──────
-    const settled = await mapLimit(
-      sections as DraftSectionInput[],
+    // RESUME: una sección cuyo .tsx ya existe en el sandbox se salta — es lo
+    // que hace idempotente re-llamar este tool tras un corte de presupuesto.
+    const already: string[] = []
+    const toDraft: DraftSectionInput[] = []
+    for (const section of sections as DraftSectionInput[]) {
+      const rel = section.path.replace(/^(\/workspace\/)?site\//, "")
+      const existing = await sandbox.readTextFile({ path: `site/${rel}` })
+      if (existing && existing.trim().length > 0) already.push(section.path)
+      else toDraft.push(section)
+    }
+    const budgetPending: DraftSectionInput[] = []
+    const { results: settled, pending: undispatched } = await mapLimitBudget(
+      toDraft,
       CONCURRENCY,
+      t0,
       async (section) => {
         try {
-          const res = await draftOneSection(section, ctx)
+          const res = await draftOneSection(
+            { ...section, retryDeadline: t0 + RETRY_DEADLINE_MS },
+            ctx,
+          )
           return { ok: true as const, res }
         } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e)
+          // Reintento omitido por presupuesto: NO es un fallo de validación —
+          // la sección vuelve como pendiente para la siguiente invocación.
+          if (msg.includes("__BUDGET__")) {
+            budgetPending.push(section)
+            return { ok: true as const, res: null }
+          }
           return {
             ok: false as const,
             path: section.path,
             component: section.component,
-            error: e instanceof Error ? e.message : String(e),
+            error: msg,
           }
         }
       },
     )
+    const pending = [...undispatched, ...budgetPending]
+    if (pending.length > 0) {
+      const drafted = settled.filter((s) => s.ok && s.res !== null).length
+      return finish({
+        ok: true as const,
+        stage: "sections" as const,
+        resume: true as const,
+        drafted,
+        skipped: already.length,
+        pendingSections: pending.map((p) => p.path),
+        hint: `Presupuesto de esta invocación agotado: quedaron ${pending.length} sección(es) sin dibujar (las ${drafted + already.length} restantes YA están en el sandbox y se saltarán). RE-LLAMA materialize_site AHORA MISMO con el MISMO input — retoma exactamente donde quedó. No es un error ni un fin de turno.`,
+      })
+    }
     const failed = settled.filter(
       (s): s is { ok: false; path: string; component: string; error: string } =>
         !s.ok,
@@ -229,7 +311,7 @@ export default defineTool({
         ok: false,
         stage: "sections" as const,
         failed: failed.map(({ path, component, error }) => ({ path, component, error })),
-        written: settled.filter((s) => s.ok).length,
+        written: settled.filter((s) => s.ok && s.res !== null).length + already.length,
         hint: `${failed.length} sección(es) no validaron ni con reintento. Escríbelas con draft_section (una a una, ajustando el brief) o write_file, y CONTINÚA con el flujo granular: assemble_registry → translate_copy → build_check {skipBuild:true} → run_visual_qa → review_screenshots → save_qa_report → deploy_preview. NO re-llames materialize_site (redibujaría todo lo que ya quedó).`,
       })
     }
@@ -238,6 +320,10 @@ export default defineTool({
     await assembleRegistry.execute({}, ctx)
 
     // ── 4. TRADUCCIONES (incrementales) ────────────────────────────────────
+    // Primera corrida completa ≈ 3-4 min con el modelo barato: gate de budget.
+    if ((translations?.length ?? 0) > 0 && timeLeft() < 240_000) {
+      return resumeAt("translations", ["surfaces", "sections", "registry"])
+    }
     for (const t of translations ?? []) {
       await translateCopy.execute(
         {
@@ -254,6 +340,14 @@ export default defineTool({
     // Rojo → el modelo de codegen repara SOLO los archivos señalados (superficies
     // editables), máx 2 rondas. Contexto mínimo: errores + archivos — nada del
     // historial del orquestador.
+    if (timeLeft() < 180_000) {
+      return resumeAt("build_check", [
+        "surfaces",
+        "sections",
+        "registry",
+        "translations",
+      ])
+    }
     let check = await buildCheck.execute({ skipInstall: false, skipBuild: true }, ctx)
     for (let round = 0; !check.ok && round < 2; round++) {
       const files = ("files" in check ? (check.files ?? []) : [])
@@ -321,6 +415,16 @@ Reglas: corrige la CAUSA (key faltante en el JSON de copy, tipo mal, token invá
     }
 
     // ── 6. QA VISUAL (next dev, sin build) ─────────────────────────────────
+    // Server + compiles de dev + capturas ≈ 3-5 min: gate de budget.
+    if (timeLeft() < 330_000) {
+      return resumeAt("visual_qa", [
+        "surfaces",
+        "sections",
+        "registry",
+        "translations",
+        "build_check",
+      ])
+    }
     const qa = await runVisualQa.execute({ routes: undefined }, ctx)
     if (!qa.validateConfigOk || qa.screenshots.length === 0) {
       return finish({
